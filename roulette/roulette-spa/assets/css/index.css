@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+body {
+  background-color: #0b2e36;
+}
+
+button:hover, a:hover {
+  cursor: pointer;
+}
+
+.text-5xl {
+  line-height: 64px;
+}

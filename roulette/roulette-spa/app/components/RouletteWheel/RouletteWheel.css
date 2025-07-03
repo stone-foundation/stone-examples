@@ -1,0 +1,54 @@
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.indicator {
+  width: 0;
+  height: 0;
+  left: 50%;
+  top: -10px;
+  z-index: 10;
+  position: absolute;
+  border-radius: 8px;
+  transform: translateX(-50%);
+  border-top: 40px solid white;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+
+.wheel {
+  width: 300px;
+  height: 300px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 100%;
+  transform: rotate(0deg);
+  transition: transform 3s ease-out;
+}
+
+.wheel img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wheel .center {
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: 80px;
+  height: 80px;
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.wheel.spin-to-orange     { transform: rotate(37deg); }
+.wheel.spin-to-blue       { transform: rotate(110deg); }
+.wheel.spin-to-blue_dark  { transform: rotate(183deg); }
+.wheel.spin-to-red        { transform: rotate(256deg); }
+.wheel.spin-to-green      { transform: rotate(329deg); }
+.wheel.spin-infinite      { animation: spin 1s linear infinite; }

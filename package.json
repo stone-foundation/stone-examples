@@ -1,0 +1,21 @@
+{
+  "name": "stone-examples",
+  "version": "1.0.0",
+  "description": "StoneJS official examples",
+  "license": "MIT",
+  "type": "module",
+  "authors": {
+    "name": "Mr. Stone",
+    "email": "pierre.evens16@gmail.com"
+  },
+  "repository": "https://github.com/stone-foundation/stone-examples.git",
+  "homepage": "https://stonejs.dev",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7"
+  }
+}
