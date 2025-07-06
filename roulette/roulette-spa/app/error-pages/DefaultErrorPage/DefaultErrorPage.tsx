@@ -1,6 +1,7 @@
 import { JSX } from 'react'
 import { RouteNotFoundError } from '@stone-js/router'
 import { TokenService } from '../../services/TokenService'
+import { ForbiddenError } from '../../errors/ForbiddenError'
 import { defaultMessages, defaultTitles } from '../../constants'
 import { UnauthorizedError } from '../../errors/UnauthorizedError'
 import { ErrorPage, IErrorPage, ReactIncomingEvent, ErrorPageRenderContext, StoneLink, HeadContext, ErrorPageHeadContext } from '@stone-js/use-react'
@@ -17,7 +18,7 @@ export interface IDefaultErrorPageOptions {
  */
 @ErrorPage({
   layout: 'error',
-  error: ['default', 'RouteNotFoundError', 'UnauthorizedError']
+  error: ['default', 'RouteNotFoundError', 'UnauthorizedError', 'ForbiddenError']
 })
 export class DefaultErrorPage implements IErrorPage<ReactIncomingEvent> {
   private readonly tokenService: TokenService
@@ -45,6 +46,8 @@ export class DefaultErrorPage implements IErrorPage<ReactIncomingEvent> {
     } else if (error instanceof UnauthorizedError) {
       statusCode = 401
       this.tokenService.removeToken()
+    } else if (error instanceof ForbiddenError) {
+      statusCode = 403
     }
 
     return {

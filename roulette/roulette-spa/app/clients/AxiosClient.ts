@@ -1,7 +1,8 @@
-import { isEmpty, isNotEmpty } from '@stone-js/core'
+import { isEmpty } from '@stone-js/core'
 import { TokenService } from '../services/TokenService'
+import { ForbiddenError } from '../errors/ForbiddenError'
 import { UnauthorizedError } from '../errors/UnauthorizedError'
-import { AxiosError, Axios, AxiosRequestConfig, AxiosResponse } from 'axios'
+import { Axios, AxiosRequestConfig, AxiosResponse } from 'axios'
 
 /**
  * Axios Client Options
@@ -52,7 +53,7 @@ export class AxiosClient {
 
       return response.data
     } catch (error: any) {
-      if (isNotEmpty<AxiosError<R, D>>(error) && error.status === 401) {
+      if (error.status === 401) {
         if (retried === true) {
           const data: any = error.response?.data
           throw new UnauthorizedError(data?.errors?.message ?? error.message, { cause: error })
@@ -61,6 +62,8 @@ export class AxiosClient {
           await this.tokenService.refresh()
           return await this.request<T, R, D>(url, payload, options, true)
         }
+      } else if (error.status === 403) {
+        throw new ForbiddenError(error.message, { cause: error })
       } else {
         throw error
       }

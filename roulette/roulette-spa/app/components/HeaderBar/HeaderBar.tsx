@@ -25,9 +25,9 @@ export const HeaderBar: FC<HeaderBarProps> = ({ container }) => {
   return (
     <>
       <header className='w-full bg-[#0b2e36] text-white border-neutral-800 pt-4 pb-6'>
-        <div className='flex justify-between items-center mb-12'>
-          <span className='font-medium capitalize text-lg'>{user.username ?? 'Inconnu'}</span>
-          <nav className='flex items-right gap-4'>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0 mb-12">
+          <span className="font-medium capitalize text-lg text-center sm:text-left">{user.username ?? 'Inconnu'}</span>
+          <nav className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <StoneLink
               to='/soldiers'
               className='text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
@@ -49,7 +49,7 @@ export const HeaderBar: FC<HeaderBarProps> = ({ container }) => {
           </nav>
         </div>
         <h1 className='text-center text-5xl uppercase font-bold tracking-wide mb-4'>
-          OPÉRATION<br /> ADRÉNALINE
+          OPÉRATION ADRÉNALINE
         </h1>
       </header>
 

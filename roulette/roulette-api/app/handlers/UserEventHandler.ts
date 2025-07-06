@@ -52,17 +52,18 @@ export class UserEventHandler {
    *
    * With explicit json response type.
   */
-  @Get('/', { name: 'list', middleware: ['admin'] })
+  @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async publicList (event: IncomingHttpEvent): Promise<User[]> {
+    const currentUser = event.getUser<UserModel>()
     const teams = await this.teamService.list(event.get<number>('limit', 10))
     const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
 
     return users.filter(v => !v.roles?.includes('admin')).map(v => {
       const user = this.userService.toUser(v)
       user.phone = 'Inconnu'
-      user.fullname = user.fullname.split(' ')[0]
       user.team = teams.find(team => team.uuid === user.teamUuid)
+      user.fullname = currentUser.roles?.includes('admin') ? user.fullname : 'Inconnu'
       return user
     })
   }

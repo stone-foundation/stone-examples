@@ -46,7 +46,7 @@ export class AppConfiguration implements IConfiguration {
       enabled: getBoolean('TWILIO_ENABLED', false),
       authToken: getString('TWILIO_AUTH_TOKEN', ''),
       accountSid: getString('TWILIO_ACCOUNT_SID', ''),
-      tmpRecipient: getString('TWILIO_TMP_RECIPIENT', '')
+      tmpRecipient: getString('TWILIO_TMP_RECIPIENT', { optional: true }) // TODO: To check Env lib returns null instead of undefined
     }
   }
 

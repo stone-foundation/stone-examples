@@ -48,7 +48,7 @@ export class UserActivationEventListener implements IEventListener<UserActivatio
   async sendOtpSms (user: UserActivation): Promise<string | undefined> {
     const fromPhone = this.blueprint.get('twilio.from', '')
     const twilioClient = this.container.make<Twilio>('twilioClient')
-    const toPhone = this.blueprint.get('twilio.tmpRecipient', user.phone)
+    const toPhone = this.blueprint.get<string>('twilio.tmpRecipient') ?? user.phone
     const message = this.blueprint.get(
       'app.security.otp.message',
       'Votre code de verification est: {otp}'
