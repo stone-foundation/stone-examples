@@ -29,6 +29,16 @@ export class UserClient {
   }
 
   /**
+   * List all users
+   *
+   * @param limit - The maximum number of users to return
+   * @returns The list of users
+   */
+  async list (limit: number = 50): Promise<User[]> {
+    return await this.client.get<User[]>(`${this.path}/?limit=${limit}`)
+  }
+
+  /**
    * Get the current user
    *
    * @returns The current user

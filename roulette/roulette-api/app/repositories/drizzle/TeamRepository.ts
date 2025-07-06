@@ -74,11 +74,15 @@ export class TeamRepository implements ITeamRepository {
 
   /**
    * Update a team
+   *
+   * @param team - The team to update
+   * @param data - The data to update in the team
+   * @returns The updated team or undefined if not found
    */
-  async update (uuid: string, team: Partial<TeamModel>): Promise<TeamModel | undefined> {
+  async update ({ uuid }: TeamModel, data: Partial<TeamModel>): Promise<TeamModel | undefined> {
     const result = await this.database
       .update(teams)
-      .set(team)
+      .set(data)
       .where(eq(teams.uuid, uuid))
       .returning()
       .get()
@@ -87,8 +91,11 @@ export class TeamRepository implements ITeamRepository {
 
   /**
    * Delete a team
+   *
+   * @param team - The team to delete
+   * @returns `true` if the team was deleted, `false` if not
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid }: TeamModel): Promise<boolean> {
     const result = await this.database.delete(teams).where(eq(teams.uuid, uuid)).run()
     return result.rowsAffected > 0
   }

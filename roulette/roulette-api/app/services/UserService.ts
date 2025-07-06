@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { normalizePhone } from '../utils'
 import { User, UserModel } from '../models/User'
 import { NotFoundError } from '@stone-js/http-core'
 import { IContainer, isNotEmpty, Service } from '@stone-js/core'
@@ -74,6 +75,9 @@ export class UserService {
    * @returns The found user
    */
   async findBy (conditions: Record<string, any>): Promise<User> {
+    // Normalize phone number if provided
+    conditions.phone = normalizePhone(conditions.phone)
+    // Find the user by conditions
     const userModel = await this.userRepository.findBy(conditions)
     if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
     throw new NotFoundError(`The user with conditions ${JSON.stringify(conditions)} not found`)
@@ -82,7 +86,7 @@ export class UserService {
   /**
    * Find a user by uuid
    *
-   * @param uuid - The phone number of the user to find
+   * @param uuid - The uuid of the user to find
    * @returns The found user or undefined if not found
    */
   async findByUuid (uuid: string): Promise<User | undefined> {
@@ -93,10 +97,11 @@ export class UserService {
   /**
    * Find a user by phone
    *
-   * @param phone - The phone number of the user to find
+   * @param rawPhone - The phone number of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByPhone (phone: string): Promise<User | undefined> {
+  async findByPhone (rawPhone: string): Promise<User | undefined> {
+    const phone = normalizePhone(rawPhone)
     const userModel = await this.userRepository.findBy({ phone })
     if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
   }
@@ -118,6 +123,8 @@ export class UserService {
    * @param user - The user to create
    */
   async create (user: User): Promise<string | undefined> {
+    user.phone = normalizePhone(user.phone, true)
+
     return await this.userRepository.create({
       ...user,
       isActive: false,
@@ -141,23 +148,28 @@ export class UserService {
   /**
    * Update a user
    *
-   * @param uuid - The uuid of the user to update
-   * @param user - The user data to update
+   * @param user - The user to update
+   * @param data - The user data to update
    * @returns The updated user
    */
-  async update (uuid: string, user: Partial<User>): Promise<User> {
-    const userModel = await this.userRepository.update(uuid, user)
+  async update (user: User, data: Partial<User>): Promise<User> {
+    // Set updatedAt to current timestamp
+    data.updatedAt = Date.now()
+    // Normalize phone number if provided
+    data.phone = normalizePhone(data.phone)
+    // Save the user
+    const userModel = await this.userRepository.update(user, data)
     if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
-    throw new NotFoundError(`User with ID ${uuid} not found`)
+    throw new NotFoundError(`User with ID ${user.uuid} not found`)
   }
 
   /**
    * Delete a user
    *
-   * @param uuid - The uuid of the user to delete
+   * @param user - The user to delete
    */
-  async delete (uuid: string): Promise<boolean> {
-    return await this.userRepository.delete(uuid)
+  async delete (user: User): Promise<boolean> {
+    return await this.userRepository.delete(user)
   }
 
   /**

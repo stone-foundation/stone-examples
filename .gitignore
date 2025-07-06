@@ -8,9 +8,12 @@
 
 # Node artifact files
 node_modules
+**/node_modules
+**/**/node_modules
 dist
+**/dist
+**/**/dist
 dist-ssr
-public
 *.local
 
 # Types

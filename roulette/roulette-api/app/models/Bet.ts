@@ -6,7 +6,7 @@ import { User } from './User'
 */
 export interface BetModel {
   uuid: string
-  value: number
+  value: string
   color: string
   userUuid: string
   teamUuid: string

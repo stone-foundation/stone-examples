@@ -40,19 +40,22 @@ export class AxiosClient {
    */
   async request<T = any, R = AxiosResponse<T>, D = any>(url: string, payload?: D, options?: AxiosRequestConfig<D>, retried?: boolean): Promise<T> {
     try {
-      const token = await this.getAccessToken()
       const headers: any = options?.headers ?? {}
+      const token = this.tokenService.getAccessToken()
       const validateStatus = (status: number): boolean => status >= 200 && status < 400
 
       headers.Accept ??= 'application/json'
       headers['Content-Type'] ??= 'application/json'
       headers.Authorization = isEmpty(token) ? '' : `Bearer ${token}`
 
-      return (await this.axios.request({ ...options, url, data: payload, headers, validateStatus })).data
+      const response = await this.axios.request({ ...options, url, data: payload, headers, validateStatus })
+
+      return response.data
     } catch (error: any) {
       if (isNotEmpty<AxiosError<R, D>>(error) && error.status === 401) {
         if (retried === true) {
-          throw new UnauthorizedError(error.message, { cause: error })
+          const data: any = error.response?.data
+          throw new UnauthorizedError(data?.errors?.message ?? error.message, { cause: error })
         } else {
           // Retry the request after refreshing the token
           await this.tokenService.refresh()
@@ -85,17 +88,5 @@ export class AxiosClient {
    */
   async post<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, options?: AxiosRequestConfig<D>): Promise<T> {
     return await this.request<T, R, D>(url, data, { ...options, method: 'POST' })
-  }
-
-  /**
-   * Get the access token
-   *
-   * @returns The access token
-   */
-  private async getAccessToken (): Promise<string> {
-    if (isNotEmpty(this.tokenService.getAccessToken()) && !this.tokenService.isAuthenticated()) {
-      await this.tokenService.refresh()
-    }
-    return this.tokenService.getAccessToken() ?? ''
   }
 }

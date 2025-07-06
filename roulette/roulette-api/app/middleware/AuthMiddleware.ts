@@ -38,6 +38,7 @@ export class AuthMiddleware implements IMiddleware<IncomingHttpEvent, OutgoingHt
   ): Promise<OutgoingHttpResponse> {
     const token = event.getHeader<string>('Authorization', '').replace('Bearer ', '')
     const user = await this.securityService.authenticate(token, event.ip, event.userAgent)
+
     event.setUserResolver(() => user)
 
     return await next(event)

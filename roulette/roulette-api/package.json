@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.840.0",
-    "@aws-sdk/client-sns": "^3.840.0",
     "@aws-sdk/lib-dynamodb": "^3.840.0",
     "@libsql/client": "^0.15.9",
     "@stone-js/aws-lambda-http-adapter": "^0.2.0",
@@ -36,7 +35,9 @@
     "@stone-js/router": "^0.1.0",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.44.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "phone": "^3.1.62",
+    "twilio": "^5.7.2"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.25.9",

@@ -6,6 +6,7 @@ import { Color } from '../constants'
 export interface Team {
   name: string
   color: Color
+  chatLink?: string
   totalMember: number
   countMember: number
   members: TeamMember[]
@@ -14,7 +15,7 @@ export interface Team {
 /**
  * TeamStat Interface
 */
-export interface TeamStat extends Omit<Team, 'members'> {}
+export interface TeamStat extends Omit<Team, 'members' | 'chatLink'> {}
 
 /**
  * TeamMember Interface

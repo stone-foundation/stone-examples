@@ -11,11 +11,6 @@ export interface TeamServiceOptions {
 
 /**
  * Team Service
- *
- * @Service() decorator is used to define a new service
- * @Service() is an alias of @Stone() decorator.
- * The alias is required to get benefits of desctructuring Dependency Injection.
- * And because the front-end class will be minified, we need to use alias to keep the class name.
 */
 @Service({ alias: 'teamService' })
 export class TeamService {

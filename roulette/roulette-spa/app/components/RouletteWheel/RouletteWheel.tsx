@@ -5,6 +5,7 @@ import { playSound } from '../../utils'
 import moai from '../../../assets/img/moai.png'
 import tada from '../../../assets/audio/tada.mp3'
 import { SpinResult } from '../../models/Roulette'
+import playing from '../../../assets/audio/playing.mp3'
 import roulette from '../../../assets/img/roulette.png'
 
 /**
@@ -35,6 +36,8 @@ export const RouletteWheel = ({ onSpin }: RouletteWheelProps): JSX.Element => {
 
     setIsDisabled(true)
     setSpinClass('spin-infinite')
+
+    playSound(playing)
 
     onSpin()
       .then((result) => {

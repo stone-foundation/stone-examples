@@ -1,7 +1,6 @@
+import { Twilio } from 'twilio'
 import { UserActivation } from '../models/User'
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns'
 import { UserActivationEvent } from '../events/UserActivationEvent'
-import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { IBlueprint, IContainer, IEventListener, Listener, Logger } from '@stone-js/core'
 
 /**
@@ -34,36 +33,31 @@ export class UserActivationEventListener implements IEventListener<UserActivatio
    * @param event - The event to handle
    */
   async handle (event: UserActivationEvent): Promise<void> {
-    // Only send SMS if the platform is AWS Lambda HTTP
-    if (this.blueprint.is('stone.adapter.platform', AWS_LAMBDA_HTTP_PLATFORM)) {
-      await this.sendOtpSmsViaSNS(event.user)
+    // Only send SMS when Twilio is enabled
+    if (this.blueprint.is('twilio.enabled', true)) {
+      await this.sendOtpSms(event.user)
     }
   }
 
   /**
-   * Send OTP SMS via SNS
+   * Send OTP SMS via Twilio
    *
    * @param user - The user activation data
    * @returns The message ID of the sent SMS
    */
-  async sendOtpSmsViaSNS (user: UserActivation): Promise<string | undefined> {
-    const message = this.blueprint.get('app.security.otp.message', 'Votre code de verification est: {otp}').replace('{otp}', user.otp)
+  async sendOtpSms (user: UserActivation): Promise<string | undefined> {
+    const fromPhone = this.blueprint.get('twilio.from', '')
+    const twilioClient = this.container.make<Twilio>('twilioClient')
+    const toPhone = this.blueprint.get('twilio.tmpRecipient', user.phone)
+    const message = this.blueprint.get(
+      'app.security.otp.message',
+      'Votre code de verification est: {otp}'
+    ).replace('{otp}', user.otp)
 
-    const cmd = new PublishCommand({
-      Message: message,
-      PhoneNumber: user.phone,
-      MessageAttributes: {
-        'AWS.SNS.SMS.SMSType': {
-          DataType: 'String',
-          StringValue: 'Transactional'
-        }
-      }
-    })
+    const response = await twilioClient.messages.create({ body: message, to: toPhone, from: fromPhone })
 
-    const response = await this.container.make<SNSClient>('notificationClient').send(cmd)
+    Logger.info('SMS sent, MessageId:', response)
 
-    Logger.info('SMS sent, MessageId:', response.MessageId)
-
-    return response.MessageId
+    return response.sid
   }
 }

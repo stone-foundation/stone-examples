@@ -1,12 +1,11 @@
 import {
-  GetCommand,
   PutCommand,
   ScanCommand,
   QueryCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
 import { BetModel } from '../../models/Bet'
-import { IBlueprint } from '@stone-js/core'
+import { IBlueprint, isNotEmpty } from '@stone-js/core'
 import { IBetRepository } from '../contracts/IBetRepository'
 
 /**
@@ -37,26 +36,16 @@ export class DynamoBetRepository implements IBetRepository {
    */
   async list (limit: number): Promise<BetModel[]> {
     const result = await this.database.send(
-      new ScanCommand({ TableName: this.tableName, Limit: limit })
+      new ScanCommand({ TableName: this.tableName, Limit: Number(limit) })
     )
     return (result.Items as BetModel[]) ?? []
-  }
-
-  /**
-   * Find a bet by UUID
-   */
-  async findByUuid (uuid: string): Promise<BetModel | undefined> {
-    const result = await this.database.send(
-      new GetCommand({ TableName: this.tableName, Key: { uuid } })
-    )
-    return result.Item as BetModel | undefined
   }
 
   /**
    * Find a bet by dynamic conditions
    */
   async findBy (conditions: Partial<BetModel>): Promise<BetModel | undefined> {
-    if (conditions.userUuid !== undefined) {
+    if (isNotEmpty(conditions.userUuid)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -70,7 +59,7 @@ export class DynamoBetRepository implements IBetRepository {
       return result.Items?.[0] as BetModel | undefined
     }
 
-    if (conditions.teamUuid !== undefined) {
+    if (isNotEmpty(conditions.teamUuid)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -84,11 +73,27 @@ export class DynamoBetRepository implements IBetRepository {
       return result.Items?.[0] as BetModel | undefined
     }
 
-    if (conditions.uuid !== undefined) {
-      return await this.findByUuid(conditions.uuid)
+    if (isNotEmpty(conditions.uuid)) {
+      const result = await this.database.send(
+        new QueryCommand({
+          Limit: 1,
+          TableName: this.tableName,
+          KeyConditionExpression: '#uuid = :uuid',
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ExpressionAttributeValues: { ':uuid': conditions.uuid }
+        })
+      )
+      return result.Items?.[0] as BetModel | undefined
     }
 
     return undefined
+  }
+
+  /**
+   * Find a bet by UUID
+   */
+  async findByUuid (uuid: string): Promise<BetModel | undefined> {
+    return await this.findBy({ uuid })
   }
 
   /**
@@ -99,7 +104,8 @@ export class DynamoBetRepository implements IBetRepository {
       new PutCommand({
         Item: bet,
         TableName: this.tableName,
-        ConditionExpression: 'attribute_not_exists(uuid)'
+        ConditionExpression: 'attribute_not_exists(#uuid)',
+        ExpressionAttributeNames: { '#uuid': 'uuid' }
       })
     )
     return bet.uuid

@@ -48,17 +48,17 @@ export interface IUserRepository {
   /**
    * Update a user
    *
-   * @param uuid - The uuid of the user to update
-   * @param user - The user data to update
+   * @param user - The user to update
+   * @param data - The data to update in the user
    * @returns The updated user or undefined if not found
    */
-  update: (uuid: string, user: Partial<UserModel>) => Promise<UserModel | undefined>
+  update: (user: UserModel, data: Partial<UserModel>) => Promise<UserModel | undefined>
 
   /**
    * Delete a user
    *
-   * @param uuid - The uuid of the user to delete
+   * @param user - The user to delete
    * @returns `true` if the user was deleted, `false` if not
    */
-  delete: (uuid: string) => Promise<boolean>
+  delete: (user: UserModel) => Promise<boolean>
 }

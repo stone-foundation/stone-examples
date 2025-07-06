@@ -17,7 +17,10 @@
     "preview": "npm run build && stone preview",
     "typings": "stone typings",
     "test": "vitest run",
-    "test:cvg": "npm run test -- --coverage"
+    "test:cvg": "npm run test -- --coverage",
+    "aws-deploy": "sh ./deploy.sh",
+    "aws-s3-deploy": "aws s3 sync dist/ s3://${AWS_S3_BUCKET} --profile ${AWS_ACTIVE_PROFILE} --delete && npm run aws-cloudfront-invalidate",
+    "aws-cloudfront-invalidate": "aws cloudfront create-invalidation --profile ${AWS_ACTIVE_PROFILE} --distribution-id ${AWS_CLOUDFRONT_DISTRIBUTION_ID} --paths '/*'"
   },
   "dependencies": {
     "@stone-js/browser-adapter": "^0.1.0",

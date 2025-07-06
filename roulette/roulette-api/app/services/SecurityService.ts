@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'node:crypto'
+import { normalizePhone } from '../utils'
 import { SessionService } from './SessionService'
 import { BadCredentialsError } from '../errors/CredentialsError'
 import { UserActivationEvent } from '../events/UserActivationEvent'
@@ -45,11 +46,12 @@ export class SecurityService {
    * @returns The UUID of the created admin user or undefined if creation failed
    */
   async createAdminUser (): Promise<string | undefined> {
-    const adminUser = this.blueprint.get<UserModel>('app.security.admin')
-    const existingAdmin = await this.userRepository.findBy({ phone: adminUser?.phone })
+    const adminUser = this.blueprint.get<UserModel>('app.security.admin', {} as unknown as UserModel)
+    adminUser.phone = normalizePhone(adminUser.phone, true)
+    const existingAdmin = await this.userRepository.findBy({ phone: adminUser.phone })
 
     if (isNotEmpty<UserModel>(existingAdmin)) {
-      throw new BadCredentialsError(`The user with phone ${String(adminUser?.phone)} already exists`)
+      throw new BadCredentialsError(`The user with phone ${String(adminUser.phone)} already exists`)
     }
 
     if (isNotEmpty<UserModel>(adminUser)) {
@@ -71,6 +73,7 @@ export class SecurityService {
    * @returns The user activation data
   */
   async requestActivation (request: UserActivationRequest): Promise<Partial<UserActivation>> {
+    request.phone = normalizePhone(request.phone)
     const userModel = await this.userRepository.findBy({ phone: request.phone })
     const otpCount = userModel?.otpCount ?? 0
 
@@ -91,7 +94,7 @@ export class SecurityService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const otpExpiresAt = Date.now() + this.blueprint.get<number>('app.security.otp.expiresIn', 300000) // 5 minutes
 
-    await this.userRepository.update(userModel.uuid, { otp, otpCount: otpCount + 1, otpExpiresAt })
+    await this.userRepository.update(userModel, { otp, otpCount: otpCount + 1, otpExpiresAt })
 
     const user: UserActivation = {
       otp,
@@ -113,6 +116,7 @@ export class SecurityService {
    * @returns The user token
   */
   async login (event: IncomingHttpEvent, credentials: UserCredentials): Promise<UserToken> {
+    credentials.phone = normalizePhone(credentials.phone)
     const model = await this.userRepository.findBy({ phone: credentials.phone })
     const userModel = await this.validateUser(model, credentials)
 
@@ -184,7 +188,7 @@ export class SecurityService {
    */
   isAdmin (user?: User): boolean {
     const admins = this.blueprint.get<Array<Record<'phone' | 'role', string>>>('app.security.admins', [])
-    return user?.roles?.includes('admin') ?? admins.some(admin => admin.phone === user?.phone && admin.role === 'admin')
+    return user?.roles?.includes('admin') ?? admins.some(admin => normalizePhone(admin.phone) === normalizePhone(user?.phone) && admin.role === 'admin')
   }
 
   /**
@@ -272,6 +276,8 @@ export class SecurityService {
       throw new BadRequestError('User registration is not allowed')
     }
 
+    payload.phone = normalizePhone(payload.phone, true)
+
     const user = await this.userRepository.findBy({ phone: payload.phone })
     const user2 = await this.userRepository.findBy({ username: payload.username })
 
@@ -309,7 +315,7 @@ export class SecurityService {
     const userModel = await this.validateUser(user, credentials)
     const password = await this.hashPassword(userPassword.newPassword)
 
-    await this.userRepository.update(userModel.uuid, { password, isActive: true })
+    await this.userRepository.update(userModel, { password, isActive: true })
   }
 
   /**

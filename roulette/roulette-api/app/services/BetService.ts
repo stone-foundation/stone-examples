@@ -78,7 +78,7 @@ export class BetService {
   /**
    * Find a bet by uuid
    *
-   * @param uuid - The phone number of the bet to find
+   * @param uuid - The uuid of the bet to find
    * @returns The found bet or undefined if not found
    */
   async findByUuid (uuid: string): Promise<Bet | undefined> {
@@ -116,22 +116,22 @@ export class BetService {
     const index = Math.floor(Math.random() * limit) % validTeams.length
     const team = validTeams[index]
 
-    await this.userRepository.update(user.uuid, {
+    await this.userRepository.update(user, {
       teamUuid: team.uuid,
       updatedAt: Date.now()
     })
 
-    await this.teamRepository.update(team.uuid, {
+    await this.teamRepository.update(team, {
       updatedAt: Date.now(),
       countMember: team.countMember + 1
     })
 
     const bet = {
-      value: index,
       color: team.color,
       uuid: randomUUID(),
       userUuid: user.uuid,
       teamUuid: team.uuid,
+      value: String(index),
       createdAt: Date.now()
     }
 

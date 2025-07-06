@@ -39,17 +39,17 @@ export interface ITeamRepository {
   /**
    * Update a team
    *
-   * @param uuid - The uuid of the team to update
-   * @param team - The team data to update
+   * @param team - The team to update
+   * @param data - The data to update in the team
    * @returns The updated team or undefined if not found
    */
-  update: (uuid: string, team: Partial<TeamModel>) => Promise<TeamModel | undefined>
+  update: (team: TeamModel, data: Partial<TeamModel>) => Promise<TeamModel | undefined>
 
   /**
    * Delete a team
    *
-   * @param uuid - The uuid of the team to delete
+   * @param team - The team to delete
    * @returns `true` if the team was deleted, `false` if not
    */
-  delete: (uuid: string) => Promise<boolean>
+  delete: (team: TeamModel) => Promise<boolean>
 }

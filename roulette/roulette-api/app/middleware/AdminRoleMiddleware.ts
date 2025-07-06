@@ -39,7 +39,9 @@ export class AdminRoleMiddleware implements IMiddleware<IncomingHttpEvent, Outgo
   ): Promise<OutgoingHttpResponse> {
     const token = event.getHeader<string>('Authorization', '').replace('Bearer ', '')
     const user = await this.securityService.authenticate(token, event.ip, event.userAgent)
+
     event.setUserResolver(() => user)
+
     if (!this.securityService.isAdmin(event.getUser<User>())) {
       throw new ForbiddenError('You do not have permission to access this resource')
     }

@@ -12,6 +12,7 @@ dist
 dist-ssr
 public
 *.local
+local.db
 
 # Types
 types/

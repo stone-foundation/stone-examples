@@ -61,25 +61,34 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
     }
   }, [teamService])
 
+  const spinRoulette = async (): Promise<{ result: SpinResult, stats: TeamStat[], team: Team }> => {
+    const result = await rouletteService.spin()
+    const team = await teamService.currentTeam()
+    const stats = await teamService.stats()
+
+    return { result, stats, team }
+  }
+
   const onSpin = async (): Promise<SpinResult> => {
     setLoadingTeam(true)
 
     return await new Promise<SpinResult>((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          const result = await rouletteService.spin()
-          const team = await teamService.currentTeam()
-          const stats = await teamService.stats()
-          setTeam(team)
-          setStats(stats)
-          resolve(result)
-        } catch (e: any) {
-          setError(e.response?.data?.errors?.message ?? e.message)
-          reject(new Error(e.response?.data?.errors?.message ?? e.message))
-        } finally {
-          setLoadingTeam(false)
-        }
-      }, spinningTime)
+      spinRoulette()
+        .then(v => {
+          setTimeout(() => {
+            setTeam(v.team)
+            setStats(v.stats)
+            resolve(v.result)
+          }, spinningTime)
+        })
+        .catch((e: any) => {
+          setTimeout(() => {
+            setError(e.response?.data?.errors?.message ?? e.message)
+            reject(new Error(e.response?.data?.errors?.message ?? e.message))
+          }, spinningTime)
+        }).finally(() => {
+          setTimeout(() => setLoadingTeam(false), spinningTime)
+        })
     })
   }
 
@@ -118,7 +127,7 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
             <TeamPanelSkeleton length={5} />
             )
           : (
-              (team != null) && <TeamPanel team={team} chat='operation-adrenaline.com' />
+              (team != null) && <TeamPanel team={team} />
             )}
       </div>
     </>

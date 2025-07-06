@@ -1,5 +1,4 @@
 import {
-  GetCommand,
   PutCommand,
   ScanCommand,
   QueryCommand,
@@ -7,9 +6,9 @@ import {
   DeleteCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { IBlueprint } from '@stone-js/core'
 import { UserModel } from '../../models/User'
 import { SessionModel } from '../../models/Session'
+import { IBlueprint, isEmpty } from '@stone-js/core'
 import { ISessionRepository } from '../contracts/ISessionRepository'
 
 /**
@@ -44,7 +43,7 @@ export class DynamoSessionRepository implements ISessionRepository {
   async list (limit: number): Promise<SessionModel[]> {
     const result = await this.database.send(
       new ScanCommand({
-        Limit: limit,
+        Limit: Number(limit),
         TableName: this.tableName
       })
     )
@@ -60,7 +59,7 @@ export class DynamoSessionRepository implements ISessionRepository {
   async listByUser (user: UserModel, limit: number): Promise<SessionModel[]> {
     const result = await this.database.send(
       new QueryCommand({
-        Limit: limit,
+        Limit: Number(limit),
         TableName: this.tableName,
         IndexName: 'userUuid-index',
         KeyConditionExpression: '#userUuid = :userUuid',
@@ -80,12 +79,15 @@ export class DynamoSessionRepository implements ISessionRepository {
    */
   async findByUuid (uuid: string): Promise<SessionModel | undefined> {
     const result = await this.database.send(
-      new GetCommand({
-        Key: { uuid },
-        TableName: this.tableName
+      new QueryCommand({
+        Limit: 1,
+        TableName: this.tableName,
+        KeyConditionExpression: '#uuid = :uuid',
+        ExpressionAttributeNames: { '#uuid': 'uuid' },
+        ExpressionAttributeValues: { ':uuid': uuid }
       })
     )
-    return result.Item as SessionModel | undefined
+    return result.Items?.[0] as SessionModel | undefined
   }
 
   /**
@@ -120,7 +122,8 @@ export class DynamoSessionRepository implements ISessionRepository {
       new PutCommand({
         Item: session,
         TableName: this.tableName,
-        ConditionExpression: 'attribute_not_exists(uuid)'
+        ExpressionAttributeNames: { '#uuid': 'uuid' },
+        ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
     return session
@@ -129,16 +132,17 @@ export class DynamoSessionRepository implements ISessionRepository {
   /**
    * Update a session
    *
-   * @param uuid - The session uuid
-   * @param session - The partial session data
+   * @param session - The session to update
+   * @param data - The data to update in the session
    * @returns The updated session or undefined
    */
-  async update (uuid: string, session: Partial<SessionModel>): Promise<SessionModel | undefined> {
+  async update ({ uuid, userUuid }: SessionModel, data: Partial<SessionModel>): Promise<SessionModel | undefined> {
     const updateExprParts: string[] = []
     const exprAttrNames: Record<string, string> = {}
     const exprAttrValues: Record<string, any> = {}
 
-    for (const [key, value] of Object.entries(session)) {
+    for (const [key, value] of Object.entries(data)) {
+      if (['uuid', 'userUuid'].includes(key) && isEmpty(value)) continue // skip immutable fields
       updateExprParts.push(`#${key} = :${key}`)
       exprAttrNames[`#${key}`] = key
       exprAttrValues[`:${key}`] = value
@@ -148,7 +152,7 @@ export class DynamoSessionRepository implements ISessionRepository {
 
     const result = await this.database.send(
       new UpdateCommand({
-        Key: { uuid },
+        Key: { uuid, userUuid },
         ReturnValues: 'ALL_NEW',
         TableName: this.tableName,
         ExpressionAttributeNames: exprAttrNames,
@@ -163,16 +167,17 @@ export class DynamoSessionRepository implements ISessionRepository {
   /**
    * Delete a session
    *
-   * @param uuid - The session uuid
+   * @param session - The session to delete
    * @returns `true` if deleted, `false` otherwise
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid, userUuid }: SessionModel): Promise<boolean> {
     try {
       await this.database.send(
         new DeleteCommand({
-          Key: { uuid },
+          Key: { uuid, userUuid },
           TableName: this.tableName,
-          ConditionExpression: 'attribute_exists(uuid)'
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ConditionExpression: 'attribute_exists(#uuid)'
         })
       )
       return true

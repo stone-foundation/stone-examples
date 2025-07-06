@@ -3,7 +3,7 @@ import { Bet, SpinResult } from '../models/Bet'
 import { BetService } from '../services/BetService'
 import { EventHandler, Get, Post } from '@stone-js/router'
 import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
-import { BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
+import { BadRequestError, IncomingHttpEvent, JsonHttpResponse } from '@stone-js/http-core'
 
 /**
  * Bet Event Handler Options
@@ -55,6 +55,7 @@ export class BetEventHandler {
    * Spin the roulette
   */
   @Post(['/bets', '/roulette/spin'], { name: 'spin' })
+  @JsonHttpResponse(201)
   async spin (event: IncomingHttpEvent): Promise<SpinResult> {
     const user = event.getUser<User>()
 
@@ -63,12 +64,12 @@ export class BetEventHandler {
     }
 
     if (isNotEmpty(user.teamUuid)) {
-      throw new BadRequestError('Oops! Vous faites déjà partie d\'une équipe.')
+      throw new BadRequestError('🤪 E PIYAY 🤪! Dasomann! Vous faites déjà partie d\'une équipe.')
     }
 
     const result = await this.betService.spin(user)
 
-    this.logger.info(`Bet created: ${String(result.uuid)}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`Bet created: ${String(result.uuid)}, by user: ${String(user.uuid)}`)
 
     return { color: result.color }
   }

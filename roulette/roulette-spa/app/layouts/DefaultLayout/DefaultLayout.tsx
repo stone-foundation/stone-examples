@@ -6,7 +6,7 @@ import { IPageLayout, PageLayoutRenderContext, PageLayout, StoneOutlet } from '@
 /**
  * Default Page layout component.
  */
-@PageLayout({ name: 'default' })
+@PageLayout({ name: 'private-default' })
 export class DefaultLayout implements IPageLayout {
   /**
    * Render the component.
@@ -17,7 +17,7 @@ export class DefaultLayout implements IPageLayout {
     return (
       <main className='min-h-screen bg-[#0b2e36] text-white flex flex-col items-center px-4 pb-20'>
         <HeaderBar container={container} />
-        <StoneOutlet className='flex flex-col sm:flex-row w-full max-w-7xl mx-auto gap-6 mt-10 px-4 transition-all duration-500 ease-in-out'>
+        <StoneOutlet>
           {children}
         </StoneOutlet>
         <Footer />

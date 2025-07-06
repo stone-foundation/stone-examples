@@ -49,17 +49,17 @@ export interface ISessionRepository {
   /**
    * Update a session
    *
-   * @param uuid - The session uuid
-   * @param session - The partial session data
+   * @param session - The session to update
+   * @param data - The data to update in the session
    * @returns The updated session or undefined
    */
-  update: (uuid: string, session: Partial<SessionModel>) => Promise<SessionModel | undefined>
+  update: (session: SessionModel, data: Partial<SessionModel>) => Promise<SessionModel | undefined>
 
   /**
    * Delete a session
    *
-   * @param uuid - The session uuid
+   * @param session - The session to delete
    * @returns `true` if deleted, `false` otherwise
    */
-  delete: (uuid: string) => Promise<boolean>
+  delete: (session: SessionModel) => Promise<boolean>
 }

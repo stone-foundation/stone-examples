@@ -1,5 +1,4 @@
 import {
-  GetCommand,
   PutCommand,
   ScanCommand,
   QueryCommand,
@@ -7,9 +6,9 @@ import {
   DeleteCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { IBlueprint } from '@stone-js/core'
 import { TeamModel } from '../../models/Team'
 import { ITeamRepository } from '../contracts/ITeamRepository'
+import { IBlueprint, isEmpty, isNotEmpty } from '@stone-js/core'
 
 /**
  * Team Repository Options
@@ -39,26 +38,16 @@ export class DynamoTeamRepository implements ITeamRepository {
    */
   async list (limit: number): Promise<TeamModel[]> {
     const result = await this.database.send(
-      new ScanCommand({ TableName: this.tableName, Limit: limit })
+      new ScanCommand({ TableName: this.tableName, Limit: Number(limit) })
     )
     return (result.Items as TeamModel[]) ?? []
-  }
-
-  /**
-   * Find a team by UUID
-   */
-  async findByUuid (uuid: string): Promise<TeamModel | undefined> {
-    const result = await this.database.send(
-      new GetCommand({ TableName: this.tableName, Key: { uuid } })
-    )
-    return result.Item as TeamModel | undefined
   }
 
   /**
    * Find a team by dynamic conditions
    */
   async findBy (conditions: Partial<TeamModel>): Promise<TeamModel | undefined> {
-    if (conditions.color !== undefined) {
+    if (isNotEmpty(conditions.color)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -72,7 +61,7 @@ export class DynamoTeamRepository implements ITeamRepository {
       return result.Items?.[0] as TeamModel | undefined
     }
 
-    if (conditions.name !== undefined) {
+    if (isNotEmpty(conditions.name)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -86,11 +75,30 @@ export class DynamoTeamRepository implements ITeamRepository {
       return result.Items?.[0] as TeamModel | undefined
     }
 
-    if (conditions.uuid !== undefined) {
-      return await this.findByUuid(conditions.uuid)
+    if (isNotEmpty(conditions.uuid)) {
+      const result = await this.database.send(
+        new QueryCommand({
+          Limit: 1,
+          TableName: this.tableName,
+          KeyConditionExpression: '#uuid = :uuid',
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ExpressionAttributeValues: { ':uuid': conditions.uuid }
+        })
+      )
+      return result.Items?.[0] as TeamModel | undefined
     }
 
     return undefined
+  }
+
+  /**
+   * Find a team by UUID
+   *
+   * @param uuid - The UUID of the team to find
+   * @returns The team or undefined if not found
+   */
+  async findByUuid (uuid: string): Promise<TeamModel | undefined> {
+    return await this.findBy({ uuid })
   }
 
   /**
@@ -101,7 +109,8 @@ export class DynamoTeamRepository implements ITeamRepository {
       new PutCommand({
         Item: team,
         TableName: this.tableName,
-        ConditionExpression: 'attribute_not_exists(uuid)'
+        ExpressionAttributeNames: { '#uuid': 'uuid' },
+        ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
     return team.uuid
@@ -109,13 +118,18 @@ export class DynamoTeamRepository implements ITeamRepository {
 
   /**
    * Update a team
+   *
+   * @param team - The team to update
+   * @param data - The data to update in the team
+   * @returns The updated team or undefined if not found
    */
-  async update (uuid: string, team: Partial<TeamModel>): Promise<TeamModel | undefined> {
+  async update ({ uuid, name }: TeamModel, data: Partial<TeamModel>): Promise<TeamModel | undefined> {
     const updateExprParts: string[] = []
-    const exprAttrNames: Record<string, string> = {}
     const exprAttrValues: Record<string, any> = {}
+    const exprAttrNames: Record<string, string> = {}
 
-    for (const [key, value] of Object.entries(team)) {
+    for (const [key, value] of Object.entries(data)) {
+      if (['uuid', 'name'].includes(key) && isEmpty(value)) continue // skip immutable fields
       updateExprParts.push(`#${key} = :${key}`)
       exprAttrNames[`#${key}`] = key
       exprAttrValues[`:${key}`] = value
@@ -125,7 +139,7 @@ export class DynamoTeamRepository implements ITeamRepository {
 
     const result = await this.database.send(
       new UpdateCommand({
-        Key: { uuid },
+        Key: { uuid, name },
         ReturnValues: 'ALL_NEW',
         TableName: this.tableName,
         ExpressionAttributeNames: exprAttrNames,
@@ -139,14 +153,18 @@ export class DynamoTeamRepository implements ITeamRepository {
 
   /**
    * Delete a team
+   *
+   * @param team - The team to delete
+   * @returns `true` if the team was deleted, `false` if not
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid, name }: TeamModel): Promise<boolean> {
     try {
       await this.database.send(
         new DeleteCommand({
-          Key: { uuid },
+          Key: { uuid, name },
           TableName: this.tableName,
-          ConditionExpression: 'attribute_exists(uuid)'
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ConditionExpression: 'attribute_exists(#uuid)'
         })
       )
       return true

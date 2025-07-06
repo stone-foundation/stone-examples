@@ -1,3 +1,4 @@
+import { Team } from './Team'
 import jwt from 'jsonwebtoken'
 import { Session } from './Session'
 
@@ -26,6 +27,7 @@ export interface UserModel {
  * User Interface
 */
 export interface User extends UserModel {
+  team?: Team
   otp: undefined
   session?: Session
   otpCount: undefined

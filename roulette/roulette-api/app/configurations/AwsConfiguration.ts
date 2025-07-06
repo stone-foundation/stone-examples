@@ -15,10 +15,21 @@ export class AwsConfiguration implements IConfiguration {
     blueprint.set('aws', {
       region: getString('AWS_REGION', 'us-east-1'),
       dynamo: {
-        region: getString('AWS_REGION', 'us-east-1')
-      },
-      sns: {
-        region: getString('AWS_REGION', 'us-east-1')
+        region: getString('AWS_REGION', 'us-east-1'),
+        tables: {
+          bets: {
+            name: getString('AWS_DYNAMO_TABLE_BETS', 'roulette-bets')
+          },
+          users: {
+            name: getString('AWS_DYNAMO_TABLE_USERS', 'roulette-users')
+          },
+          teams: {
+            name: getString('AWS_DYNAMO_TABLE_TEAMS', 'roulette-teams')
+          },
+          sessions: {
+            name: getString('AWS_DYNAMO_TABLE_SESSIONS', 'roulette-sessions')
+          }
+        }
       }
     })
   }

@@ -1,7 +1,10 @@
+import { Team } from './Team'
+
 /**
  * User Interface
 */
 export interface User {
+  team?: Team
   uuid: string
   phone: string
   roles?: string | null

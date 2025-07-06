@@ -122,22 +122,22 @@ export class UserRepository implements IUserRepository {
   /**
    * Update a user
    *
-   * @param uuid - The uuid of the user to update
-   * @param user - The user data to update
+   * @param user - The user to update
+   * @param data - The data to update in the user
    * @returns The updated user or undefined if not found
    */
-  async update (uuid: string, user: Partial<UserModel>): Promise<UserModel | undefined> {
-    const result = await this.database.update(users).set(user).where(eq(users.uuid, uuid)).returning().get()
+  async update ({ uuid }: UserModel, data: Partial<UserModel>): Promise<UserModel | undefined> {
+    const result = await this.database.update(users).set(data).where(eq(users.uuid, uuid)).returning().get()
     return result ?? undefined
   }
 
   /**
    * Delete a user
    *
-   * @param uuid - The uuid of the user to delete
+   * @param user - The user to delete
    * @returns `true` if the user was deleted, `false` if not
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid }: UserModel): Promise<boolean> {
     const result = await this.database.delete(users).where(eq(users.uuid, uuid)).run()
     return result.rowsAffected > 0
   }

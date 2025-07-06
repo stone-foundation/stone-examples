@@ -1,6 +1,6 @@
-# Stone.js - Standard starter
+# Stone.js - Roulette API
 
-Stone.js's standard starter to create web app using declarative API.
+Stone.js's Roulette API is a demonstration project showcasing the capabilities of the Stone.js framework. It includes features such as user authentication, team management, and a betting system.
 
 ## Project Setup
 

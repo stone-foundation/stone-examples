@@ -93,33 +93,33 @@ export class SessionService {
   /**
    * Updates the last activity timestamp of a session.
    *
-   * @param sessionId - The session ID to update
+   * @param session - The session to update
    * @returns `true` if the session was updated, otherwise `false`
    */
   async updateLastActivity (session: Session): Promise<void> {
-    await this.sessionRepository.update(session.uuid, { lastActivityAt: Date.now() })
+    await this.sessionRepository.update(session, { lastActivityAt: Date.now() })
   }
 
   /**
    * Extends a session expiration time.
    *
-   * @param sessionId - The session ID to extend
-   * @param additionalTime - Additional time in milliseconds
+   * @param session - The session to extend
+   * @param additionalTime - The additional time in milliseconds to extend the session
    * @returns `true` if the session was extended, otherwise `false`
    */
   async extend (session: Session, additionalTime: number): Promise<Session> {
-    session.expiresAt = Date.now() + additionalTime
-    await this.sessionRepository.update(session.uuid, session)
+    const expiresAt = session.expiresAt = Date.now() + additionalTime
+    await this.sessionRepository.update(session, { expiresAt })
     return session
   }
 
   /**
    * Closes a session.
    *
-   * @param sessionId - The session ID to close
+   * @param session - The session to close
    */
   async close (session: Session): Promise<void> {
-    session.closedAt = Date.now()
-    await this.sessionRepository.update(session.uuid, session)
+    const closedAt = session.closedAt = Date.now()
+    await this.sessionRepository.update(session, { closedAt })
   }
 }

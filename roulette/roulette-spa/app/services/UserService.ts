@@ -11,11 +11,6 @@ export interface UserServiceOptions {
 
 /**
  * User Service
- *
- * @Service() decorator is used to define a new service
- * @Service() is an alias of @Stone() decorator.
- * The alias is required to get benefits of desctructuring Dependency Injection.
- * And because the front-end class will be minified, we need to use alias to keep the class name.
 */
 @Service({ alias: 'userService' })
 export class UserService {
@@ -27,6 +22,16 @@ export class UserService {
   */
   constructor ({ userClient }: UserServiceOptions) {
     this.userClient = userClient
+  }
+
+  /**
+   * List all users
+   *
+   * @param limit - The maximum number of users to return
+   * @returns The list of users
+  */
+  async list (limit: number = 50): Promise<User[]> {
+    return await this.userClient.list(limit)
   }
 
   /**

@@ -41,6 +41,7 @@ export const teams = sqliteTable('teams', {
   uuid: text('uuid').primaryKey(),
   name: text('name').notNull(),
   color: text('color').notNull(),
+  chatLink: text('chat_link'),
   totalMember: integer('total_member').notNull(),
   countMember: integer('count_member').notNull(),
   updatedAt: integer('updated_at').notNull(),
@@ -50,7 +51,7 @@ export const teams = sqliteTable('teams', {
 // Bets table
 export const bets = sqliteTable('bets', {
   uuid: text('uuid').primaryKey(),
-  value: integer('value').notNull(),
+  value: text('value').notNull(),
   color: text('color').notNull(),
   userUuid: text('user_uuid')
     .notNull()

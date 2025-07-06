@@ -45,6 +45,6 @@ export class ChangePasswordPage implements IPage<ReactIncomingEvent> {
    * @returns The rendered component.
    */
   render (): JSX.Element {
-    return <ChangePasswordForm securityService={this.securityService} onChange={() => this.router.navigate('/')} />
+    return <ChangePasswordForm securityService={this.securityService} onChange={() => this.router.navigate('/spin')} />
   }
 }

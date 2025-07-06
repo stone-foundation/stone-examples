@@ -4,13 +4,12 @@ import {
   IBlueprint,
   IServiceProvider
 } from '@stone-js/core'
-import { SNSClient } from '@aws-sdk/client-sns'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
+import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { DynamoBetRepository } from '../repositories/dynamobd/DynamoBetRepository'
 import { DynamoUserRepository } from '../repositories/dynamobd/DynamoUserRepository'
 import { DynamoTeamRepository } from '../repositories/dynamobd/DynamoTeamRepository'
-import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { DynamoSessionRepository } from '../repositories/dynamobd/DynamoSessionRepository'
 
 /**
@@ -46,7 +45,6 @@ export class AwsServiceProvider implements IServiceProvider {
    */
   register (): void {
     this.registerDynamoClient()
-    this.registerAwsSnsClient()
     this.registerRepositories()
   }
 
@@ -61,16 +59,6 @@ export class AwsServiceProvider implements IServiceProvider {
     this.container
       .instanceIf('dynamoClient', docClient)
       .alias('dynamoClient', ['awsDynamoClient', 'database', 'db'])
-  }
-
-  /**
-   * Register the AWS SNS client
-   */
-  registerAwsSnsClient (): void {
-    const snsClient = new SNSClient(this.blueprint.get('aws.sns', { region: 'us-east-1' }))
-    this.container
-      .instanceIf('snsClient', snsClient)
-      .alias('snsClient', ['awsSnsClient', 'notificationClient'])
   }
 
   /**

@@ -65,7 +65,7 @@ export class TeamService {
   /**
    * Find a team by uuid
    *
-   * @param uuid - The phone number of the team to find
+   * @param uuid - The uuid of the team to find
    * @returns The found team or undefined if not found
    */
   async findByUuid (uuid: string): Promise<Team | undefined> {
@@ -75,7 +75,7 @@ export class TeamService {
 
   /**
    * Find a team by name
-   * 
+   *
    * @param name - The name of the team to find
    * @returns The found team or undefined if not found
    */
@@ -86,7 +86,7 @@ export class TeamService {
 
   /**
    * Find a team by color
-   * 
+   *
    * @param color - The color of the team to find
    * @returns The found team or undefined if not found
    */
@@ -116,23 +116,23 @@ export class TeamService {
   /**
    * Update a team
    *
-   * @param uuid - The uuid of the team to update
-   * @param team - The team data to update
+   * @param team - The team to update
+   * @param data - The data to update in the team
    * @returns The updated team
    */
-  async update (uuid: string, team: Partial<Team>): Promise<Team> {
-    const teamModel = await this.teamRepository.update(uuid, team)
+  async update (team: Team, data: Partial<Team>): Promise<Team> {
+    const teamModel = await this.teamRepository.update(team, data)
     if (isNotEmpty<TeamModel>(teamModel)) return this.toTeam(teamModel)
-    throw new NotFoundError(`Team with ID ${uuid} not found`)
+    throw new NotFoundError(`Team with ID ${team.uuid} not found`)
   }
 
   /**
    * Delete a team
    *
-   * @param uuid - The uuid of the team to delete
+   * @param team - The team to delete
    */
-  async delete (uuid: string): Promise<boolean> {
-    return await this.teamRepository.delete(uuid)
+  async delete (team: Team): Promise<boolean> {
+    return await this.teamRepository.delete(team)
   }
 
   /**
@@ -149,15 +149,17 @@ export class TeamService {
    * Convert Team to Partial<Team>
    *
    * @param team - The team to convert
+   * @param withDetails - Whether to include detailed information like members and chat link
    * @returns The converted team
    */
-  toStatTeam (team: Team, withMembers: boolean = false): Partial<Team> {
+  toStatTeam (team: Team, withDetails: boolean = false): Partial<Team> {
     return {
       name: team.name,
       color: team.color,
       totalMember: team.totalMember,
       countMember: team.countMember,
-      members: withMembers ? team.members : undefined,
+      members: withDetails ? team.members : undefined,
+      chatLink: withDetails ? team.chatLink : undefined
     }
   }
 }

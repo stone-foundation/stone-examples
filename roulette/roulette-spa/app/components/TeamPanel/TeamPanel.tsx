@@ -7,16 +7,14 @@ import { JSX, useEffect, useState } from 'react'
  */
 export interface TeamPanelProps {
   team: Team
-  chat: string
 }
 
 /**
  * TeamPanel component displays the revealed color and its teammates.
  */
-export const TeamPanel = ({ team, chat }: TeamPanelProps): JSX.Element => {
+export const TeamPanel = ({ team }: TeamPanelProps): JSX.Element => {
   const bg = COLOR_MAP[team.color] ?? '#444'
   const [visible, setVisible] = useState(false)
-  const chatLink = `https://${team.name}.${chat}`
 
   useEffect(() => setVisible(true), [team.color])
 
@@ -57,7 +55,7 @@ export const TeamPanel = ({ team, chat }: TeamPanelProps): JSX.Element => {
       </div>
 
       <a
-        href={chatLink}
+        href={team.chatLink ?? '#'}
         target='_blank'
         rel='noopener noreferrer'
         className='block w-full text-center bg-white/20 hover:bg-white/30 text-sm font-medium py-2 rounded-md transition'

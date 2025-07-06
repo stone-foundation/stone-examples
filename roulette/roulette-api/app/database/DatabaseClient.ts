@@ -25,9 +25,7 @@ export class DatabaseClient {
    * @returns The client instance
    */
   static create (config: Config): Client {
-    if (this._client === undefined) {
-      this._client = createClient(config)
-    }
+    this._client ??= createClient(config)
     return this._client
   }
 

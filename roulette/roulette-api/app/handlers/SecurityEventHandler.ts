@@ -33,7 +33,6 @@ export class SecurityEventHandler {
    * @param event - IncomingHttpEvent
   */
   @Post('/make-admin')
-  @NoContentHttpResponse({ 'content-type': 'application/json' })
   async makeAdmin (_event: IncomingHttpEvent): Promise<void> {
     await this.securityService.createAdminUser()
   }
@@ -72,7 +71,6 @@ export class SecurityEventHandler {
    * @returns void
   */
   @Post('/logout', { name: 'logout', middleware: ['auth'] })
-  @NoContentHttpResponse({ 'content-type': 'application/json' })
   async logout (event: IncomingHttpEvent): Promise<void> {
     await this.securityService.logout(
       event.get<string>('Authorization', '').replace('Bearer ', '')
@@ -99,7 +97,6 @@ export class SecurityEventHandler {
    * @returns UserToken
   */
   @Post('/register', { name: 'register' })
-  @NoContentHttpResponse({ 'content-type': 'application/json' })
   async register (event: IncomingHttpEvent): Promise<void> {
     await this.securityService.register(
       event.getBody<UserRegister>({} as any)
@@ -113,7 +110,7 @@ export class SecurityEventHandler {
    * @returns void
   */
   @Post(['/set-password', '/change-password'], { name: 'change-password', middleware: ['auth'] })
-  @NoContentHttpResponse({ 'content-type': 'application/json' })
+  @NoContentHttpResponse()
   async changePassword (event: IncomingHttpEvent): Promise<void> {
     const user = event.getUser<User>()
     const data = event.getBody<UserChangePassword>()

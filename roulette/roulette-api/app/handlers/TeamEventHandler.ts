@@ -51,7 +51,7 @@ export class TeamEventHandler {
    * Show team statistics
   */
   @Get('/stats', { name: 'stats' })
-  async stats (): Promise<Partial<Team>[]> {
+  async stats (): Promise<Array<Partial<Team>>> {
     const limit = this.blueprint.get<number>('app.team.defaultTotalMember', 10)
     return (await this.teamService.list(limit)).map(v => this.teamService.toStatTeam(v))
   }
@@ -98,6 +98,7 @@ export class TeamEventHandler {
    * Create a team
   */
   @Post('/', { middleware: ['admin'] })
+  @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
     const data = await this.validateTeamData(event.getBody<Team>(), true)
     const uuid = await this.teamService.create(data)
@@ -113,16 +114,14 @@ export class TeamEventHandler {
    * With explicit rules definition.
   */
   @Patch('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService }, middleware: ['admin'] })
-  @JsonHttpResponse(204)
+  @JsonHttpResponse(201)
   async update (event: IncomingHttpEvent): Promise<Team> {
     const data = await this.validateTeamData(event.getBody<Team>())
+    const team = event.get<Team>('team', {} as unknown as Team)
 
-    const updated = await this.teamService.update(
-      event.get<string>('uuid', ''),
-      data
-    )
+    const updated = await this.teamService.update(team, data)
 
-    this.logger.info(`Team updated: ${String(updated.uuid)}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`Team updated: ${team.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return updated
   }
@@ -134,8 +133,12 @@ export class TeamEventHandler {
   */
   @Delete('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService }, middleware: ['admin'] })
   async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
-    await this.teamService.delete(event.get<string>('uuid', ''))
-    this.logger.info(`Team deleted: ${String(event.get<number>('id'))}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    const team = event.get<Team>('team', {} as unknown as Team)
+
+    await this.teamService.delete(team)
+
+    this.logger.info(`Team deleted: ${team.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
+
     return { statusCode: 204 }
   }
 

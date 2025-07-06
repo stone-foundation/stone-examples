@@ -1,15 +1,14 @@
 import {
   PutCommand,
-  GetCommand,
   ScanCommand,
   QueryCommand,
   DeleteCommand,
   UpdateCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { IBlueprint } from '@stone-js/core'
 import { UserModel } from '../../models/User'
 import { IUserRepository } from '../contracts/IUserRepository'
+import { IBlueprint, isEmpty, isNotEmpty } from '@stone-js/core'
 
 /**
  * User Repository Options
@@ -42,7 +41,7 @@ export class DynamoUserRepository implements IUserRepository {
    */
   async list (limit: number): Promise<UserModel[]> {
     const result = await this.database.send(
-      new ScanCommand({ TableName: this.tableName, Limit: limit })
+      new ScanCommand({ TableName: this.tableName, Limit: Number(limit) })
     )
     return (result.Items as UserModel[]) ?? []
   }
@@ -55,10 +54,10 @@ export class DynamoUserRepository implements IUserRepository {
    * @returns The list of users
    */
   async listBy (conditions: Partial<UserModel>, limit: number): Promise<UserModel[]> {
-    if (conditions.teamUuid !== undefined) {
+    if (isNotEmpty(conditions.teamUuid)) {
       const result = await this.database.send(
         new QueryCommand({
-          Limit: limit,
+          Limit: Number(limit),
           TableName: this.tableName,
           IndexName: 'teamUuid-index',
           KeyConditionExpression: '#teamUuid = :teamUuid',
@@ -74,26 +73,13 @@ export class DynamoUserRepository implements IUserRepository {
   }
 
   /**
-   * Find a user by uuid
-   *
-   * @param uuid - The uuid of the user to find
-   * @returns The user or undefined if not found
-   */
-  async findByUuid (uuid: string): Promise<UserModel | undefined> {
-    const result = await this.database.send(
-      new GetCommand({ TableName: this.tableName, Key: { uuid } })
-    )
-    return result.Item as UserModel | undefined
-  }
-
-  /**
    * Find a user by dynamic conditions
    *
    * @param conditions - Conditions to match the user
    * @returns The user or undefined if not found
    */
   async findBy (conditions: Partial<UserModel>): Promise<UserModel | undefined> {
-    if (conditions.phone !== undefined) {
+    if (isNotEmpty(conditions.phone)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -107,7 +93,7 @@ export class DynamoUserRepository implements IUserRepository {
       return result.Items?.[0] as UserModel | undefined
     }
 
-    if (conditions.username !== undefined) {
+    if (isNotEmpty(conditions.username)) {
       const result = await this.database.send(
         new QueryCommand({
           Limit: 1,
@@ -121,11 +107,30 @@ export class DynamoUserRepository implements IUserRepository {
       return result.Items?.[0] as UserModel | undefined
     }
 
-    if (conditions.uuid !== undefined) {
-      return await this.findByUuid(conditions.uuid)
+    if (isNotEmpty(conditions.uuid)) {
+      const result = await this.database.send(
+        new QueryCommand({
+          Limit: 1,
+          TableName: this.tableName,
+          KeyConditionExpression: '#uuid = :uuid',
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ExpressionAttributeValues: { ':uuid': conditions.uuid }
+        })
+      )
+      return result.Items?.[0] as UserModel | undefined
     }
 
     return undefined
+  }
+
+  /**
+   * Find a user by uuid
+   *
+   * @param uuid - The uuid of the user to find
+   * @returns The user or undefined if not found
+   */
+  async findByUuid (uuid: string): Promise<UserModel | undefined> {
+    return await this.findBy({ uuid })
   }
 
   /**
@@ -139,7 +144,8 @@ export class DynamoUserRepository implements IUserRepository {
       new PutCommand({
         Item: user,
         TableName: this.tableName,
-        ConditionExpression: 'attribute_not_exists(uuid)'
+        ExpressionAttributeNames: { '#uuid': 'uuid' },
+        ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
     return user.uuid
@@ -148,16 +154,17 @@ export class DynamoUserRepository implements IUserRepository {
   /**
    * Update a user
    *
-   * @param uuid - The uuid of the user to update
-   * @param user - The user data to update
+   * @param data - The user to update
+   * @param data - The data to update in the user
    * @returns The updated user or undefined if not found
    */
-  async update (uuid: string, user: Partial<UserModel>): Promise<UserModel | undefined> {
+  async update ({ uuid, username }: UserModel, data: Partial<UserModel>): Promise<UserModel | undefined> {
     const updateExprParts: string[] = []
-    const exprAttrNames: Record<string, string> = {}
     const exprAttrValues: Record<string, any> = {}
+    const exprAttrNames: Record<string, string> = {}
 
-    for (const [key, value] of Object.entries(user)) {
+    for (const [key, value] of Object.entries(data)) {
+      if (['uuid', 'username'].includes(key) || isEmpty(value)) continue // skip immutable fields
       updateExprParts.push(`#${key} = :${key}`)
       exprAttrNames[`#${key}`] = key
       exprAttrValues[`:${key}`] = value
@@ -167,7 +174,7 @@ export class DynamoUserRepository implements IUserRepository {
 
     const result = await this.database.send(
       new UpdateCommand({
-        Key: { uuid },
+        Key: { uuid, username },
         ReturnValues: 'ALL_NEW',
         TableName: this.tableName,
         ExpressionAttributeNames: exprAttrNames,
@@ -182,16 +189,17 @@ export class DynamoUserRepository implements IUserRepository {
   /**
    * Delete a user
    *
-   * @param uuid - The uuid of the user to delete
+   * @param user - The user to delete
    * @returns `true` if the user was deleted, `false` if not
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid, username }: UserModel): Promise<boolean> {
     try {
       await this.database.send(
         new DeleteCommand({
-          Key: { uuid },
+          Key: { uuid, username },
           TableName: this.tableName,
-          ConditionExpression: 'attribute_exists(uuid)'
+          ExpressionAttributeNames: { '#uuid': 'uuid' },
+          ConditionExpression: 'attribute_exists(#uuid)'
         })
       )
       return true

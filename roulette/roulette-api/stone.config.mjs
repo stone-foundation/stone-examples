@@ -12,7 +12,6 @@ export default defineConfig({
       external: [
         '@libsql/client',
         'drizzle-orm/libsql',
-        '@aws-sdk/client-sns',
         '@aws-sdk/lib-dynamodb',
         '@aws-sdk/client-dynamodb',
       ],

@@ -96,22 +96,22 @@ export class SessionRepository implements ISessionRepository {
   /**
    * Update a session
    *
-   * @param uuid - The session uuid
-   * @param session - The partial session data
+   * @param session - The session to update
+   * @param data - The data to update in the session
    * @returns The updated session or undefined
    */
-  async update (uuid: string, session: Partial<SessionModel>): Promise<SessionModel | undefined> {
-    const result = await this.database.update(sessions).set(session).where(eq(sessions.uuid, uuid)).returning().get()
+  async update ({ uuid }: SessionModel, data: Partial<SessionModel>): Promise<SessionModel | undefined> {
+    const result = await this.database.update(sessions).set(data).where(eq(sessions.uuid, uuid)).returning().get()
     return result ?? undefined
   }
 
   /**
    * Delete a session
    *
-   * @param uuid - The session uuid
+   * @param session - The session to delete
    * @returns `true` if deleted, `false` otherwise
    */
-  async delete (uuid: string): Promise<boolean> {
+  async delete ({ uuid }: SessionModel): Promise<boolean> {
     const result = await this.database.delete(sessions).where(eq(sessions.uuid, uuid)).run()
     return result.rowsAffected > 0
   }

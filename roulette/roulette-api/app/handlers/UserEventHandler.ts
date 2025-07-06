@@ -1,6 +1,7 @@
 import { convertCSVtoJSON } from '../utils'
 import { User, UserModel } from '../models/User'
 import { UserService } from '../services/UserService'
+import { TeamService } from '../services/TeamService'
 import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
 import { Delete, EventHandler, Get, Patch, Post } from '@stone-js/router'
 import { BadRequestError, IncomingHttpEvent, JsonHttpResponse } from '@stone-js/http-core'
@@ -10,6 +11,7 @@ import { BadRequestError, IncomingHttpEvent, JsonHttpResponse } from '@stone-js/
 */
 export interface UserEventHandlerOptions {
   logger: ILogger
+  teamService: TeamService
   userService: UserService
 }
 
@@ -19,6 +21,7 @@ export interface UserEventHandlerOptions {
 @EventHandler('/users', { name: 'users', middleware: ['auth'] })
 export class UserEventHandler {
   private readonly logger: ILogger
+  private readonly teamService: TeamService
   private readonly userService: UserService
 
   /**
@@ -27,9 +30,21 @@ export class UserEventHandler {
    * @param userService
    * @param logger
    */
-  constructor ({ logger, userService }: UserEventHandlerOptions) {
+  constructor ({ logger, teamService, userService }: UserEventHandlerOptions) {
     this.logger = logger
+    this.teamService = teamService
     this.userService = userService
+  }
+
+  /**
+   * List all users
+   *
+   * With explicit json response type.
+  */
+  @Get('/private-list', { name: 'list', middleware: ['admin'] })
+  @JsonHttpResponse(200)
+  async list (event: IncomingHttpEvent): Promise<UserModel[]> {
+    return await this.userService.sensitiveList(event.get<number>('limit', 10))
   }
 
   /**
@@ -39,8 +54,15 @@ export class UserEventHandler {
   */
   @Get('/', { name: 'list', middleware: ['admin'] })
   @JsonHttpResponse(200)
-  async list (event: IncomingHttpEvent): Promise<UserModel[]> {
-    return await this.userService.sensitiveList(event.get<number>('limit', 10))
+  async publicList (event: IncomingHttpEvent): Promise<User[]> {
+    const teams = await this.teamService.list(event.get<number>('limit', 10))
+    const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
+
+    return users.map(v => {
+      const user = this.userService.toUser(v)
+      user.team = teams.find(team => team.uuid === user.teamUuid)
+      return user
+    })
   }
 
   /**
@@ -70,6 +92,7 @@ export class UserEventHandler {
    * Create a user
   */
   @Post('/', { middleware: ['admin'] })
+  @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
     const data = await this.validateUserData(event.getBody<User>(), true)
 
@@ -84,6 +107,7 @@ export class UserEventHandler {
    * Create a user
   */
   @Post('/from-csv', { middleware: ['admin'] })
+  @JsonHttpResponse(201)
   async createManyFromCSV (event: IncomingHttpEvent): Promise<{ uuids?: Array<string | undefined> }> {
     const tmpFile = event.getFile('file')?.[0]
 
@@ -114,16 +138,14 @@ export class UserEventHandler {
    * With explicit rules definition.
   */
   @Patch('/:user@uuid', { rules: { uuid: /\S{30,40}/ }, bindings: { user: UserService }, middleware: ['admin'] })
-  @JsonHttpResponse(204)
+  @JsonHttpResponse(201)
   async update (event: IncomingHttpEvent): Promise<User> {
     const data = await this.validateUserData(event.getBody<User>())
+    const user = event.get<User>('user', {} as unknown as User)
 
-    const updated = await this.userService.update(
-      event.get<string>('uuid', ''),
-      data
-    )
+    const updated = await this.userService.update(user, data)
 
-    this.logger.info(`User updated: ${String(updated.uuid)}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`User updated: ${user.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return updated
   }
@@ -139,9 +161,11 @@ export class UserEventHandler {
       throw new BadRequestError('You cannot delete yourself')
     }
 
-    await this.userService.delete(event.get<string>('uuid', ''))
+    const user = event.get<User>('user', {} as unknown as User)
 
-    this.logger.info(`User deleted: ${String(event.get<number>('id'))}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    await this.userService.delete(user)
+
+    this.logger.info(`User deleted: ${user.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return { statusCode: 204 }
   }

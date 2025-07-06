@@ -1,18 +1,52 @@
 import { JSX } from 'react'
 import { RouteNotFoundError } from '@stone-js/router'
+import { TokenService } from '../../services/TokenService'
 import { defaultMessages, defaultTitles } from '../../constants'
+import { UnauthorizedError } from '../../errors/UnauthorizedError'
 import { ErrorPage, IErrorPage, ReactIncomingEvent, ErrorPageRenderContext, StoneLink, HeadContext, ErrorPageHeadContext } from '@stone-js/use-react'
+
+/**
+ * Options for the DefaultErrorPage.
+ */
+export interface IDefaultErrorPageOptions {
+  tokenService: TokenService
+}
 
 /**
  * Default Error Handler component.
  */
 @ErrorPage({
   layout: 'error',
-  error: ['default', 'RouteNotFoundError']
+  error: ['default', 'RouteNotFoundError', 'UnauthorizedError']
 })
 export class DefaultErrorPage implements IErrorPage<ReactIncomingEvent> {
+  private readonly tokenService: TokenService
+
+  /**
+   * Create a new DefaultErrorPage component.
+   *
+   * @param options - The options for the DefaultErrorPage.
+   */
+  constructor ({ tokenService }: IDefaultErrorPageOptions) {
+    this.tokenService = tokenService
+  }
+
+  /**
+   * Handle the incoming error and return a standardized error response.
+   *
+   * @param error - The error to handle.
+   * @returns An object containing the status code and content for the error page.
+   */
   handle (error: any): { statusCode: number, content: { title: string, message: string } } {
-    const statusCode = error instanceof RouteNotFoundError ? 404 : error.statusCode ?? 500
+    let statusCode = error.statusCode ?? 500
+
+    if (error instanceof RouteNotFoundError) {
+      statusCode = 404
+    } else if (error instanceof UnauthorizedError) {
+      statusCode = 401
+      this.tokenService.removeToken()
+    }
+
     return {
       statusCode,
       content: { title: defaultTitles[statusCode], message: defaultMessages[statusCode] }
@@ -27,7 +61,7 @@ export class DefaultErrorPage implements IErrorPage<ReactIncomingEvent> {
   head ({ data, statusCode }: ErrorPageHeadContext): HeadContext {
     return {
       description: data.message,
-      title: `Opération Adrénaline - Erreur ${statusCode}`
+      title: `Opération Adrénaline - Erreur ${String(statusCode)}`
     }
   }
 

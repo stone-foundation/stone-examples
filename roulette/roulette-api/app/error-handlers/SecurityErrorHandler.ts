@@ -24,7 +24,16 @@ export interface SecurityErrorHandlerOptions {
 /**
  * User Error Handler
  */
-@ErrorHandler({ error: ['BadCredentialsError', 'UnauthorizedError', 'RouteNotFoundError', 'NotFoundError', 'BadRequestError', 'ForbiddenError'] })
+@ErrorHandler({
+  error: [
+    'NotFoundError',
+    'ForbiddenError',
+    'BadRequestError',
+    'UnauthorizedError',
+    'RouteNotFoundError',
+    'BadCredentialsError'
+  ]
+})
 export class SecurityErrorHandler implements IErrorHandler<IncomingHttpEvent> {
   private readonly logger: ILogger
 
@@ -41,10 +50,16 @@ export class SecurityErrorHandler implements IErrorHandler<IncomingHttpEvent> {
    * Handle CredentialsError and UnauthorizedError
    *
    * @param error - The error to handle
-   * @param _event - The incoming event
    * @returns The response
    */
-  handle (error: BadCredentialsError | UnauthorizedError | RouteNotFoundError | NotFoundError | BadRequestError, _event: IncomingHttpEvent): Promiseable<unknown> {
+  handle (
+    error:
+    | NotFoundError
+    | BadRequestError
+    | UnauthorizedError
+    | RouteNotFoundError
+    | BadCredentialsError
+  ): Promiseable<unknown> {
     this.logger.error(error.message)
     let message: string = 'An error occurred'
     let statusCode: number = HTTP_INTERNAL_SERVER_ERROR

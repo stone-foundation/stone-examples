@@ -1,5 +1,4 @@
 import { JSX } from 'react'
-import { IBlueprint } from '@stone-js/core'
 import { LoginForm } from '../../components/LoginForm/LoginForm'
 import { SecurityService } from '../../services/SecurityService'
 import { Page, ReactIncomingEvent, IPage, IRouter, HeadContext } from '@stone-js/use-react'
@@ -9,7 +8,6 @@ import { Page, ReactIncomingEvent, IPage, IRouter, HeadContext } from '@stone-js
  */
 interface LoginPageOptions {
   router: IRouter
-  blueprint: IBlueprint
   securityService: SecurityService
 }
 
@@ -19,15 +17,13 @@ interface LoginPageOptions {
 @Page('/login', { layout: 'security' })
 export class LoginPage implements IPage<ReactIncomingEvent> {
   private readonly router: IRouter
-  private readonly blueprint: IBlueprint
   private readonly securityService: SecurityService
 
   /**
    * Create a new Login Page component.
    */
-  constructor ({ router, blueprint, securityService }: LoginPageOptions) {
+  constructor ({ router, securityService }: LoginPageOptions) {
     this.router = router
-    this.blueprint = blueprint
     this.securityService = securityService
   }
 
@@ -37,16 +33,9 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
    * @returns The head object containing title and description.
    */
   head (): HeadContext {
-    const url = this.blueprint.get('app.website.url', 'https://operation-adrenaline.com')
-
     return {
       title: 'Opération Adrénaline - Connexion',
-      description: 'Connectez-vous pour participer à l’Opération Adrénaline. Entrez votre numéro de téléphone pour commencer.',
-      metas: [
-        { name: 'og:url', content: url },
-        { name: 'og:type', content: 'website' },
-        { name: 'og:image', content: '/logo.png' },
-      ]
+      description: 'Connectez-vous pour participer à l’Opération Adrénaline. Entrez votre numéro de téléphone pour commencer.'
     }
   }
 
@@ -59,7 +48,7 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
     return (
       <LoginForm
         securityService={this.securityService}
-        onLogin={() => this.router.navigate('/')}
+        onLogin={() => this.router.navigate('/spin')}
         onActivate={() => this.router.navigate('/password')}
       />
     )

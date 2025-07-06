@@ -21,7 +21,7 @@ export class AppConfiguration implements IConfiguration {
   private appConfig (): Record<string, any> {
     return {
       website: {
-        url: getString('APP_WEBSITE_URL', 'https://operation-adrenaline.com'),
+        url: getString('APP_WEBSITE_URL', '')
       },
       roulette: {
         spinningTime: getString('APP_ROULETTE_SPINNING_TIME', '10000')
