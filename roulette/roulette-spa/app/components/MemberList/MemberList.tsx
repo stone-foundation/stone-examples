@@ -21,9 +21,12 @@ export const MemberList = ({ members }: MemberListProps): JSX.Element => {
 
   return (
     <div>
-      <h2 className='text-2xl font-bold text-center text-white mb-6 uppercase'>
+      <h2 className='text-2xl font-bold text-center text-white mb-4 uppercase'>
         Liste des soldats
       </h2>
+      <p className='text-center text-white/70 mb-6'>
+        Filtrez les soldats selon leur unité
+      </p>
 
       <FilterTabs value={filter} onChange={setFilter} />
 
@@ -36,7 +39,7 @@ export const MemberList = ({ members }: MemberListProps): JSX.Element => {
             )
           : (
             <AlertBox className='col-span-full text-center text-white/70 text-sm italic mt-4'>
-              Aucun membre trouvé pour ce filtre.
+              Aucun soldat trouvé avec ce filtre.
             </AlertBox>
             )}
       </div>

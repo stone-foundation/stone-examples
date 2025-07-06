@@ -58,8 +58,10 @@ export class UserEventHandler {
     const teams = await this.teamService.list(event.get<number>('limit', 10))
     const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
 
-    return users.map(v => {
+    return users.filter(v => !v.roles?.includes('admin')).map(v => {
       const user = this.userService.toUser(v)
+      user.phone = 'Inconnu'
+      user.fullname = user.fullname.split(' ')[0]
       user.team = teams.find(team => team.uuid === user.teamUuid)
       return user
     })

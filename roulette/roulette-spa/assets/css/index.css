@@ -11,3 +11,9 @@ button:hover, a:hover {
 .text-5xl {
   line-height: 64px;
 }
+
+.stone-link.selected {
+  color: #fff;
+  border-color: #fff;
+  background-color: #0b2e36;
+}

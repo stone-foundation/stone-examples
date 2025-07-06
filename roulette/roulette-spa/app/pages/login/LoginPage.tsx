@@ -14,7 +14,7 @@ interface LoginPageOptions {
 /**
  * Login Page component.
  */
-@Page('/login', { layout: 'security' })
+@Page('/login', { layout: 'security', middleware: ['not-auth'] })
 export class LoginPage implements IPage<ReactIncomingEvent> {
   private readonly router: IRouter
   private readonly securityService: SecurityService

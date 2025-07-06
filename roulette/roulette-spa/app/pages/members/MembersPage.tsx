@@ -14,7 +14,7 @@ interface MembersPageOptions {
 /**
  * Members Page component.
  */
-@Page('/members', { layout: 'private-default', middleware: ['auth'] })
+@Page('/soldiers', { layout: 'private-default', middleware: ['auth'] })
 export class MembersPage implements IPage<ReactIncomingEvent> {
   private readonly userService: UserService
 

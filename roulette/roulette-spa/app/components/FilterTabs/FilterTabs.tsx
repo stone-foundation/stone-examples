@@ -7,8 +7,8 @@ export interface FilterTabsProps {
 
 const FILTERS = [
   { label: 'Tous', value: 'all' },
-  { label: 'Sans groupe', value: 'no-team' },
-  { label: 'Avec groupe', value: 'with-team' },
+  { label: 'Sans unité', value: 'no-team' },
+  { label: 'Avec unité', value: 'with-team' },
   { label: 'Rubis', value: 'red' },
   { label: 'Topaze', value: 'blue' },
   { label: 'Ambre', value: 'orange' },

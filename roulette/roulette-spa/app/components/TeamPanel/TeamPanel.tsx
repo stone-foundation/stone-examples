@@ -49,7 +49,7 @@ export const TeamPanel = ({ team }: TeamPanelProps): JSX.Element => {
             )
           : (
             <p className='text-white/70 text-sm italic mb-4'>
-              Aucun membre pour l’instant.
+              Aucun soldat pour l’instant.
             </p>
             )}
       </div>

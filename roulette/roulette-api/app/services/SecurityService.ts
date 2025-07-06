@@ -170,7 +170,7 @@ export class SecurityService {
     if (payload.session.ip !== ip) {
       throw new UnauthorizedError('Invalid IP address')
     } else if (payload.session.userAgent !== userAgent) {
-      throw new UnauthorizedError('Invalid user agent')
+      throw new UnauthorizedError('Invalid user agent') // TODO: Check if this is needed
     } else if (isEmpty(user)) {
       throw new UnauthorizedError('User not found')
     }

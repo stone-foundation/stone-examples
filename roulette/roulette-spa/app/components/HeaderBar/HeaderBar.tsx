@@ -3,7 +3,7 @@ import { User } from '../../models/User'
 import { IContainer } from '@stone-js/core'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
 import { SecurityService } from '../../services/SecurityService'
-import { IRouter, ReactIncomingEvent } from '@stone-js/use-react'
+import { IRouter, ReactIncomingEvent, StoneLink } from '@stone-js/use-react'
 
 /**
  * Props for the HeaderBar component.
@@ -27,12 +27,26 @@ export const HeaderBar: FC<HeaderBarProps> = ({ container }) => {
       <header className='w-full bg-[#0b2e36] text-white border-neutral-800 pt-4 pb-6'>
         <div className='flex justify-between items-center mb-12'>
           <span className='font-medium capitalize text-lg'>{user.username ?? 'Inconnu'}</span>
-          <button
-            onClick={() => setShowModal(true)}
-            className='text-sm text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
-          >
-            Se déconnecter
-          </button>
+          <nav className='flex items-right gap-4'>
+            <StoneLink
+              to='/soldiers'
+              className='text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
+            >
+              Liste des soldats
+            </StoneLink>
+            <StoneLink
+              to='/spin'
+              className='text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
+            >
+              Roulette
+            </StoneLink>
+            <button
+              onClick={() => setShowModal(true)}
+              className='text-sm text-white rounded-md px-6 py-2 transition duration-200 bg-orange-600 hover:bg-orange-600/80'
+            >
+              Se déconnecter
+            </button>
+          </nav>
         </div>
         <h1 className='text-center text-5xl uppercase font-bold tracking-wide mb-4'>
           OPÉRATION<br /> ADRÉNALINE

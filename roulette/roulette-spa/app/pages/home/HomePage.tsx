@@ -5,7 +5,7 @@ import { Page, ReactIncomingEvent, IPage, HeadContext } from '@stone-js/use-reac
 /**
  * Home Page component.
  */
-@Page('/')
+@Page('/', { middleware: ['not-auth'] })
 export class HomePage implements IPage<ReactIncomingEvent> {
   /**
    * Define the head of the page.

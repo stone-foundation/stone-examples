@@ -10,6 +10,6 @@ export const TeamBadge = ({ color }: TeamBadgeProps): JSX.Element => (
     className='text-xs font-semibold px-2 py-1 rounded-md text-white shadow'
     style={{ backgroundColor: COLOR_MAP[color] ?? '#555' }}
   >
-    {COLOR_TITLES[color] ?? 'Aucun groupe'}
+    {COLOR_TITLES[color] ?? 'Aucune unité'}
   </span>
 )
