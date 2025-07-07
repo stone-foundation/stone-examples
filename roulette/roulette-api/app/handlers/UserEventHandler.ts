@@ -54,16 +54,16 @@ export class UserEventHandler {
   */
   @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
-  async publicList (event: IncomingHttpEvent): Promise<User[]> {
+  async publicList (event: IncomingHttpEvent): Promise<Partial<User>[]> {
     const currentUser = event.getUser<UserModel>()
     const teams = await this.teamService.list(event.get<number>('limit', 10))
     const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
 
     return users.filter(v => !v.roles?.includes('admin')).map(v => {
-      const user = this.userService.toUser(v)
-      user.phone = 'Inconnu'
+      const user: Partial<User> = this.userService.toUser(v)
       user.team = teams.find(team => team.uuid === user.teamUuid)
-      user.fullname = currentUser.roles?.includes('admin') ? user.fullname : 'Inconnu'
+      user.phone = currentUser.roles?.includes('admin') ? user.phone : undefined
+      user.fullname = currentUser.roles?.includes('admin') ? user.fullname : undefined
       return user
     })
   }

@@ -30,6 +30,10 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
 
     setLoadingStats(true)
 
+    setInterval(() => {
+      autoUpdateTeams().catch(_e => {})
+    }, 15000)
+
     teamService
       .stats()
       .then(v => {
@@ -67,6 +71,17 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
     const stats = await teamService.stats()
 
     return { result, stats, team }
+  }
+
+  const autoUpdateTeams = async (): Promise<void> => {
+    try {
+      const stats = await teamService.stats()
+      setStats(stats)
+    } catch (_e: any) {}
+    try {
+      const team = await teamService.currentTeam()
+      setTeam(team)
+    } catch (_e: any) {}
   }
 
   const onSpin = async (): Promise<SpinResult> => {
