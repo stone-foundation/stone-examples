@@ -17,3 +17,7 @@ button:hover, a:hover {
   border-color: #fff;
   background-color: #0b2e36;
 }
+
+.sidebar-menu-link.selected {
+  background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
+}

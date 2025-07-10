@@ -14,6 +14,14 @@ export const COLOR_TITLES: Record<Color, string> = {
   blue_dark: 'Saphir'
 }
 
+export const POST_COLORS: Array<{ name: Color, value: string }> = [
+  { name: 'red', value: COLOR_MAP.red },  
+  { name: 'blue', value: COLOR_MAP.blue },
+  { name: 'green', value: COLOR_MAP.green },
+  { name: 'orange', value: COLOR_MAP.orange },
+  { name: 'blue_dark', value: COLOR_MAP.blue_dark }
+]
+
 export type Color = 'red' | 'blue' | 'green' | 'orange' | 'blue_dark'
 
 export const defaultTitles: Record<number, string> = {

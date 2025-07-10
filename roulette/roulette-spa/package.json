@@ -30,8 +30,12 @@
     "@stone-js/use-react": "^0.2.0",
     "axios": "^1.10.0",
     "canvas-confetti": "^1.9.3",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
+    "lucide-react": "^0.525.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-infinite-scroll-component": "^6.1.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.25.9",

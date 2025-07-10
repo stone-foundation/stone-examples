@@ -1,11 +1,14 @@
 import { JSX } from 'react'
-import { LandingPage } from '../../components/LandingPage/LandingPage'
-import { Page, ReactIncomingEvent, IPage, HeadContext } from '@stone-js/use-react'
+import { User } from '../../models/User'
+import { TimelineFeed } from '../../components/TimelineFeed/TimelineFeed'
+import { TimelineComposer } from '../../components/TimelineComposer/TimelineComposer'
+import { RightSidebarPanel } from '../../components/RightSidebarPanel/RightSidebarPanel'
+import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
 
 /**
  * Home Page component.
  */
-@Page('/', { middleware: ['not-auth'] })
+@Page('/', { layout: 'app' })
 export class HomePage implements IPage<ReactIncomingEvent> {
   /**
    * Define the head of the page.
@@ -14,8 +17,8 @@ export class HomePage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Découvre ton unité',
-      description: 'Tourne la roulette du destin et découvre ton unité. ESKE W PARE?'
+      title: 'Opération Adrénaline - Timeline',
+      description: 'Vivez l\'Opération Adrénaline avec la timeline interactive !',
     }
   }
 
@@ -24,7 +27,19 @@ export class HomePage implements IPage<ReactIncomingEvent> {
    *
    * @returns The rendered component.
    */
-  render (): JSX.Element {
-    return <LandingPage />
+  render ({ event }: PageRenderContext): JSX.Element {
+    const user = event.getUser<User>() ?? { username: 'Jonh', fullname: 'Doe' } as unknown as User
+
+    return (
+      <>
+        <main className="flex-1 min-w-0">
+          <TimelineComposer userName="Lolo" onPost={(v) => { console.log(v)}} />
+          <TimelineFeed currentUser={user} fetchPosts={(): any => {}} />
+        </main>
+        <aside className="w-full lg:w-64 shrink-0 hidden xl:block sticky top-[80px] self-start h-[calc(100vh-80px)] overflow-y-auto">
+          <RightSidebarPanel />
+        </aside>
+      </>
+    )
   }
 }

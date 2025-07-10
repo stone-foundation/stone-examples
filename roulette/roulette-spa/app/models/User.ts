@@ -16,6 +16,12 @@ export interface User {
   createdAt: number
   teamUuid?: string | null
   updatedAt: number
+  isModerator?: boolean
+  isAdmin?: boolean
+  isPunched?: boolean
+  isCaptain?: boolean
+  avatarUrl?: string
+  avatarColor?: string | null
 }
 
 /**

@@ -30,9 +30,9 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
 
     setLoadingStats(true)
 
-    setInterval(() => {
-      autoUpdateTeams().catch(_e => {})
-    }, 15000)
+    // setInterval(() => {
+    //   autoUpdateTeams().catch(_e => {})
+    // }, 15000)
 
     teamService
       .stats()

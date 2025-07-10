@@ -32,7 +32,7 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
    * @returns A promise that resolves to an array of User objects.
    */
   async handle (event: ReactIncomingEvent): Promise<User[]> {
-    return await this.userService.list(event.get('query.limit', 50))
+    return await this.userService.list(event.get('query.limit', 55))
   }
 
   /**
