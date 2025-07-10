@@ -4,6 +4,7 @@ import { Color } from '../constants'
  * Team Interface
 */
 export interface Team {
+  uuid: string
   name: string
   color: Color
   rank?: number
@@ -30,6 +31,7 @@ export interface TeamStat extends Omit<Team, 'members' | 'chatLink'> {}
  * TeamMember Interface
 */
 export interface TeamMember {
+  uuid: string
   fullname: string
   username: string
 }

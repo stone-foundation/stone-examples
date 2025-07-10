@@ -61,3 +61,49 @@ export const bets = sqliteTable('bets', {
     .references(() => teams.uuid, { onDelete: 'cascade' }),
   createdAt: integer('created_at').notNull()
 })
+
+export const badges = sqliteTable('badges', {
+  id: integer('id').primaryKey(),
+  uuid: text('uuid').unique().notNull(),
+  authorUuid: text('author_uuid').notNull(), // lien vers users
+  name: text('name').notNull(),
+  color: text('color').notNull(),
+  score: integer('score').notNull(),
+  category: text('category').notNull(),
+  categoryLabel: text('category_label').notNull(),
+  description: text('description').notNull(),
+  iconUrl: text('icon_url'),
+  maxAssignments: integer('max_assignments').notNull(),
+  visibility: text('visibility').notNull(), // 'public' | 'private'
+  expirationDays: integer('expiration_days'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
+})
+
+export const badgeAssignments = sqliteTable('badge_assignments', {
+  id: integer('id').primaryKey(),
+  uuid: text('uuid').unique().notNull(),
+  badgeUuid: text('badge_uuid').notNull(),
+  teamUuid: text('team_uuid'),
+  memberUuid: text('member_uuid'),
+  comment: text('comment'),
+  issuedByUuid: text('issued_by_uuid').notNull(),
+  issuedAt: integer('issued_at').notNull(),
+  origin: text('origin').notNull(), // 'manual' | 'system' | 'event'
+  revoked: integer('revoked', { mode: 'boolean' }),
+  revokedAt: integer('revoked_at'),
+  revokedByUuid: text('revoked_by_uuid')
+})
+
+
+export const metadata = sqliteTable('metadata', {
+  id: integer('id').primaryKey(),
+  table: text('table').unique().notNull(),         // ex: 'badges'
+  total: integer('total').notNull().default(0),
+  deleted: integer('deleted').notNull().default(0),
+  lastCreatedAt: integer('last_created_at'),
+  lastUpdatedAt: integer('last_updated_at'),
+  syncedAt: integer('synced_at'),
+  lastUuid: text('last_uuid'),
+  schemaVersion: text('schema_version').default('1.0')
+})

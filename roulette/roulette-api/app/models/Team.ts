@@ -20,3 +20,12 @@ export interface TeamModel {
 export interface Team extends TeamModel {
   members: Array<Partial<User>>
 }
+
+/**
+ * Team Member Interface
+*/
+export interface TeamMember {
+  phone: string
+  fullname: string
+  username: string
+}

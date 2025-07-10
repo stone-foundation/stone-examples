@@ -12,8 +12,10 @@ import { DatabaseClient } from '../database/DatabaseClient'
 import { BetRepository } from '../repositories/drizzle/BetRepository'
 import { TeamRepository } from '../repositories/drizzle/TeamRepository'
 import { UserRepository } from '../repositories/drizzle/UserRepository'
+import { BadgeRepository } from '../repositories/drizzle/BadgeRepository'
 import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { SessionRepository } from '../repositories/drizzle/SessionRepository'
+import { MetadataRepository } from '../repositories/drizzle/MetadataRepository'
 
 /**
  * Drizzle Service Provider
@@ -84,7 +86,9 @@ export class DrizzleServiceProvider implements IServiceProvider {
       .autoBinding(BetRepository, BetRepository, true, ['betRepository'])
       .autoBinding(UserRepository, UserRepository, true, ['userRepository'])
       .autoBinding(TeamRepository, TeamRepository, true, ['teamRepository'])
+      .autoBinding(BadgeRepository, BadgeRepository, true, ['badgeRepository'])
       .autoBinding(SessionRepository, SessionRepository, true, ['sessionRepository'])
+      .autoBinding(MetadataRepository, MetadataRepository, true, ['metadataRepository'])
   }
 
   /**

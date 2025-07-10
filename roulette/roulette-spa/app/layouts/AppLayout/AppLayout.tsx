@@ -1,5 +1,6 @@
 import { JSX, useState } from 'react'
 import { Team } from '../../models/Team'
+import { Footer } from '../../components/Footer/Footer'
 import { AppHeader } from '../../components/AppHeader/AppHeader'
 import { SidebarMenu } from '../../components/SidebarMenu/SidebarMenu'
 import { SidebarDrawer } from '../../components/SidebarDrawer/SidebarDrawer'
@@ -42,6 +43,7 @@ export class AppLayout implements IPageLayout {
             {children}
           </StoneOutlet>
         </div>
+        <Footer />
       </div>
     )
   }

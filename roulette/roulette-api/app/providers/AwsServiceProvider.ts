@@ -10,7 +10,9 @@ import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { DynamoBetRepository } from '../repositories/dynamobd/DynamoBetRepository'
 import { DynamoUserRepository } from '../repositories/dynamobd/DynamoUserRepository'
 import { DynamoTeamRepository } from '../repositories/dynamobd/DynamoTeamRepository'
+import { DynamoBadgeRepository } from '../repositories/dynamobd/DynamoBadgeRepository'
 import { DynamoSessionRepository } from '../repositories/dynamobd/DynamoSessionRepository'
+import { DynamoMetadataRepository } from '../repositories/dynamobd/DynamoMetadataRepository'
 
 /**
  * AWS Service Provider
@@ -69,6 +71,8 @@ export class AwsServiceProvider implements IServiceProvider {
       .autoBinding(DynamoBetRepository, DynamoBetRepository, true, ['betRepository'])
       .autoBinding(DynamoUserRepository, DynamoUserRepository, true, ['userRepository'])
       .autoBinding(DynamoTeamRepository, DynamoTeamRepository, true, ['teamRepository'])
+      .autoBinding(DynamoBadgeRepository, DynamoBadgeRepository, true, ['badgeRepository'])
       .autoBinding(DynamoSessionRepository, DynamoSessionRepository, true, ['sessionRepository'])
+      .autoBinding(DynamoMetadataRepository, DynamoMetadataRepository, true, ['metadataRepository'])
   }
 }
