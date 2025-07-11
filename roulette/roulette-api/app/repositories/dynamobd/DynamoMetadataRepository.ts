@@ -1,5 +1,5 @@
 import {
-  GetCommand,
+  QueryCommand,
   UpdateCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
@@ -22,11 +22,14 @@ export class DynamoMetadataRepository implements IMetadataRepository {
   }
 
   async get (table: string): Promise<MetadataModel | undefined> {
-    const result = await this.db.send(new GetCommand({
+    const result = await this.db.send(new QueryCommand({
       TableName: this.tableName,
-      Key: { table }
+      KeyConditionExpression: '#table = :table',
+      ExpressionAttributeNames: { '#table': 'table' },
+      ExpressionAttributeValues: { ':table': table },
+      Limit: 1
     }))
-    return result.Item as MetadataModel
+    return result.Items?.[0] as MetadataModel | undefined
   }
 
   async increment (table: string, data: Partial<MetadataModel> = {}): Promise<void> {

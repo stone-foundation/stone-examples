@@ -6,36 +6,30 @@ import {
   UpdateCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { BadgeModel } from '../../models/Badge'
+import { ActivityModel } from '../../models/Activity'
 import { ListMetadataOptions } from '../../models/App'
-import { IBadgeRepository } from '../contracts/IBadgeRepository'
-import { IBlueprint, isNotEmpty, isEmpty } from '@stone-js/core'
+import { IBlueprint, isEmpty, isNotEmpty } from '@stone-js/core'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IActivityRepository } from '../contracts/IActivityRepository'
 
-/**
- * Badge Repository Options
- */
-export interface DynamoBadgeRepositoryOptions {
+export interface DynamoActivityRepositoryOptions {
   blueprint: IBlueprint
   database: DynamoDBDocumentClient
   metadataRepository: IMetadataRepository
 }
 
-/**
- * Badge Repository (DynamoDB)
- */
-export class DynamoBadgeRepository implements IBadgeRepository {
+export class DynamoActivityRepository implements IActivityRepository {
   private readonly tableName: string
   private readonly database: DynamoDBDocumentClient
   private readonly metadataRepository: IMetadataRepository
 
-  constructor ({ blueprint, metadataRepository, database }: DynamoBadgeRepositoryOptions) {
+  constructor ({ blueprint, metadataRepository, database }: DynamoActivityRepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
-    this.tableName = blueprint.get('aws.dynamo.tables.badges.name', 'badges')
+    this.tableName = blueprint.get('aws.dynamo.tables.activities.name', 'activities')
   }
 
-  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<BadgeModel>> {
+  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<ActivityModel>> {
     const params: any = {
       TableName: this.tableName,
       Limit: Number(limit)
@@ -52,22 +46,22 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       total,
       limit,
       page: cursor,
-      items: (result.Items as BadgeModel[]) ?? [],
+      items: (result.Items as ActivityModel[]) ?? [],
       nextPage: result.LastEvaluatedKey
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
   }
 
-  async listBy (conditions: Partial<BadgeModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<BadgeModel>> {
+  async listBy (conditions: Partial<ActivityModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<ActivityModel>> {
     let keyValue: any
     let keyName: string | undefined
     let indexName: string | undefined
 
-    if (isNotEmpty(conditions.authorUuid)) {
-      indexName = 'authorUuid-index'
-      keyName = 'authorUuid'
-      keyValue = conditions.authorUuid
+    if (isNotEmpty(conditions.badgeUuid)) {
+      indexName = 'badgeUuid-index'
+      keyName = 'badgeUuid'
+      keyValue = conditions.badgeUuid
     } else if (isNotEmpty(conditions.category)) {
       indexName = 'category-index'
       keyName = 'category'
@@ -95,22 +89,21 @@ export class DynamoBadgeRepository implements IBadgeRepository {
         total,
         limit,
         page: cursor,
-        items: (result.Items as BadgeModel[]) ?? [],
+        items: (result.Items as ActivityModel[]) ?? [],
         nextPage: result.LastEvaluatedKey
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
       }
     }
 
-    // fallback to global list
     return await this.list(limit, cursor)
   }
 
-  async findByUuid (uuid: string): Promise<BadgeModel | undefined> {
+  async findByUuid (uuid: string): Promise<ActivityModel | undefined> {
     return await this.findBy({ uuid })
   }
 
-  async findBy (conditions: Partial<BadgeModel>): Promise<BadgeModel | undefined> {
+  async findBy (conditions: Partial<ActivityModel>): Promise<ActivityModel | undefined> {
     if (isNotEmpty(conditions.uuid)) {
       const result = await this.database.send(
         new QueryCommand({
@@ -121,40 +114,25 @@ export class DynamoBadgeRepository implements IBadgeRepository {
           Limit: 1
         })
       )
-      return result.Items?.[0] as BadgeModel | undefined
+      return result.Items?.[0] as ActivityModel | undefined
     }
-
-    if (isNotEmpty(conditions.name)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          TableName: this.tableName,
-          IndexName: 'name-index',
-          KeyConditionExpression: '#name = :name',
-          ExpressionAttributeNames: { '#name': 'name' },
-          ExpressionAttributeValues: { ':name': conditions.name },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as BadgeModel | undefined
-    }
-
     return undefined
   }
 
-  async create (badge: BadgeModel): Promise<string | undefined> {
+  async create (assignment: ActivityModel): Promise<string | undefined> {
     await this.database.send(
       new PutCommand({
         TableName: this.tableName,
-        Item: badge,
+        Item: assignment,
         ExpressionAttributeNames: { '#uuid': 'uuid' },
         ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
-    await this.metadataRepository.increment(this.tableName, { lastUuid: badge.uuid })
-    return badge.uuid
+    await this.metadataRepository.increment(this.tableName, { lastUuid: assignment.uuid })
+    return assignment.uuid
   }
 
-  async update ({ uuid }: BadgeModel, data: Partial<BadgeModel>): Promise<BadgeModel | undefined> {
+  async update ({ uuid }: ActivityModel, data: Partial<ActivityModel>): Promise<ActivityModel | undefined> {
     const updateExpr: string[] = []
     const attrNames: Record<string, string> = {}
     const attrValues: Record<string, any> = {}
@@ -179,10 +157,10 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       })
     )
 
-    return result.Attributes as BadgeModel | undefined
+    return result.Attributes as ActivityModel | undefined
   }
 
-  async delete ({ uuid }: BadgeModel): Promise<boolean> {
+  async delete ({ uuid }: ActivityModel): Promise<boolean> {
     try {
       await this.database.send(
         new DeleteCommand({
@@ -199,9 +177,10 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       throw err
     }
   }
-  
+
   async count (): Promise<number> {
     const meta = await this.metadataRepository.get(this.tableName)
     return meta?.total ?? 0
   }
 }
+

@@ -11,11 +11,16 @@ import { drizzle } from 'drizzle-orm/libsql'
 import { DatabaseClient } from '../database/DatabaseClient'
 import { BetRepository } from '../repositories/drizzle/BetRepository'
 import { TeamRepository } from '../repositories/drizzle/TeamRepository'
+import { PostRepository } from '../repositories/drizzle/PostRepository'
 import { UserRepository } from '../repositories/drizzle/UserRepository'
 import { BadgeRepository } from '../repositories/drizzle/BadgeRepository'
 import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { SessionRepository } from '../repositories/drizzle/SessionRepository'
 import { MetadataRepository } from '../repositories/drizzle/MetadataRepository'
+import { ActivityRepository } from '../repositories/drizzle/ActivityRepository'
+import { PostCommentRepository } from '../repositories/drizzle/PostCommentRepository'
+import { BadgeAssignmentRepository } from '../repositories/drizzle/BadgeAssignmentRepository'
+import { ActivityAssignmentRepository } from '../repositories/drizzle/ActivityAssignmentRepository'
 
 /**
  * Drizzle Service Provider
@@ -86,9 +91,14 @@ export class DrizzleServiceProvider implements IServiceProvider {
       .autoBinding(BetRepository, BetRepository, true, ['betRepository'])
       .autoBinding(UserRepository, UserRepository, true, ['userRepository'])
       .autoBinding(TeamRepository, TeamRepository, true, ['teamRepository'])
+      .autoBinding(PostRepository, PostRepository, true, ['postRepository'])
       .autoBinding(BadgeRepository, BadgeRepository, true, ['badgeRepository'])
       .autoBinding(SessionRepository, SessionRepository, true, ['sessionRepository'])
       .autoBinding(MetadataRepository, MetadataRepository, true, ['metadataRepository'])
+      .autoBinding(ActivityRepository, ActivityRepository, true, ['activityRepository'])
+      .autoBinding(PostCommentRepository, PostCommentRepository, true, ['postCommentRepository'])
+      .autoBinding(BadgeAssignmentRepository, BadgeAssignmentRepository, true, ['badgeAssignmentRepository'])
+      .autoBinding(ActivityAssignmentRepository, ActivityAssignmentRepository, true, ['activityAssignmentRepository'])
   }
 
   /**

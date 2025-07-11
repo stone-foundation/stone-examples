@@ -10,9 +10,14 @@ import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { DynamoBetRepository } from '../repositories/dynamobd/DynamoBetRepository'
 import { DynamoUserRepository } from '../repositories/dynamobd/DynamoUserRepository'
 import { DynamoTeamRepository } from '../repositories/dynamobd/DynamoTeamRepository'
+import { DynamoPostRepository } from '../repositories/dynamobd/DynamoPostRepository'
 import { DynamoBadgeRepository } from '../repositories/dynamobd/DynamoBadgeRepository'
 import { DynamoSessionRepository } from '../repositories/dynamobd/DynamoSessionRepository'
 import { DynamoMetadataRepository } from '../repositories/dynamobd/DynamoMetadataRepository'
+import { DynamoActivityRepository } from '../repositories/dynamobd/DynamoActivityRepository'
+import { DynamoPostCommentRepository } from '../repositories/dynamobd/DynamoPostCommentRepository'
+import { DynamoBadgeAssignmentRepository } from '../repositories/dynamobd/DynamoBadgeAssignmentRepository'
+import { DynamoActivityAssignmentRepository } from '../repositories/dynamobd/DynamoActivityAssignmentRepository'
 
 /**
  * AWS Service Provider
@@ -71,8 +76,13 @@ export class AwsServiceProvider implements IServiceProvider {
       .autoBinding(DynamoBetRepository, DynamoBetRepository, true, ['betRepository'])
       .autoBinding(DynamoUserRepository, DynamoUserRepository, true, ['userRepository'])
       .autoBinding(DynamoTeamRepository, DynamoTeamRepository, true, ['teamRepository'])
+      .autoBinding(DynamoPostRepository, DynamoPostRepository, true, ['postRepository'])
       .autoBinding(DynamoBadgeRepository, DynamoBadgeRepository, true, ['badgeRepository'])
       .autoBinding(DynamoSessionRepository, DynamoSessionRepository, true, ['sessionRepository'])
       .autoBinding(DynamoMetadataRepository, DynamoMetadataRepository, true, ['metadataRepository'])
+      .autoBinding(DynamoActivityRepository, DynamoActivityRepository, true, ['activityRepository'])
+      .autoBinding(DynamoPostCommentRepository, DynamoPostCommentRepository, true, ['postCommentRepository'])
+      .autoBinding(DynamoBadgeAssignmentRepository, DynamoBadgeAssignmentRepository, true, ['badgeAssignmentRepository'])
+      .autoBinding(DynamoActivityAssignmentRepository, DynamoActivityAssignmentRepository, true, ['activityAssignmentRepository'])
   }
 }

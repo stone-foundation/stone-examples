@@ -34,7 +34,7 @@ export class BadgeEventHandler {
   @Get('/', { name: 'list', middleware: ['auth'] })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Badge>> {
-    return await this.badgeService.list(event.get('limit', 10), event.get('page'))
+    return await this.badgeService.list(Number(event.get('limit', 10)), event.get('page'))
   }
 
   /**

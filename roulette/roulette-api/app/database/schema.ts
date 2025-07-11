@@ -1,5 +1,5 @@
 // schema.ts
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text, numeric } from 'drizzle-orm/sqlite-core'
 
 // Users table
 export const users = sqliteTable('users', {
@@ -90,7 +90,7 @@ export const badgeAssignments = sqliteTable('badge_assignments', {
   issuedByUuid: text('issued_by_uuid').notNull(),
   issuedAt: integer('issued_at').notNull(),
   origin: text('origin').notNull(), // 'manual' | 'system' | 'event'
-  revoked: integer('revoked', { mode: 'boolean' }),
+  revoked: integer('revoked', { mode: 'boolean' }).notNull().default(false),
   revokedAt: integer('revoked_at'),
   revokedByUuid: text('revoked_by_uuid')
 })
@@ -106,4 +106,98 @@ export const metadata = sqliteTable('metadata', {
   syncedAt: integer('synced_at'),
   lastUuid: text('last_uuid'),
   schemaVersion: text('schema_version').default('1.0')
+})
+
+export const activities = sqliteTable('activities', {
+  uuid: text('uuid').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+
+  category: text('category').notNull(),
+  categoryLabel: text('category_label').notNull(),
+
+  impact: text('impact', { enum: ['positive', 'negative', 'neutral'] }).notNull(),
+
+  score: integer('score').notNull(),
+  authorUuid: text('author_uuid').notNull(),
+
+  badgeUuid: text('badge_uuid'),
+  autoConvertToBadge: integer('auto_convert_to_badge', { mode: 'boolean' }).default(false),
+  conversionThreshold: integer('conversion_threshold'),
+  conversionWindow: text('conversion_window', { enum: ['team', 'member'] }),
+  validityDuration: integer('validity_duration'),
+
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+})
+
+export const activityAssignments = sqliteTable('activity_assignments', {
+  uuid: text('uuid').primaryKey(),
+  activityUuid: text('activity_uuid').notNull(),
+
+  teamUuid: text('team_uuid'),
+  memberUuid: text('member_uuid'),
+
+  badgeUuid: text('badge_uuid'),
+  authorUuid: text('author_uuid').notNull(),
+  origin: text('origin', { enum: ['system', 'manual'] }).notNull(),
+  issuedAt: integer('issued_at').notNull(),
+  status: text('status', { enum: ['pending', 'approved', 'cancelled', 'contested', 'archived'] }).notNull(),
+
+  // Location
+  country: text('location_country'),
+  city: text('location_city'),
+  latitude: numeric('location_latitude'),
+  longitude: numeric('location_longitude'),
+  ip: text('location_ip'),
+  region: text('location_region'),
+  timezone: text('location_timezone'),
+  continent: text('location_continent'),
+  postalCode: text('location_postal_code'),
+  isp: text('location_isp'),
+
+  // Device info
+  userAgent: text('user_agent'),
+  device: text('device'),
+  platform: text('platform'),
+  ipAddress: text('ip_address'),
+
+  // Extra
+  comment: text('comment'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  validatedAt: integer('validated_at'),
+  validatedByUuid: text('validated_by_uuid')
+})
+
+export const posts = sqliteTable('posts', {
+  uuid: text('uuid').primaryKey(),
+  type: text('type').notNull(), // 'text' | 'colored' | 'image' | 'event' | 'badge'
+  content: text('content'),
+  teamUuid: text('teamUuid'),
+  imageUrl: text('imageUrl'),
+  badgeUuid: text('badgeUuid'),
+  eventUuid: text('eventUuid'),
+  authorUuid: text('authorUuid').notNull(),
+  backgroundColor: text('backgroundColor'),
+  visibility: text('visibility').notNull(), // 'private' | 'public'
+  createdAt: integer('createdAt').notNull(),
+  updatedAt: integer('updatedAt').notNull(),
+
+  likeCount: integer('likeCount').notNull(),
+  commentCount: integer('commentCount').notNull(),
+  likedByUuids: text('likedByUuids', { mode: 'json' }) // array of strings
+})
+
+export const postComments = sqliteTable('postComments', {
+  uuid: text('uuid').primaryKey(),
+  content: text('content').notNull(),
+  postUuid: text('postUuid').notNull(),
+  authorUuid: text('authorUuid').notNull(),
+
+  createdAt: integer('createdAt').notNull(),
+  updatedAt: integer('updatedAt').notNull(),
+
+  likeCount: integer('likeCount').notNull(),
+  likedByUuids: text('likedByUuids', { mode: 'json' }) // array of strings
 })

@@ -28,6 +28,15 @@ export class AwsConfiguration implements IConfiguration {
           },
           sessions: {
             name: getString('AWS_DYNAMO_TABLE_SESSIONS', 'roulette-sessions')
+          },
+          badges: {
+            name: getString('AWS_DYNAMO_TABLE_BADGES', 'roulette-badges')
+          },
+          badgesAssignments: {
+            name: getString('AWS_DYNAMO_TABLE_BADGE_ASSIGNMENTS', 'roulette-badges-assignments')
+          },
+          metadata: {
+            name: getString('AWS_DYNAMO_TABLE_METADATA', 'roulette-tables-metadata')
           }
         }
       }

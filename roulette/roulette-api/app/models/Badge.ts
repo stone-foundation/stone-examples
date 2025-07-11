@@ -24,20 +24,21 @@ export interface Badge extends BadgeModel {
 
 export interface BadgeAssignmentModel {
   uuid: string
-  issuedBy: User
   issuedAt: number
+  revoked: boolean
+  issuedByUuid: string
   comment?: string | null
   revokedBy?: User | null
   badgeUuid: string
   teamUuid?: string | null
-  revoked?: boolean | null
   revokedAt?: number | null
   memberUuid?: string | null
-  origin: 'manual' | 'system' | 'event'
+  origin: 'manual' | 'system' | 'event' | string
 }
 
 export interface BadgeAssignment extends BadgeAssignmentModel {
   badge: Badge
   team?: Team
+  issuedBy: User
   member?: TeamMember
 }
