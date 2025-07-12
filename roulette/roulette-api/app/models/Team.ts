@@ -1,31 +1,47 @@
-import { User } from './User'
-
 /**
  * Team Model Interface
 */
 export interface TeamModel {
   uuid: string
   name: string
+  rank: number
   color: string
-  chatLink?: string | null
+  score: number
+  motto?: string | null
+  rules?: string | null
+  slogan?: string | null
+  logoUrl?: string | null
+  bannerUrl?: string | null
   createdAt: number
   updatedAt: number
   totalMember: number
   countMember: number
+  countActivity: number
+  countBadges: number
+  countPresence: number
+  chatLink?: string | null
+  description?: string | null
+  captainUuid?: string | null
 }
 
 /**
  * Team Interface
 */
 export interface Team extends TeamModel {
-  members: Array<Partial<User>>
+  captain?: TeamMember
+  members: TeamMember[]
 }
 
 /**
  * Team Member Interface
 */
 export interface TeamMember {
-  phone: string
+  uuid: string
+  phone?: string
+  isLate?: boolean
   fullname: string
   username: string
+  isSoldier?: boolean
+  isCaptain?: boolean
+  isPresent?: boolean
 }

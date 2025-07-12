@@ -1,3 +1,4 @@
+import { BadgeTeam } from './Badge'
 import { Color } from '../constants'
 
 /**
@@ -32,6 +33,20 @@ export interface TeamStat extends Omit<Team, 'members' | 'chatLink'> {}
 */
 export interface TeamMember {
   uuid: string
+  isLate?: boolean
   fullname: string
   username: string
+  isPresent?: boolean
+  isCaptain?: boolean
+}
+
+export interface TeamsAsideStats {
+  teams: Team[]
+  badges: BadgeTeam[]
+  total: {
+    presence: number
+    members: number
+    posts: number
+    badges: number
+  }
 }

@@ -4,7 +4,7 @@ import { ThumbsUp, MessageCircle } from 'lucide-react'
 
 interface PostFooterProps {
   post: Post
-  currentUser: User
+  currentUser?: User
   onLike?: () => void
   onComment?: () => void
 }
@@ -15,13 +15,15 @@ export const PostFooter = ({
   onComment,
   currentUser,
 }: PostFooterProps) => {
+  const isLikedByCurrentUser = post.likedByUuids?.includes(currentUser?.uuid ?? '')
+
   return (
     <div className="flex items-center gap-6 text-white/70 text-sm">
       <button
         onClick={onLike}
-        className="flex items-center gap-2 hover:text-white transition"
+        className='flex items-center gap-2 hover:text-white transition'
       >
-        <ThumbsUp size={16} />
+        <ThumbsUp size={16} color={isLikedByCurrentUser ? 'red' : ''} />
         <span>{post.likeCount}</span>
       </button>
 

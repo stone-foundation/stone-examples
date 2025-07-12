@@ -1,6 +1,7 @@
 import { User } from '../models/User'
 import { convertCSVtoJSON } from '../utils'
 import { ListMetadataOptions } from '../models/App'
+import { BadgeService } from '../services/BadgeService'
 import { Activity, ActivityModel } from '../models/Activity'
 import { ActivityService } from '../services/ActivityService'
 import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
@@ -12,29 +13,38 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/
  */
 export interface ActivityEventHandlerOptions {
   logger: ILogger
+  badgeService: BadgeService
   activityService: ActivityService
 }
 
 /**
  * Activity Event Handler
  */
-@EventHandler('/activities', { name: 'activities' })
+@EventHandler('/activities', { name: 'activities', middleware: ['auth'] })
 export class ActivityEventHandler {
   private readonly logger: ILogger
+  private readonly badgeService: BadgeService
   private readonly activityService: ActivityService
 
-  constructor ({ activityService, logger }: ActivityEventHandlerOptions) {
+  constructor ({ activityService, badgeService, logger }: ActivityEventHandlerOptions) {
     this.logger = logger
+    this.badgeService = badgeService
     this.activityService = activityService
   }
 
   /**
    * List all activities
    */
-  @Get('/', { name: 'list', middleware: ['auth'] })
+  @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Activity>> {
-    return await this.activityService.list(Number(event.get('limit', 10)), event.get('page'))
+    const meta = await this.activityService.list(Number(event.get('limit', 10)), event.get('page'))
+    meta.items = await Promise.all(meta.items.map(async (v) => {
+      v.badge = v.badgeUuid ? await this.badgeService.findByUuid(v.badgeUuid) : undefined
+      return v
+    }))
+
+    return meta
   }
 
   /**
@@ -42,13 +52,12 @@ export class ActivityEventHandler {
    */
   @Get('/:activity@uuid', {
     rules: { activity: /\S{30,40}/ },
-    bindings: { activity: ActivityService },
-    middleware: ['admin']
+    bindings: { activity: ActivityService }
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<Activity | undefined> {
     const activity = event.get<Activity>('activity')
-    return isNotEmpty(activity) ? this.activityService.toActivity(activity) : undefined
+    return isNotEmpty<Activity>(activity) ? this.activityService.toActivity(activity) : undefined
   }
 
   /**
@@ -87,14 +96,14 @@ export class ActivityEventHandler {
         name: v.name,
         description: v.description,
         category: v.category,
-        categoryLabel: v.categoryLabel,
-        impact: v.impact,
+        categoryLabel: v.categoryLabel ??  v.category,
+        impact: v.impact ?? 'neutral',
         score: Number(v.score) || 0,
         badgeUuid: v.badgeUuid,
         autoConvertToBadge: v.autoConvertToBadge === 'true',
         conversionThreshold: v.conversionThreshold ? Number(v.conversionThreshold) : undefined,
         conversionWindow: v.conversionWindow,
-        validityDuration: v.validityDuration ? Number(v.validityDuration) : undefined,
+        validityDuration: v.validityDuration ? Number(v.validityDuration) : undefined
       } as unknown as Activity
     })
 

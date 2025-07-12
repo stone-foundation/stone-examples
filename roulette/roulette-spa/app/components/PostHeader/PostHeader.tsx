@@ -7,18 +7,18 @@ import { ShieldCheckIcon } from "lucide-react"
 
 interface PostHeaderProps {
   post: Post
-  currentUser: User
+  currentUser?: User
 }
 
 export const PostHeader = ({ post, currentUser }: PostHeaderProps) => {
   return (
     <div className="flex items-start justify-between w-full mb-2">
       <div className="flex items-center gap-3">
-        <Avatar size={48} name={currentUser.username} imageUrl={currentUser.avatarUrl} />
+        <Avatar size={48} name={currentUser?.username ?? 'I'} imageUrl={currentUser?.avatarUrl} />
 
         <div className="flex flex-col text-white gap-3">
           <span className="font-semibold leading-none capitalize">
-            {currentUser.isAdmin && <span>{currentUser.isAdmin && post.author.fullname} - @</span>}
+            {currentUser?.isAdmin && <span>{currentUser.isAdmin && post.author.fullname} - @</span>}
             <span>{post.author.username}</span>
             {post.author.isModerator && (
               <ShieldCheckIcon size={14} className="inline-block ml-1 text-orange-400" />

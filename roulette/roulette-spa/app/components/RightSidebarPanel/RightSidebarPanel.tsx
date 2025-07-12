@@ -1,11 +1,29 @@
-import { Team } from "../../models/Team";
+import { Logger } from "@stone-js/core";
 import { BadgeTeam } from "../../models/Badge";
+import { StoneContext } from "@stone-js/use-react";
+import { useState, useContext, useEffect } from "react";
 import { TopTeamCard } from "../TopTeamCard/TopTeamCard";
+import { TeamService } from "../../services/TeamService";
+import { Team, TeamsAsideStats } from "../../models/Team";
 import { StatsSection } from "../StatsSection/StatsSection";
 import { GlobalStatsCard } from "../GlobalStatsCard/GlobalStatsCard";
 import { RecentBadgesCard } from "../RecentBadgesCard/RecentBadgesCard";
 
 export function RightSidebarPanel() {
+  const [stats, setStats] = useState<TeamsAsideStats>()
+  const teamService = useContext(StoneContext).container.resolve<TeamService>(TeamService)
+
+  useEffect(() => {
+    teamService
+      .stats()
+      .then(v => {
+        setStats(v)
+      })
+      .catch(error => {
+        Logger.error("Failed to fetch stats:", error)
+      })
+  }, [])
+
   const teams = [
     { name: 'Alpha', color: 'blue', countMember: 5, totalMember: 10, score: 120 } as Team,
     { name: 'Bravo', color: 'red', countMember: 3, totalMember: 8, score: 95 } as Team,
@@ -32,23 +50,23 @@ export function RightSidebarPanel() {
   return (
     <aside className="w-full space-y-6 mt-8 md:mt-0">
       <StatsSection title="Équipe en tête">
-        <TopTeamCard teams={teams} />
+        <TopTeamCard teams={stats?.teams ?? []} />
       </StatsSection>
 
       <StatsSection title="Statistiques globales">
         <GlobalStatsCard
           stats={{
-            totalPosts: 120,
-            totalBadges: 16,
-            totalPresence: 47,
-            totalSoldiers: 54
+            totalPosts: stats?.total?.posts ?? 0,
+            totalBadges: stats?.total?.badges ?? 0,
+            totalPresence: stats?.total?.presence ?? 0,
+            totalSoldiers: stats?.total?.members ?? 0,
           }}
         />
       </StatsSection>
 
-      <StatsSection title="Derniers badges attribués">
-        <RecentBadgesCard badges={badges} />
-      </StatsSection>
+      {Boolean(stats?.badges?.length) && <StatsSection title="Derniers badges attribués">
+        <RecentBadgesCard badges={stats?.badges ?? []} />
+      </StatsSection>}
     </aside>
   )
 }

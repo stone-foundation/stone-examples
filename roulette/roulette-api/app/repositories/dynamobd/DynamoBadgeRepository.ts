@@ -53,7 +53,7 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       limit,
       page: cursor,
       items: (result.Items as BadgeModel[]) ?? [],
-      nextPage: result.LastEvaluatedKey
+      nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
@@ -64,14 +64,15 @@ export class DynamoBadgeRepository implements IBadgeRepository {
     let keyName: string | undefined
     let indexName: string | undefined
 
-    if (isNotEmpty(conditions.authorUuid)) {
-      indexName = 'authorUuid-index'
-      keyName = 'authorUuid'
-      keyValue = conditions.authorUuid
-    } else if (isNotEmpty(conditions.category)) {
-      indexName = 'category-index'
-      keyName = 'category'
-      keyValue = conditions.category
+    const keys = ['name', 'category']
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        keyName = key
+        keyValue = value
+        indexName = `${key}-index`
+        break
+      }
     }
 
     if (keyName) {
@@ -96,7 +97,7 @@ export class DynamoBadgeRepository implements IBadgeRepository {
         limit,
         page: cursor,
         items: (result.Items as BadgeModel[]) ?? [],
-        nextPage: result.LastEvaluatedKey
+        nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
       }
@@ -111,33 +112,24 @@ export class DynamoBadgeRepository implements IBadgeRepository {
   }
 
   async findBy (conditions: Partial<BadgeModel>): Promise<BadgeModel | undefined> {
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'name', 'category']
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
+          Limit: 1,
           TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as BadgeModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as BadgeModel | undefined
+      }
     }
-
-    if (isNotEmpty(conditions.name)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          TableName: this.tableName,
-          IndexName: 'name-index',
-          KeyConditionExpression: '#name = :name',
-          ExpressionAttributeNames: { '#name': 'name' },
-          ExpressionAttributeValues: { ':name': conditions.name },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as BadgeModel | undefined
-    }
-
     return undefined
   }
 
@@ -199,7 +191,7 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       throw err
     }
   }
-  
+
   async count (): Promise<number> {
     const meta = await this.metadataRepository.get(this.tableName)
     return meta?.total ?? 0

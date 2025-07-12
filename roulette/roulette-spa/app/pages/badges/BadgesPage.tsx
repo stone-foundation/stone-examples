@@ -1,24 +1,51 @@
-import { JSX } from 'react'
 import { User } from '../../models/User'
+import { Badge } from '../../models/Badge'
 import { Team, TeamMember } from '../../models/Team'
-import { Badges } from '../../components/Badges/Badges'
-import { Badge, BadgeAssignPayload } from '../../models/Badge'
+import { TeamService } from '../../services/TeamService'
+import { BadgeService } from '../../services/BadgeService'
+import { ActivityAssignment } from '../../models/Activity'
+import { Dispatch, JSX, SetStateAction, useState } from 'react'
+import { BadgeList } from '../../components/BadgeList/BadgeList'
+import { ActivityAssignmentService } from '../../services/ActivityAssignmentService'
 import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
+
+/**
+ * Home Page options.
+ */
+interface BadgesPageOptions {
+  teamService: TeamService
+  badgeService: BadgeService
+  activityAssignmentService: ActivityAssignmentService
+}
 
 /**
  * Interface for the response of the BadgesPage.
  */
 interface HandleResponse {
-  badges: Badge[]
   teams: Team[]
+  badges: Badge[]
   membersByTeam: Record<string, TeamMember[]>
 }
 
 /**
  * Badges Page component.
  */
-@Page('/badges', { layout: 'private-default' })
+@Page('/badges', { layout: 'private-default', middleware: ['auth'] })
 export class BadgesPage implements IPage<ReactIncomingEvent> {
+  private readonly teamService: TeamService
+  private readonly badgeService: BadgeService
+  private readonly activityAssignmentService: ActivityAssignmentService
+
+  /**
+   * Create a new Login Page component.
+   */
+  constructor ({ teamService, badgeService, activityAssignmentService }: BadgesPageOptions) {
+    this.teamService = teamService
+    this.badgeService = badgeService
+    this.activityAssignmentService = activityAssignmentService
+
+  }
+
   /**
    * Handle the incoming event and return a list of badges.
    *
@@ -26,49 +53,18 @@ export class BadgesPage implements IPage<ReactIncomingEvent> {
    * @returns A promise that resolves to an array of Badge objects.
    */
   async handle (event: ReactIncomingEvent): Promise<HandleResponse> {
-    const badges: Badge[] = [
-      {
-      uuid: '1',
-      author: { username: 'alice', fullname: 'Alice Smith' } as User,
-      name: 'Courageux',
-      color: '#FF5733',
-      score: 10,
-      type: 'victory',
-      createdAt: Date.now() - 1000000,
-      typeLabel: 'Succès',
-      updatedAt: Date.now() - 500000,
-      description: 'Attribué pour avoir relevé un défi difficile.'
-      },
-      {
-      uuid: '2',
-      author: { username: 'bob', fullname: 'Bob Martin' } as User,
-      name: 'Esprit d\'équipe',
-      color: '#33C3FF',
-      score: 8,
-      type: 'participation',
-      createdAt: Date.now() - 2000000,
-      typeLabel: 'Collaboration',
-      updatedAt: Date.now() - 1000000,
-      description: 'Pour une excellente collaboration en équipe.'
-      },
-      {
-      uuid: '3',
-      author: { username: 'eve', fullname: 'Eve Johnson' } as User,
-      name: 'Créatif',
-      color: '#8D33FF',
-      score: 12,
-      type: 'victory',
-      createdAt: Date.now() - 3000000,
-      typeLabel: 'Créativité',
-      updatedAt: Date.now() - 2000000,
-      description: 'Pour avoir proposé une idée innovante.'
-      }
-    ]
+    const membersByTeam: Record<string, TeamMember[]> = {}
+    const teams = await this.teamService.list(1000)
+    const badgeMeta = await this.badgeService.list(event.get('limit', 1000))
+
+    teams.forEach((team) => {
+      membersByTeam[team.uuid] = team.members || []
+    })
 
     return {
-      badges,
-      teams: [],
-      membersByTeam: {},
+      teams: teams,
+      membersByTeam,
+      badges: badgeMeta.items,
     }
   }
 
@@ -90,29 +86,45 @@ export class BadgesPage implements IPage<ReactIncomingEvent> {
    * @returns The rendered component.
    */
   render ({ data, event }: PageRenderContext<HandleResponse>): JSX.Element {
+    const [badges, setBadges] = useState<Badge[]>(data?.badges ?? [])
     const user = event.getUser<User>() ?? { username: 'Jonh', fullname: 'Doe' } as unknown as User
 
     return (
-      <main>
-        <Badges
+      <main className="w-full">
+        <BadgeList
+          badges={badges}
           currentUser={user}
           teams={data?.teams ?? []}
-          badges={data?.badges ?? []}
-          onUpdate={v => this.updateBadge(v)}
-          onCreate={v => this.createBadge(v)}
           membersByTeam={data?.membersByTeam ?? {}}
-          onDelete={badge => this.deleteBadge(badge)}
-          onAssign={payload => this.assignBadge(payload)}
+          onCreate={v => this.createBadge(v, setBadges)}
+          onAssign={payload => this.assignActivity(payload)}
+          onUpdate={(u, v) => this.updateBadge(u, v, setBadges)}
+          onDelete={badge => this.deleteBadge(badge, setBadges)}
         />
       </main>
     )
   }
-
-  private createBadge (badge: Partial<Badge>) {}
-
-  private updateBadge (badge: Partial<Badge>) {}
-
-  private deleteBadge (badge: Partial<Badge>) {}
   
-  private assignBadge (payload: BadgeAssignPayload) {}
+  private async listBadges (limit: number = 1000): Promise<Badge[]> {
+    return (await this.badgeService.list(limit)).items
+  }
+
+  private async createBadge (badge: Partial<Badge>, setActivities: Dispatch<SetStateAction<Badge[]>>): Promise<void> {
+    await this.badgeService.create(badge)
+    setActivities(await this.listBadges())
+  }
+
+  private async updateBadge (badge: Badge, data: Partial<Badge>, setActivities: Dispatch<SetStateAction<Badge[]>>): Promise<void> {
+    await this.badgeService.update(badge.uuid, data)
+    setActivities(await this.listBadges())
+  }
+
+  private async deleteBadge (badge: Badge, setActivities: Dispatch<SetStateAction<Badge[]>>): Promise<void> {
+    await this.badgeService.delete(badge.uuid)
+    setActivities(await this.listBadges())
+  }
+  
+  private async assignActivity (payload: Partial<ActivityAssignment>): Promise<void> {
+    await this.activityAssignmentService.create(payload)
+  }
 }

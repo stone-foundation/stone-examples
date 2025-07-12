@@ -70,7 +70,7 @@ export class BadgeAssignmentEventHandler {
     )
 
     this.logger.info(`Badge assigned to member: ${uuid}`)
-  
+
     return { uuid }
   }
 

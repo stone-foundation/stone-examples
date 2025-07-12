@@ -83,6 +83,27 @@ export class PostCommentService {
   }
 
   /**
+   * Toggle like on post
+   */
+  async toggleLike (comment: PostComment, user: User): Promise<void> {
+    let likeCount = comment.likeCount
+    let likedByUuids = (comment.likedByUuids ?? []) as string[]
+
+    if (likedByUuids.includes(user.uuid)) {
+      likeCount--
+      likedByUuids = likedByUuids.filter(uuid => uuid !== user.uuid)
+    } else {
+      likeCount++
+      likedByUuids.push(user.uuid)
+    }
+
+    await this.update(comment, {
+      likeCount,
+      likedByUuids
+    })
+  }
+
+  /**
    * Update comment
    */
   async update (comment: PostComment, data: Partial<PostComment>): Promise<PostComment> {

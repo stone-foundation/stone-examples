@@ -1,0 +1,1 @@
+export const PRESENCE_EVENT_CATEGORY = 'presence.punch'

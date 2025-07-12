@@ -1,14 +1,17 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
-import { Team, TeamModel } from '../models/Team'
 import { NotFoundError } from '@stone-js/http-core'
-import { ITeamRepository } from '../repositories/contracts/ITeamRepository'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { Team, TeamMember, TeamModel } from '../models/Team'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { IBlueprint, IContainer, isNotEmpty, Service } from '@stone-js/core'
+import { ITeamRepository } from '../repositories/contracts/ITeamRepository'
 
 /**
  * Team Service Options
 */
 export interface TeamServiceOptions {
+  s3Client: S3Client
   blueprint: IBlueprint
   teamRepository: ITeamRepository
 }
@@ -18,6 +21,7 @@ export interface TeamServiceOptions {
 */
 @Service({ alias: 'teamService' })
 export class TeamService {
+  private readonly s3Client: S3Client
   private readonly blueprint: IBlueprint
   private readonly teamRepository: ITeamRepository
 
@@ -36,7 +40,8 @@ export class TeamService {
   /**
    * Create a new Team Service
   */
-  constructor ({ blueprint, teamRepository }: TeamServiceOptions) {
+  constructor ({ s3Client, blueprint, teamRepository }: TeamServiceOptions) {
+    this.s3Client = s3Client
     this.blueprint = blueprint
     this.teamRepository = teamRepository
   }
@@ -136,6 +141,40 @@ export class TeamService {
   }
 
   /**
+   * Generate upload URLs for team logo or banner
+   *
+   * @param team - The team for which to generate the upload URLs
+   * @param type - The type of the image (logo or banner)
+   * @param extension - The file extension of the image (default is 'png')
+   * @returns An object containing the upload URL, public URL, and key
+   */
+  async generateUploadUrls (team: Team, type: 'logo' | 'banner', extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
+    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'teams')
+    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
+    const s3BucketFolder = this.blueprint.get<string>('aws.s3.teamsFolderName', 'teams')
+    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
+    const key = `${s3BucketFolder}/${team.uuid}/${type}.${extension}`
+
+    const command = new PutObjectCommand({
+      Key: key,
+      Bucket: bucketName,
+      ContentType: `image/${extension}`
+    })
+
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
+
+    const publicUrl = `${cloudfrontStaticUrl}/${key}`
+
+    if (type === 'logo') {
+      await this.update(team, { logoUrl: publicUrl, updatedAt: Date.now() })
+    } else if (type === 'banner') {
+      await this.update(team, { bannerUrl: publicUrl, updatedAt: Date.now() })
+    }
+
+    return { uploadUrl, publicUrl, key }
+  }
+
+  /**
    * Convert TeamModel to Team
    *
    * @param teamModel - The team model to convert
@@ -160,6 +199,20 @@ export class TeamService {
       countMember: team.countMember,
       members: withDetails ? team.members : undefined,
       chatLink: withDetails ? team.chatLink : undefined
+    }
+  }
+
+  toTeamMember (member: User): TeamMember {
+    const isCaptain = member.roles?.includes('captain') || false
+
+    return {
+      isCaptain,
+      uuid: member.uuid,
+      phone: member.phone,
+      isSoldier: !isCaptain,
+      fullname: member.fullname,
+      username: member.username,
+      isPresent: isNotEmpty(member.presenceActivityUuid)
     }
   }
 }

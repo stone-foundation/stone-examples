@@ -6,6 +6,7 @@ import {
 } from '@stone-js/core'
 import twilio from 'twilio'
 import { TwilioConfig } from '../models/App'
+import { S3Client } from '@aws-sdk/client-s3'
 
 /**
  * App Service Provider
@@ -30,6 +31,7 @@ export class AppServiceProvider implements IServiceProvider {
    * Register services to the container
    */
   register (): void {
+    this.registerS3Client()
     this.registerTwilioClient()
   }
 
@@ -41,5 +43,13 @@ export class AppServiceProvider implements IServiceProvider {
       const config = this.blueprint.get<TwilioConfig>('twilio', {} as unknown as TwilioConfig)
       this.container.instance('twilioClient', twilio(config.accountSid, config.authToken))
     }
+  }
+
+  /**
+   * Register the S3 client
+   */
+  registerS3Client (): void {
+    const region = this.blueprint.get('aws.region', 'us-east-2')
+    this.container.instance('s3Client', new S3Client({ region }))
   }
 }

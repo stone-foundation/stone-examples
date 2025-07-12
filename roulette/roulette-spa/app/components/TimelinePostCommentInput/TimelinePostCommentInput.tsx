@@ -5,7 +5,7 @@ import { SendHorizonalIcon } from 'lucide-react'
 
 interface TimelinePostCommentInputProps {
   onSubmit: (comment: string) => void
-  currentUser: User
+  currentUser?: User
   disabled?: boolean
 }
 
@@ -32,7 +32,7 @@ export const TimelinePostCommentInput = ({
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 border border-white/10 rounded-md bg-white/5 mt-3">
-      <Avatar size={32} name={currentUser.username} imageUrl={currentUser.avatarUrl} />
+      <Avatar size={32} name={currentUser?.username ?? 'I'} imageUrl={currentUser?.avatarUrl} />
       <textarea
         rows={1}
         className="flex-1 resize-none rounded-md bg-white/5 px-4 py-2 text-sm text-white placeholder-white/40 focus:outline-none"

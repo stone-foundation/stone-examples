@@ -24,7 +24,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.840.0",
+    "@aws-sdk/client-s3": "^3.844.0",
     "@aws-sdk/lib-dynamodb": "^3.840.0",
+    "@aws-sdk/s3-request-presigner": "^3.844.0",
     "@libsql/client": "^0.15.9",
     "@stone-js/aws-lambda-http-adapter": "^0.2.0",
     "@stone-js/core": "^0.1.2",

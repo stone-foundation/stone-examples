@@ -1,7 +1,7 @@
 import { JSX } from 'react'
 
 export const Footer = (): JSX.Element => (
-  <footer className='mt-14 text-center text-xs text-neutral-500'>
+  <footer className='mt-8 mb-6 text-center text-xs text-neutral-500'>
     <p>
       Made with ❤️ using{' '}
       <a href='https://stonejs.dev' className='text-orange-400 font-semibold'>

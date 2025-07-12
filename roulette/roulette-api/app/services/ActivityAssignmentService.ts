@@ -1,18 +1,23 @@
 import { User } from '../models/User'
+import { Team } from '../models/Team'
+import { Badge } from '../models/Badge'
 import { randomUUID } from 'node:crypto'
 import { TeamService } from './TeamService'
 import { UserService } from './UserService'
+import { PostService } from './PostService'
 import { BadgeService } from './BadgeService'
 import { ActivityService } from './ActivityService'
 import { ListMetadataOptions } from '../models/App'
-import { Service, IContainer, isNotEmpty } from '@stone-js/core'
+import { PRESENCE_EVENT_CATEGORY } from '../constants'
 import { NotFoundError, UnauthorizedError } from '@stone-js/http-core'
-import { ActivityAssignmentModel, ActivityAssignment } from '../models/Activity'
+import { Service, IContainer, isNotEmpty, isEmpty } from '@stone-js/core'
+import { ActivityAssignmentModel, ActivityAssignment, Activity } from '../models/Activity'
 import { IActivityAssignmentRepository } from '../repositories/contracts/IActivityAssignmentRepository'
 
 export interface ActivityAssignmentServiceOptions {
   teamService: TeamService
   userService: UserService
+  postService: PostService
   badgeService: BadgeService
   activityService: ActivityService
   activityAssignmentRepository: IActivityAssignmentRepository
@@ -22,12 +27,14 @@ export interface ActivityAssignmentServiceOptions {
 export class ActivityAssignmentService {
   private readonly teamService: TeamService
   private readonly userService: UserService
+  private readonly postService: PostService
   private readonly badgeService: BadgeService
   private readonly activityService: ActivityService
   private readonly activityAssignmentRepository: IActivityAssignmentRepository
 
-  constructor ({ teamService, badgeService, userService, activityService, activityAssignmentRepository }: ActivityAssignmentServiceOptions) {
+  constructor ({ postService, teamService, badgeService, userService, activityService, activityAssignmentRepository }: ActivityAssignmentServiceOptions) {
     this.teamService = teamService
+    this.postService = postService
     this.userService = userService
     this.badgeService = badgeService
     this.activityService = activityService
@@ -41,25 +48,25 @@ export class ActivityAssignmentService {
 
   async list (limit = 10, page?: number | string): Promise<ListMetadataOptions<ActivityAssignment>> {
     const result = await this.activityAssignmentRepository.list(limit, page)
-    const items = await Promise.all(result.items.map(m => this.toAssignment(m)))
+    const items = await Promise.all(result.items.map(async m => await this.toAssignment(m)))
     return { ...result, items }
   }
 
   async listBy (conditions: Partial<ActivityAssignmentModel>, limit = 10, page?: number | string): Promise<ListMetadataOptions<ActivityAssignment>> {
     const result = await this.activityAssignmentRepository.listBy(conditions, limit, page)
-    const items = await Promise.all(result.items.map(m => this.toAssignment(m)))
+    const items = await Promise.all(result.items.map(async m => await this.toAssignment(m)))
     return { ...result, items }
   }
 
   async findByUuid (uuid: string): Promise<ActivityAssignment | undefined> {
     const model = await this.activityAssignmentRepository.findByUuid(uuid)
-    if (model) return this.toAssignment(model)
+    if (model != null) return await this.toAssignment(model)
   }
 
   async findBy (conditions: Partial<ActivityAssignmentModel>): Promise<ActivityAssignment> {
     const model = await this.activityAssignmentRepository.findBy(conditions)
-    if (!model) throw new NotFoundError(`Activity assignment not found with ${JSON.stringify(conditions)}`)
-    return this.toAssignment(model)
+    if (model == null) throw new NotFoundError(`Activity assignment not found with ${JSON.stringify(conditions)}`)
+    return await this.toAssignment(model)
   }
 
   async assignToMember (activityUuid: string, teamUuid: string, memberUuid: string, issuedBy: User): Promise<string | undefined> {
@@ -70,14 +77,16 @@ export class ActivityAssignmentService {
     return await this.create({ activityUuid, teamUuid }, issuedBy)
   }
 
-  async create (assignment: Partial<ActivityAssignment>, issuedBy: User): Promise<string | undefined> {
+  async create (assignment: Partial<ActivityAssignment>, author: User): Promise<string | undefined> {
     const now = Date.now()
     return await this.activityAssignmentRepository.create({
       ...assignment,
       issuedAt: now,
-      uuid: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
       status: 'pending',
-      issuedByUuid: issuedBy.uuid
+      uuid: randomUUID(),
+      authorUuid: author.uuid
     } as ActivityAssignmentModel)
   }
 
@@ -106,7 +115,7 @@ export class ActivityAssignmentService {
   async update (assignment: ActivityAssignment, data: Partial<ActivityAssignment>): Promise<ActivityAssignment> {
     data.issuedAt = Date.now()
     const model = await this.activityAssignmentRepository.update(assignment, data)
-    if (isNotEmpty<ActivityAssignment>(model)) return this.toAssignment(model)
+    if (isNotEmpty<ActivityAssignment>(model)) return await this.toAssignment(model)
     throw new NotFoundError(`BadgeAssignment with ID ${assignment.uuid} not found`)
   }
 
@@ -114,21 +123,111 @@ export class ActivityAssignmentService {
     return await this.activityAssignmentRepository.delete(assignment)
   }
 
+  async statistics (conditions?: Partial<ActivityAssignmentModel>): Promise<Record<string, unknown>> {
+    let meta: ListMetadataOptions<ActivityAssignmentModel>
+
+    if (isEmpty(conditions)) {
+      meta = await this.activityAssignmentRepository.list(undefined, undefined)
+    } else {
+      meta = await this.activityAssignmentRepository.listBy(conditions, undefined, undefined)
+    }
+
+    const assignments = meta
+      .items
+      .filter(item => item.status === 'approved' && item.activityUuid)
+      .sort((a, b) => Number(b.validatedAt) - Number(a.validatedAt))
+
+    const teams = (await Promise.all(
+      assignments
+        .map(item => item.teamUuid)
+        .filter(v => isNotEmpty<string>(v))
+        .map(async uuid => await this.teamService.findByUuid(uuid))
+    )).reduce((acc, team) => acc.concat(acc.some(v => v.uuid === team?.uuid) ? [] : team ?? []), [] as Team[])
+
+    const latestactivities = (await Promise.all(
+      assignments
+        .map(item => item.activityUuid)
+        .filter(v => isNotEmpty<string>(v))
+        .map(async uuid => await this.activityService.findByUuid(uuid))
+    )).filter(activity => isNotEmpty<Activity>(activity))
+
+    const lastestBadges = (await Promise.all(
+      latestactivities
+        .map(item => item.badgeUuid)
+        .filter(v => isNotEmpty<string>(v))
+        .map(async uuid => await this.badgeService.findByUuid(uuid))
+    )).filter(badge => isNotEmpty<Badge>(badge))
+
+    const totalBadges = lastestBadges.length
+    const totalActivities = latestactivities.length
+    const totalBadgeScores = lastestBadges.reduce((sum, badge) => sum + Math.abs(badge?.score ?? 0), 0)
+    const totalActivityScores = latestactivities.reduce((sum, activity) => {
+      const score = Math.abs(activity.score ?? 0)
+      return activity?.impact === 'negative' ? sum - score : sum + score
+    }, 0)
+    const totalScores = totalBadgeScores + totalActivityScores
+    const totalPresence = latestactivities.filter(activity => activity.category === PRESENCE_EVENT_CATEGORY).length
+
+    // Per team statistics
+    teams.forEach(team => {
+      const teamAssigns = assignments.filter(item => item.teamUuid === team.uuid)
+      const teamBadges = teamAssigns
+        .map(item => lastestBadges.find(v => v.uuid === item.badgeUuid))
+        .filter(v => isNotEmpty<Badge>(v))
+      const teamActivities = teamAssigns
+        .map(item => latestactivities.find(v => v.uuid === item.activityUuid))
+        .filter(v => isNotEmpty<Activity>(v))
+      const totalBadgeScores = teamBadges.reduce((sum, badge) => sum + Math.abs(badge?.score ?? 0), 0)
+      const totalActivityScores = teamActivities.reduce((sum, activity) => {
+        const score = Math.abs(activity.score ?? 0)
+        return activity?.impact === 'negative' ? sum - score : sum + score
+      }, 0)
+      team.countBadges = teamBadges.length
+      team.countActivity = teamActivities.length
+      team.score = totalBadgeScores + totalActivityScores
+      team.countPresence = teamActivities.filter(v => v.category === PRESENCE_EVENT_CATEGORY).length
+    })
+
+    teams.sort((a, b) => b.score - a.score)
+    teams.forEach((team, index) => {
+      team.rank = index + 1
+    })
+
+    const postCount = await this.postService.count()
+
+    return {
+      teams,
+      postCount,
+      totalScores,
+      totalBadges,
+      totalPresence,
+      lastestBadges,
+      totalActivities,
+      totalBadgeScores,
+      latestactivities,
+      totalActivityScores
+    }
+  }
+
   async toAssignment (model: ActivityAssignmentModel): Promise<ActivityAssignment> {
     const team = model.teamUuid ? await this.teamService.findByUuid(model.teamUuid) : undefined
     const badge = model.badgeUuid ? await this.badgeService.findByUuid(model.badgeUuid) : undefined
     const member = model.memberUuid ? await this.userService.findByUuid(model.memberUuid) : undefined
-    const issuedBy = model.authorUuid ? await this.userService.findByUuid(model.authorUuid) : undefined
+    const author = model.authorUuid ? await this.userService.findByUuid(model.authorUuid) : undefined
     const activity = model.activityUuid ? await this.activityService.findByUuid(model.activityUuid) : undefined
     const validatedBy = model.validatedByUuid ? await this.userService.findByUuid(model.validatedByUuid) : undefined
+
+    if(isEmpty(activity)) {
+      throw new NotFoundError(`Activity with UUID ${model.activityUuid} not found`)
+    }
 
     return {
       ...model,
       team,
       badge,
       member,
+      author,
       activity,
-      issuedBy,
       validatedBy
     }
   }

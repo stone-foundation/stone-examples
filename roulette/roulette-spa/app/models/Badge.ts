@@ -5,16 +5,21 @@ export type BadgeType = 'victory' | 'participation' | 'achievement' | 'creativit
 
 export interface Badge {
   uuid: string
-  author: User
   name: string
   color: string
   score: number
-  type: BadgeType
+  author?: User
   iconUrl?: string
+  category: string
   createdAt: number
-  typeLabel: string
   updatedAt: number
+  authorUuid: string
   description: string
+  categoryLabel: string
+  activityUuid?: string
+  maxAssignments: number
+  expirationDays?: number
+  visibility: 'public' | 'private'
 }
 
 export interface BadgeTeam {
@@ -33,5 +38,23 @@ export interface BadgeAssignPayload {
   team: Team
   badge: Badge
   comment?: string
+  member?: TeamMember
+}
+
+export interface BadgeAssignment {
+  uuid: string
+  issuedAt: number
+  revoked: boolean
+  issuedByUuid: string
+  comment?: string
+  revokedBy?: User
+  badgeUuid: string
+  teamUuid?: string
+  revokedAt?: number
+  memberUuid?: string
+  origin: 'manual' | 'system' | 'event'
+  badge: Badge
+  team?: Team
+  issuedBy: User
   member?: TeamMember
 }

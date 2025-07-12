@@ -1,25 +1,37 @@
 import { Team } from '../../models/Team'
 import { User } from '../../models/User'
+import { Post } from '../../models/Post'
+import { Badge } from '../../models/Badge'
 import { PageInfo } from '../PageInfo/PageInfo'
 import { PageHeader } from '../PageHeader/PageHeader'
+import { PageBadges } from '../PageBadges/PageBadges'
+import { ListMetadataOptions } from '../../models/App'
 import { PageMembers } from '../PageMembers/PageMembers'
+import { ActivityAssignment } from '../../models/Activity'
 import { TimelineFeed } from '../TimelineFeed/TimelineFeed'
-import { TabItem, TabNavigation } from '../TabNavigation/TabNavigation'
+import { PageActivities } from '../PageActivities/PageActivities'
 import { TimelineComposer } from '../TimelineComposer/TimelineComposer'
+import { TabItem, TabNavigation } from '../TabNavigation/TabNavigation'
 
 interface PageDetailsProps {
   team: Team
+  badges: Badge[]
   currentUser: User
   activePath?: string
+  activityAssignments: ActivityAssignment[]
+  savePost: (payload: Partial<Post>) => Promise<void>
+  onUpdateInfos: (data: Partial<Team>) => Promise<void>
+  fetchPosts: (limit?: number, page?: string | number) => Promise<ListMetadataOptions<Post>>
+  onUpdateAssigmentStatus: (assignment: ActivityAssignment, payload: Partial<ActivityAssignment>) => Promise<void>
 }
 
-export const PageDetails: React.FC<PageDetailsProps> = ({ team, currentUser, activePath = 'timeline' }) => {
+export const PageDetails: React.FC<PageDetailsProps> = ({ onUpdateAssigmentStatus: onUpdateAssigment, activityAssignments, badges, team, onUpdateInfos, fetchPosts, savePost, currentUser, activePath = 'timeline' }) => {
   const tabs: TabItem[] = [
-    { path: 'timeline', label: 'Timeline' },
-    { path: 'infos', label: 'Infos' },
-    { path: 'members', label: 'Soldats' },
-    { path: 'events', label: 'Activités' },
-    { path: 'badges', label: 'Badges' },
+    { path: `/page/${team.name}/`, label: 'Timeline' },
+    { path: `/page/${team.name}/infos`, label: 'Infos' },
+    { path: `/page/${team.name}/badges`, label: 'Badges' },
+    { path: `/page/${team.name}/soldiers`, label: 'Soldats' },
+    { path: `/page/${team.name}/activities`, label: 'Activités' },
   ]
 
   return (
@@ -30,12 +42,28 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ team, currentUser, act
         <div className="flex-1">
           {activePath === 'timeline' && (
             <>
-              <TimelineComposer userName="Lolo" onPost={(v) => { console.log(v)}} />
-              <TimelineFeed currentUser={currentUser} fetchPosts={(): any => {}} />
+            {currentUser && <TimelineComposer currentUser={currentUser} onPost={async (v) => await savePost(v)} />}
+              <TimelineFeed currentUser={currentUser} fetchPosts={fetchPosts} />
             </>
           )}
-          {activePath === 'info' && <PageInfo team={team} />}
-          {activePath === 'members' && <PageMembers members={[]} />}
+          {activePath === 'infos' && <PageInfo team={team} onUpdate={onUpdateInfos} />}
+          {activePath === 'soldiers' && <PageMembers members={team.members} currentUser={currentUser} />}
+          {activePath === 'badges' && (
+            <PageBadges
+              badges={badges}
+              currentUser={currentUser}
+            />
+          )}
+          {activePath === 'activities' && (
+            <PageActivities
+              currentUser={currentUser}
+              assignments={activityAssignments}
+              onApprove={async (assignment) => await onUpdateAssigment(assignment, { status: 'approved' })}
+              onCancel={async (assignment) => await onUpdateAssigment(assignment, { status: 'cancelled' })}
+              onArchive={async (assignment) => await onUpdateAssigment(assignment, { status: 'archived' })}
+              onContest={async (assignment) => await onUpdateAssigment(assignment, { status: 'contested' })}
+            />
+          )}
         </div>
       </div>
     </div>

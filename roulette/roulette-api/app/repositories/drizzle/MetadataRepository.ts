@@ -8,7 +8,7 @@ export interface MetadataRepositoryOptions {
   database: LibSQLDatabase
 }
 
-export class MetadataRepository implements IMetadataRepository{
+export class MetadataRepository implements IMetadataRepository {
   private readonly db: LibSQLDatabase
 
   constructor ({ database }: MetadataRepositoryOptions) {
@@ -23,7 +23,7 @@ export class MetadataRepository implements IMetadataRepository{
   async increment (table: string, data: Partial<MetadataModel> = {}): Promise<void> {
     const existing = await this.get(table)
 
-    if (existing) {
+    if (existing != null) {
       await this.db.update(metadata).set({
         ...data,
         total: (existing.total ?? 0) + 1,
@@ -44,7 +44,7 @@ export class MetadataRepository implements IMetadataRepository{
   async decrement (table: string, data: Partial<MetadataModel> = {}): Promise<void> {
     const existing = await this.get(table)
 
-    if (existing) {
+    if (existing != null) {
       await this.db.update(metadata).set({
         ...data,
         total: Math.max((existing.total ?? 1) - 1, 0),

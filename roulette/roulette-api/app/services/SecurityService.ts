@@ -6,7 +6,7 @@ import { SessionService } from './SessionService'
 import { BadCredentialsError } from '../errors/CredentialsError'
 import { UserActivationEvent } from '../events/UserActivationEvent'
 import { IUserRepository } from '../repositories/contracts/IUserRepository'
-import { EventEmitter, IBlueprint, isEmpty, isNotEmpty, Service } from '@stone-js/core'
+import { EventEmitter, IBlueprint, isEmpty, isNotEmpty, Logger, Service } from '@stone-js/core'
 import { BadRequestError, IncomingHttpEvent, UnauthorizedError } from '@stone-js/http-core'
 import { UserCredentials, UserToken, UserChangePassword, UserModel, UserTokenPayload, User, UserActivation, UserActivationRequest, UserRegister } from '../models/User'
 
@@ -181,6 +181,23 @@ export class SecurityService {
   }
 
   /**
+   * Authenticate a user or return undefined if the user is not authenticated
+   *
+   * @param token - The token to authenticate
+   * @param ip - The IP address of the user
+   * @param userAgent - The user agent of the user
+   * @returns The authenticated user or undefined if not authenticated
+  */
+  async authenticateOrNot (token: string, ip: string, userAgent?: string): Promise<UserModel | undefined> {
+    try {
+      return await this.authenticate(token, ip, userAgent)
+    } catch (error) {
+      Logger.error('SecurityService', 'authenticateOrNot', error)
+      return undefined
+    }
+  }
+
+  /**
    * Check if the user is an admin
    *
    * @param user - The user to check
@@ -189,6 +206,17 @@ export class SecurityService {
   isAdmin (user?: User): boolean {
     const admins = this.blueprint.get<Array<Record<'phone' | 'role', string>>>('app.security.admins', [])
     return user?.roles?.includes('admin') ?? admins.some(admin => normalizePhone(admin.phone) === normalizePhone(user?.phone) && admin.role === 'admin')
+  }
+
+  /**
+   * Check if the user has a specific role
+   *
+   * @param user - The user to check
+   * @param role - The role to check for
+   * @returns True if the user has the role, false otherwise
+   */
+  hasRole (user?: User, role?: string): boolean {
+    return user?.roles?.includes(role ?? '') || false
   }
 
   /**

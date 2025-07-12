@@ -1,4 +1,4 @@
-import { MetadataModel } from "../../models/App"
+import { MetadataModel } from '../../models/App'
 
 /**
  * Metadata table Repository contract

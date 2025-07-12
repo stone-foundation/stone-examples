@@ -7,9 +7,10 @@ import { MemberCard } from '../MemberCard/MemberCard'
 
 export interface MemberListProps {
   members: User[]
+  isPage?: boolean
 }
 
-export const MemberList = ({ members }: MemberListProps): JSX.Element => {
+export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Element => {
   const [filter, setFilter] = useState('all')
 
   const filteredMembers = useMemo(() => {
@@ -21,14 +22,16 @@ export const MemberList = ({ members }: MemberListProps): JSX.Element => {
 
   return (
     <div>
-      <h2 className='text-2xl font-bold text-center text-white mb-4 uppercase'>
-        Liste des soldats
-      </h2>
-      <p className='text-center text-white/70 mb-6'>
-        Filtrez les soldats selon leur unité
-      </p>
+      {isPage && <>
+        <h2 className='text-2xl font-bold text-center text-white mb-4 uppercase'>
+          Liste des soldats
+        </h2>
+        <p className='text-center text-white/70 mb-6'>
+          Filtrez les soldats selon leur unité
+        </p>
 
-      <FilterTabs value={filter} onChange={setFilter} />
+        <FilterTabs value={filter} onChange={setFilter} />
+      </>}
 
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6'>
         {filteredMembers.length > 0

@@ -39,7 +39,25 @@ export class AppConfiguration implements IConfiguration {
         },
         roulette: {
           path: getString('API_CLIENT_ROULETTE_PATH', '/roulette')
-        }
+        },
+        badge: {
+          path: getString('API_CLIENT_BADGE_PATH', '/badges')
+        },
+        badgeAssignment: {
+          path: getString('API_CLIENT_BADGE_ASSIGNMENT_PATH', '/badge-assignments')
+        },
+        activity: {
+          path: getString('API_CLIENT_ACTIVITY_PATH', '/activities')
+        },
+        activityAssignment: {
+          path: getString('API_CLIENT_ACTIVITY_ASSIGNMENT_PATH', '/activity-assignments')
+        },
+        post: {
+          path: getString('API_CLIENT_POST_PATH', '/posts')
+        },
+        postComment: {
+          path: getString('API_CLIENT_POST_COMMENT_PATH', '/post-comments')
+        },
       }
     }
   }

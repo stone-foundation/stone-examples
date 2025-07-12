@@ -3,13 +3,17 @@ import { randomUUID } from 'node:crypto'
 import { Post, PostModel } from '../models/Post'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
-import { isNotEmpty, Service, IContainer } from '@stone-js/core'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { IPostRepository } from '../repositories/contracts/IPostRepository'
+import { isNotEmpty, Service, IContainer, IBlueprint } from '@stone-js/core'
 
 /**
  * Post Service Options
  */
 export interface PostServiceOptions {
+  s3Client: S3Client
+  blueprint: IBlueprint
   postRepository: IPostRepository
 }
 
@@ -18,9 +22,13 @@ export interface PostServiceOptions {
  */
 @Service({ alias: 'postService' })
 export class PostService {
+  private readonly s3Client: S3Client
+  private readonly blueprint: IBlueprint
   private readonly postRepository: IPostRepository
 
-  constructor ({ postRepository }: PostServiceOptions) {
+  constructor ({ s3Client, blueprint, postRepository }: PostServiceOptions) {
+    this.s3Client = s3Client
+    this.blueprint = blueprint
     this.postRepository = postRepository
   }
 
@@ -70,16 +78,43 @@ export class PostService {
   /**
    * Create post
    */
-  async create (post: Post, author: User): Promise<string | undefined> {
+  async create (post: Post, author: User): Promise<Record<string, string>> {
     const now = Date.now()
-    return await this.postRepository.create({
+    const uuid = randomUUID()
+    const urls = post.type === 'image' ? await this.generateUploadUrls({ ...post, uuid }) : undefined
+
+    await this.postRepository.create({
       ...post,
+      uuid,
+      imageUrl: urls?.publicUrl,
       authorUuid: author.uuid,
-      uuid: randomUUID(),
       createdAt: now,
       updatedAt: now,
       likeCount: 0,
       commentCount: 0
+    })
+    
+    return { uuid, ...urls }
+  }
+
+  /**
+   * Toggle like on post
+   */
+  async toggleLike (post: Post, user: User): Promise<void> {
+    let likeCount = post.likeCount
+    let likedByUuids = (post.likedByUuids ?? []) as string[]
+
+    if (likedByUuids.includes(user.uuid)) {
+      likeCount--
+      likedByUuids = likedByUuids.filter(uuid => uuid !== user.uuid)
+    } else {
+      likeCount++
+      likedByUuids.push(user.uuid)
+    }
+
+    await this.update(post, {
+      likeCount,
+      likedByUuids
     })
   }
 
@@ -98,6 +133,40 @@ export class PostService {
    */
   async delete (post: Post): Promise<boolean> {
     return await this.postRepository.delete(post)
+  }
+
+  /**
+   * Count total posts
+   */
+  async count (): Promise<number> {
+    return await this.postRepository.count()
+  }
+
+  /**
+   * Generate upload URLs for user avatar
+   *
+   * @param user - The user for whom to generate the upload URLs
+   * @param extension - The file extension for the avatar (default is 'png')
+   * @returns An object containing the upload URL, public URL, and key for the avatar
+   */
+  async generateUploadUrls (post: Post, extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
+    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'posts')
+    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
+    const s3BucketFolder = this.blueprint.get<string>('aws.s3.postsFolderName', 'posts')
+    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
+    const key = `${s3BucketFolder}/${post.uuid}/image.${extension}`
+
+    const command = new PutObjectCommand({
+      Key: key,
+      Bucket: bucketName,
+      ContentType: `image/${extension}`
+    })
+
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
+
+    const publicUrl = `${cloudfrontStaticUrl}/${key}`
+
+    return { uploadUrl, publicUrl, key }
   }
 
   /**

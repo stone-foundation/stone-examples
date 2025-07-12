@@ -1,5 +1,5 @@
-import { ActivityModel } from "../../models/Activity"
-import { ListMetadataOptions } from "../../models/App"
+import { ActivityModel } from '../../models/Activity'
+import { ListMetadataOptions } from '../../models/App'
 
 /**
  * Activity Repository contract

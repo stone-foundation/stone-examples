@@ -54,7 +54,7 @@ export class UserEventHandler {
   */
   @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
-  async publicList (event: IncomingHttpEvent): Promise<Partial<User>[]> {
+  async publicList (event: IncomingHttpEvent): Promise<Array<Partial<User>>> {
     const currentUser = event.getUser<UserModel>()
     const teams = await this.teamService.list(event.get<number>('limit', 10))
     const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
@@ -151,6 +151,18 @@ export class UserEventHandler {
     this.logger.info(`User updated: ${user.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return updated
+  }
+
+  /**
+   * Generate signed URL for team asset (logo or banner)
+   */
+  @Post('/:user@uuid/upload', { rules: { user: /\S{30,40}/ }, bindings: { user: UserService }, middleware: ['auth'] })
+  @JsonHttpResponse(200)
+  async generateUploadLink (event: IncomingHttpEvent): Promise<{ uploadUrl: string, publicUrl: string }> {
+    const user = event.getUser<User>()
+    const data = event.getBody<{ extension: string }>()
+
+    return await this.userService.generateUploadUrls(user, data?.extension ?? 'png')
   }
 
   /**

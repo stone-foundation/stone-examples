@@ -47,47 +47,24 @@ export class DynamoTeamRepository implements ITeamRepository {
    * Find a team by dynamic conditions
    */
   async findBy (conditions: Partial<TeamModel>): Promise<TeamModel | undefined> {
-    if (isNotEmpty(conditions.color)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          Limit: 1,
-          IndexName: 'color-index',
-          TableName: this.tableName,
-          KeyConditionExpression: '#color = :color',
-          ExpressionAttributeNames: { '#color': 'color' },
-          ExpressionAttributeValues: { ':color': conditions.color }
-        })
-      )
-      return result.Items?.[0] as TeamModel | undefined
-    }
-
-    if (isNotEmpty(conditions.name)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          Limit: 1,
-          IndexName: 'name-index',
-          TableName: this.tableName,
-          KeyConditionExpression: '#name = :name',
-          ExpressionAttributeNames: { '#name': 'name' },
-          ExpressionAttributeValues: { ':name': conditions.name }
-        })
-      )
-      return result.Items?.[0] as TeamModel | undefined
-    }
-
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'color', 'name']
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
           Limit: 1,
           TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid }
-        })
-      )
-      return result.Items?.[0] as TeamModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as TeamModel | undefined
+      }
     }
-
     return undefined
   }
 

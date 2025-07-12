@@ -15,8 +15,8 @@ export function RecentBadgesCard({ badges }: RecentBadgesCardProps) {
         >
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="font-semibold">{badge.name}</span>
-              <span className="text-xs text-white/60">{badge.description}</span>
+              <span className="font-semibold">{badge.badge.name}</span>
+              <span className="text-xs text-white/60">{badge.badge.description}</span>
               {badge.team.name && (
                 <span
                   className="mt-1 text-xs inline-block px-2 py-0.5 rounded-full text-white font-medium"

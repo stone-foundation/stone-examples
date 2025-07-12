@@ -48,7 +48,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ team }): JSX.Element => 
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/80 flex-shrink-0">
                   <Megaphone size={20} className='font-bold' color={COLOR_MAP[team.color]} />
                 </span>
-                {team.slogan}
+                {team.motto ?? team.slogan}
               </p>
             )}
           </div>

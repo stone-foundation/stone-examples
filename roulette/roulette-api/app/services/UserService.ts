@@ -2,13 +2,17 @@ import { randomUUID } from 'node:crypto'
 import { normalizePhone } from '../utils'
 import { User, UserModel } from '../models/User'
 import { NotFoundError } from '@stone-js/http-core'
-import { IContainer, isNotEmpty, Service } from '@stone-js/core'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { IUserRepository } from '../repositories/contracts/IUserRepository'
+import { IBlueprint, IContainer, isNotEmpty, Service } from '@stone-js/core'
 
 /**
  * User Service Options
 */
 export interface UserServiceOptions {
+  s3Client: S3Client
+  blueprint: IBlueprint
   userRepository: IUserRepository
 }
 
@@ -17,6 +21,8 @@ export interface UserServiceOptions {
 */
 @Service({ alias: 'userService' })
 export class UserService {
+  private readonly s3Client: S3Client
+  private readonly blueprint: IBlueprint
   private readonly userRepository: IUserRepository
 
   /**
@@ -35,7 +41,9 @@ export class UserService {
   /**
    * Create a new User Service
   */
-  constructor ({ userRepository }: UserServiceOptions) {
+  constructor ({ s3Client, blueprint, userRepository }: UserServiceOptions) {
+    this.s3Client = s3Client
+    this.blueprint = blueprint
     this.userRepository = userRepository
   }
 
@@ -173,14 +181,51 @@ export class UserService {
   }
 
   /**
+   * Generate upload URLs for user avatar
+   *
+   * @param user - The user for whom to generate the upload URLs
+   * @param extension - The file extension for the avatar (default is 'png')
+   * @returns An object containing the upload URL, public URL, and key for the avatar
+   */
+  async generateUploadUrls (user: User, extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
+    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'users')
+    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
+    const s3BucketFolder = this.blueprint.get<string>('aws.s3.usersFolderName', 'users')
+    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
+    const key = `${s3BucketFolder}/${user.uuid}/avatar.${extension}`
+
+    const command = new PutObjectCommand({
+      Key: key,
+      Bucket: bucketName,
+      ContentType: `image/${extension}`
+    })
+
+    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
+
+    const publicUrl = `${cloudfrontStaticUrl}/${key}`
+
+    await this.update(user, { avatarUrl: publicUrl, updatedAt: Date.now() })
+
+    return { uploadUrl, publicUrl, key }
+  }
+
+  /**
    * Convert UserModel to User
    *
    * @param userModel - The user model to convert
    * @returns The converted user
    */
   toUser (userModel: UserModel): User {
+    const isAdmin = userModel.roles?.includes('admin') || false
+    const isCaptain = userModel.roles?.includes('captain') || false
+    const isModerator = isAdmin || userModel.roles?.includes('moderator') || false
+    
     return {
       ...userModel,
+      isAdmin,
+      isCaptain,
+      isModerator,
+      
       otp: undefined, // Omit sensitive data
       otpCount: undefined, // Omit OTP count
       password: undefined, // Omit password

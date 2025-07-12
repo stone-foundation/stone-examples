@@ -1,3 +1,4 @@
+import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
@@ -43,14 +44,26 @@ export class ActivityService {
     throw new NotFoundError(`Activity not found with conditions: ${JSON.stringify(conditions)}`)
   }
 
-  async create (data: Partial<ActivityModel>): Promise<string | undefined> {
+  async create (data: Partial<ActivityModel>, author: User): Promise<string | undefined> {
     const now = Date.now()
     return await this.activityRepository.create({
       ...data,
-      uuid: randomUUID(),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      uuid: randomUUID(),
+      authorUuid: author.uuid,
+      badgeUuid: isNotEmpty<string>(data.badgeUuid) ? data.badgeUuid : undefined
     } as ActivityModel)
+  }
+
+  async createMany (activities: ActivityModel[], author: User): Promise<Array<string | undefined>> {
+    const uuids: Array<string | undefined> = []
+
+    for (const activity of activities) {
+      uuids.push(await this.create(activity, author))
+    }
+
+    return uuids
   }
 
   async update (activity: ActivityModel, data: Partial<ActivityModel>): Promise<Activity> {

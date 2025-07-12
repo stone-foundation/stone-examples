@@ -9,7 +9,7 @@ export interface UserModel {
   uuid: string
   otp?: string | null
   phone: string
-  roles?: string | null
+  roles?: string[] | null // Array of roles, e.g., ['admin', 'moderator']
   fullname: string
   username: string
   otpCount?: number | null
@@ -20,7 +20,9 @@ export interface UserModel {
   teamUuid?: string | null
   password?: string | null
   updatedAt: number
+  avatarUrl?: string | null
   otpExpiresAt?: number | null
+  presenceActivityUuid?: string | null
 }
 
 /**
@@ -28,6 +30,12 @@ export interface UserModel {
 */
 export interface User extends UserModel {
   team?: Team
+  isModerator?: boolean
+  isAdmin?: boolean
+  isPunched?: boolean
+  isCaptain?: boolean
+  isPresent?: boolean
+  isLate?: boolean
   otp: undefined
   session?: Session
   otpCount: undefined

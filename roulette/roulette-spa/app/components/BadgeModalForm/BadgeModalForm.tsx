@@ -38,7 +38,7 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
   }
 
   const handleSubmit = () => {
-    if (!form.name || !form.type || !form.color || !form.typeLabel) return
+    if (!form.name || !form.category || !form.color || !form.categoryLabel) return
     onSubmit(form)
     onClose()
   }
@@ -91,7 +91,7 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
             <div>
               <label className="block mb-1 text-sm">Type</label>
               <select
-                value={form.type ?? ""}
+                value={form.category ?? ""}
                 onChange={(e) => handleChange("type", e.target.value as BadgeType)}
                 className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
               >
@@ -107,7 +107,7 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
             <div>
               <label className="block mb-1 text-sm">Texte du type</label>
               <input
-                value={form.typeLabel ?? ""}
+                value={form.categoryLabel ?? ""}
                 onChange={(e) => handleChange("typeLabel", e.target.value)}
                 className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
               />

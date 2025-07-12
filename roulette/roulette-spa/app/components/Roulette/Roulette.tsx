@@ -35,7 +35,7 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
     // }, 15000)
 
     teamService
-      .stats()
+      .results()
       .then(v => {
         if (!cancelled) setStats(v)
       })
@@ -68,14 +68,14 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
   const spinRoulette = async (): Promise<{ result: SpinResult, stats: TeamStat[], team: Team }> => {
     const result = await rouletteService.spin()
     const team = await teamService.currentTeam()
-    const stats = await teamService.stats()
+    const stats = await teamService.results()
 
     return { result, stats, team }
   }
 
   const autoUpdateTeams = async (): Promise<void> => {
     try {
-      const stats = await teamService.stats()
+      const stats = await teamService.results()
       setStats(stats)
     } catch (_e: any) {}
     try {

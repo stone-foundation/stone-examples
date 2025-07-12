@@ -47,7 +47,7 @@ export class DynamoPostRepository implements IPostRepository {
       limit,
       page: cursor,
       items: (result.Items as PostModel[]) ?? [],
-      nextPage: result.LastEvaluatedKey
+      nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
@@ -58,14 +58,15 @@ export class DynamoPostRepository implements IPostRepository {
     let keyName: string | undefined
     let indexName: string | undefined
 
-    if (isNotEmpty(conditions.authorUuid)) {
-      indexName = 'authorUuid-index'
-      keyName = 'authorUuid'
-      keyValue = conditions.authorUuid
-    } else if (isNotEmpty(conditions.teamUuid)) {
-      indexName = 'teamUuid-index'
-      keyName = 'teamUuid'
-      keyValue = conditions.teamUuid
+    const keys = ['teamUuid', 'authorUuid']
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        keyName = key
+        keyValue = value
+        indexName = `${key}-index`
+        break
+      }
     }
 
     if (keyName) {
@@ -90,7 +91,7 @@ export class DynamoPostRepository implements IPostRepository {
         limit,
         page: cursor,
         items: (result.Items as PostModel[]) ?? [],
-        nextPage: result.LastEvaluatedKey
+        nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
       }
@@ -104,19 +105,24 @@ export class DynamoPostRepository implements IPostRepository {
   }
 
   async findBy (conditions: Partial<PostModel>): Promise<PostModel | undefined> {
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'teamUuid', 'authorUuid']
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
+          Limit: 1,
           TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as PostModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as PostModel | undefined
+      }
     }
-
     return undefined
   }
 

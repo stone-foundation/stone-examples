@@ -15,8 +15,9 @@ export const users = sqliteTable('users', {
   lastSeen: integer('last_seen'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull(),
   isOnline: integer('is_online', { mode: 'boolean' }).notNull(),
-  roles: text('roles'),
+  roles: text('roles', { mode: 'json' }).default('[]'), // JSON array of roles
   teamUuid: text('team_uuid'),
+  presenceActivityUuid: text('presence_activity_uuid'),
   updatedAt: integer('updated_at').notNull(),
   createdAt: integer('created_at').notNull()
 })
@@ -40,12 +41,23 @@ export const sessions = sqliteTable('sessions', {
 export const teams = sqliteTable('teams', {
   uuid: text('uuid').primaryKey(),
   name: text('name').notNull(),
+  rank: integer('rank').notNull().default(0),
+  score: integer('score').notNull().default(0),
   color: text('color').notNull(),
+  motto: text('motto'),
+  rules: text('rules'),
+  slogan: text('slogan'),
+  logoUrl: text('logo_url'),
+  bannerUrl: text('banner_url'),
+  description: text('description'),
   chatLink: text('chat_link'),
-  totalMember: integer('total_member').notNull(),
-  countMember: integer('count_member').notNull(),
-  updatedAt: integer('updated_at').notNull(),
-  createdAt: integer('created_at').notNull()
+  captainUuid: text('captain_uuid'),
+  totalMember: integer('total_member').notNull().default(0),
+  countActivity: integer('count_activity').notNull().default(0),
+  countBadges: integer('count_badges').notNull().default(0),
+  countPresence: integer('count_presence').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
 })
 
 // Bets table
@@ -95,10 +107,9 @@ export const badgeAssignments = sqliteTable('badge_assignments', {
   revokedByUuid: text('revoked_by_uuid')
 })
 
-
 export const metadata = sqliteTable('metadata', {
   id: integer('id').primaryKey(),
-  table: text('table').unique().notNull(),         // ex: 'badges'
+  table: text('table').unique().notNull(), // ex: 'badges'
   total: integer('total').notNull().default(0),
   deleted: integer('deleted').notNull().default(0),
   lastCreatedAt: integer('last_created_at'),
@@ -128,7 +139,7 @@ export const activities = sqliteTable('activities', {
   validityDuration: integer('validity_duration'),
 
   createdAt: integer('created_at').notNull(),
-  updatedAt: integer('updated_at').notNull(),
+  updatedAt: integer('updated_at').notNull()
 })
 
 export const activityAssignments = sqliteTable('activity_assignments', {
@@ -177,7 +188,7 @@ export const posts = sqliteTable('posts', {
   teamUuid: text('teamUuid'),
   imageUrl: text('imageUrl'),
   badgeUuid: text('badgeUuid'),
-  eventUuid: text('eventUuid'),
+  eventUuid: text('activityUuid'),
   authorUuid: text('authorUuid').notNull(),
   backgroundColor: text('backgroundColor'),
   visibility: text('visibility').notNull(), // 'private' | 'public'

@@ -1,5 +1,5 @@
-import { ListMetadataOptions } from "../../models/App"
-import { BadgeAssignmentModel } from "../../models/Badge"
+import { ListMetadataOptions } from '../../models/App'
+import { BadgeAssignmentModel } from '../../models/Badge'
 
 /**
  * Badge Assignment Repository contract

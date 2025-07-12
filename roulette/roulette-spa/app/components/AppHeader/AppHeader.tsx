@@ -3,9 +3,11 @@ import { Spinner } from "../Spinner/Spinner"
 import { RouteEvent } from "@stone-js/router"
 import { JSX, useEffect, useState } from "react"
 import { IContainer, isNotEmpty } from "@stone-js/core"
+import { PRESENCE_EVENT_CATEGORY } from "../../constants"
 import { ConfirmModal } from "../ConfirmModal/ConfirmModal"
 import { SecurityService } from "../../services/SecurityService"
 import { IRouter, ReactIncomingEvent, StoneLink } from "@stone-js/use-react"
+import { ActivityAssignmentService } from "../../services/ActivityAssignmentService"
 import { ActivitySquare, BadgeCheck, Gamepad2, GroupIcon, LogOutIcon, MenuIcon, User as UserIcon } from "lucide-react"
 
 interface AppHeaderProps {
@@ -17,24 +19,37 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
   const [menuOpen, setMenuOpen] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [isPunching, setIsPunching] = useState(false)
-  const [user, setUser] = useState<User | undefined>({ fullname: 'Evens Pierre', username: 'Stone', isPunched: true } as User)
+  const [user, setUser] = useState<User | undefined>()
   
   const router = container.make<IRouter>('router')
   const securityService = container.make<SecurityService>('securityService')
+  const activityAssignmentService = container.make<ActivityAssignmentService>('activityAssignmentService')
   const setCurrentUser = () => {
-    // setUser(
-    //   container.make<ReactIncomingEvent>('event').getUser()
-    // )
+    setUser(
+      container.make<ReactIncomingEvent>('event').getUser()
+    )
   }
 
   useEffect(() => {
     setCurrentUser()
-    router.on(RouteEvent.ROUTING, setCurrentUser)
-    return () => { router.off(RouteEvent.ROUTING, setCurrentUser) }
+    // router.on(RouteEvent.ROUTED, setCurrentUser)
+    // return () => { router.off(RouteEvent.ROUTED, setCurrentUser) }
   }, [router])
 
   const onPunch = () => {
+    if (!user) return
     setIsPunching(true)
+    activityAssignmentService.create({
+      memberUuid: user.uuid,
+      teamUuid: user.teamUuid,
+      activityCategory: PRESENCE_EVENT_CATEGORY,
+    })
+      .then(() => {
+        setUser({ ...user, isPunched: true })
+      })
+      .finally(() => {
+        setIsPunching(false)
+      })
   }
 
   const dropdownRef = (el: HTMLDivElement | null) => {
@@ -67,7 +82,7 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
           <span className="hidden md:inline text-lg font-bold text-left uppercase tracking-wide">Opération Adrénaline</span>
         </StoneLink>
 
-        {user?.isPunched && (
+        {user && !user.isPunched && (
             <button
             onClick={onPunch}
             disabled={isPunching}
@@ -81,10 +96,10 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
         {user && <div className="relative">
           <nav className="md:flex items-center gap-3">
             <StoneLink
-              to='/events'
+              to='/activities'
               className='items-center justify-center gap-2 hidden md:flex text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
             >
-              <ActivitySquare size={16} /> Events
+              <ActivitySquare size={16} /> Activities
             </StoneLink>
             <StoneLink
               to='/badges'
@@ -109,7 +124,7 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
               onClick={() => setMenuOpen(!menuOpen)}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm flex items-center justify-center gap-2"
             >
-              <UserIcon size={16} /> <span className="hidden md:inline text-sm text-white/80">{user.username}</span>
+              <UserIcon size={16} /> <span className="hidden md:inline text-sm text-white/80 capitalize">{user.username}</span>
             </button>
           </nav>
 
@@ -126,21 +141,23 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
                 </div>
                 <div>
                   <div className="font-semibold text-white">{user.fullname}</div>
-                  <div className="text-xs text-white/50">@{user.username}</div>
+                  <div className="text-xs text-white/50 capitalize">@{user.username}</div>
                 </div>
               </div>
-              <StoneLink to="/events" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
-                <ActivitySquare size={16} className="text-white/80" /> Events
-              </StoneLink>
-              <StoneLink to="/badges" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
-                <BadgeCheck size={16} className="text-white/80" /> Badges
-              </StoneLink>
-              <StoneLink to="/soldiers" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
-                <GroupIcon size={16} className="text-white/80" /> Soldats
-              </StoneLink>
-              <StoneLink to="/spin" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
-                <Gamepad2 size={16} className="text-white/80" /> Roulette
-              </StoneLink>
+              <div className="md:hidden">
+                <StoneLink to="/activities" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                  <ActivitySquare size={16} className="text-white/80" /> Activities
+                </StoneLink>
+                <StoneLink to="/badges" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                  <BadgeCheck size={16} className="text-white/80" /> Badges
+                </StoneLink>
+                <StoneLink to="/soldiers" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                  <GroupIcon size={16} className="text-white/80" /> Soldats
+                </StoneLink>
+                <StoneLink to="/spin" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                  <Gamepad2 size={16} className="text-white/80" /> Roulette
+                </StoneLink>
+              </div>
               <button
                 onClick={() => onLogout(router, securityService)}
                 className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors mt-2"

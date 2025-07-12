@@ -21,3 +21,7 @@ button:hover, a:hover {
 .sidebar-menu-link.selected {
   background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
 }
+
+.page-tab.selected {
+  background-color: color-mix(in oklab, var(--color-white) 5%, transparent);
+}

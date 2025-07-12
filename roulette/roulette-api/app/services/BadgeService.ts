@@ -85,8 +85,8 @@ export class BadgeService {
    * Create many badges
    */
   async createMany (badges: Badge[], author: User): Promise<Array<string | undefined>> {
-    const uuids: (string | undefined)[] = []
-    
+    const uuids: Array<string | undefined> = []
+
     for (const badge of badges) {
       uuids.push(await this.create(badge, author))
     }
@@ -117,7 +117,7 @@ export class BadgeService {
   toBadge (model: BadgeModel, author?: User): Badge {
     return {
       ...model,
-      author,
+      author
     }
   }
 }

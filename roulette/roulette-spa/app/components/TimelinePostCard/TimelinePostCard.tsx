@@ -9,12 +9,12 @@ import { TimelinePostCommentInput } from "../TimelinePostCommentInput/TimelinePo
 
 interface TimelinePostCardProps {
   post: Post
-  currentUser: User
+  currentUser?: User
 }
 
 export const TimelinePostCard = ({ post, currentUser }: TimelinePostCardProps) => {
   return (
-    <div className="bg-neutral-900 rounded-xl mb-6 shadow border border-white/5 w-full transition hover:shadow-md hover:border-white/10">
+    <div className="bg-neutral-900 rounded-xl mb-4 shadow border border-white/5 w-full transition hover:shadow-md hover:border-white/10">
       {/* Header */}
       <div className="p-4 border-b border-white/5">
         <PostHeader post={post} currentUser={currentUser} />

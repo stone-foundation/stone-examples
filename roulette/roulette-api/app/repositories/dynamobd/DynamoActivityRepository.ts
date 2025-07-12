@@ -47,7 +47,7 @@ export class DynamoActivityRepository implements IActivityRepository {
       limit,
       page: cursor,
       items: (result.Items as ActivityModel[]) ?? [],
-      nextPage: result.LastEvaluatedKey
+      nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
@@ -58,21 +58,22 @@ export class DynamoActivityRepository implements IActivityRepository {
     let keyName: string | undefined
     let indexName: string | undefined
 
-    if (isNotEmpty(conditions.badgeUuid)) {
-      indexName = 'badgeUuid-index'
-      keyName = 'badgeUuid'
-      keyValue = conditions.badgeUuid
-    } else if (isNotEmpty(conditions.category)) {
-      indexName = 'category-index'
-      keyName = 'category'
-      keyValue = conditions.category
+    const keys = ['badgeUuid', 'category']
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        keyName = key
+        keyValue = value
+        indexName = `${key}-index`
+        break
+      }
     }
 
     if (keyName) {
       const params: any = {
-        TableName: this.tableName,
         IndexName: indexName,
         Limit: Number(limit),
+        TableName: this.tableName,
         KeyConditionExpression: `#${keyName} = :${keyName}`,
         ExpressionAttributeNames: { [`#${keyName}`]: keyName },
         ExpressionAttributeValues: { [`:${keyName}`]: keyValue }
@@ -90,7 +91,7 @@ export class DynamoActivityRepository implements IActivityRepository {
         limit,
         page: cursor,
         items: (result.Items as ActivityModel[]) ?? [],
-        nextPage: result.LastEvaluatedKey
+        nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
       }
@@ -104,17 +105,24 @@ export class DynamoActivityRepository implements IActivityRepository {
   }
 
   async findBy (conditions: Partial<ActivityModel>): Promise<ActivityModel | undefined> {
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'badgeUuid', 'category']
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
+          Limit: 1,
           TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as ActivityModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as ActivityModel | undefined
+      }
     }
     return undefined
   }
@@ -183,4 +191,3 @@ export class DynamoActivityRepository implements IActivityRepository {
     return meta?.total ?? 0
   }
 }
-

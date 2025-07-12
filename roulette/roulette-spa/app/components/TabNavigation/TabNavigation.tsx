@@ -35,7 +35,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
             to={tab.path}
             key={tab.path}
             className={clsx(
-              'whitespace-nowrap px-4 py-2 rounded-t-md text-sm transition',
+              'whitespace-nowrap px-4 py-2 rounded-t-md text-sm transition page-tab',
               isActive
                 ? 'bg-white/10 text-white font-medium'
                 : 'text-white/60 hover:bg-white/5'

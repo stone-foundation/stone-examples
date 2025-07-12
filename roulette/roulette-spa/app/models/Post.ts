@@ -4,6 +4,8 @@ import { Badge } from "./Badge"
 import { Event } from "./Event"
 import { Color } from "../constants"
 
+export type PostVisibility = 'public' | 'team-only' | 'private'
+
 export type PostType = 'text' | 'colored' | 'image' | 'event' | 'badge'
 
 export interface Post {
@@ -11,22 +13,23 @@ export interface Post {
   uuid: string
   author: User
   event?: Event
+  image?: File
   badge?: Badge
   type: PostType
   content?: string
   private: boolean
-  image?: ImagePost
+  imageUrl: string
   createdAt: number
   likeCount: number
+  teamUuid?: string
   updatedAt?: number
   likedByMe?: boolean
   commentCount: number
   backgroundColor?: Color
-}
 
-export interface ImagePost {
-  imageUrl: string
-  caption?: string
+  visibility: PostVisibility
+
+  likedByUuids?: string[]
 }
 
 export interface PostComment {
@@ -75,66 +78,7 @@ export const mockEvent: Event = {
   createdAt: 1718000000000
 } as Event
 
-export const mockPosts: Post[] = [
-  {
-    uuid: "post-1",
-    author: mockUser,
-    team: mockTeam,
-    type: "text",
-    content: "Hello world!",
-    private: false,
-    createdAt: 1718000000000,
-    likeCount: 5,
-    commentCount: 2
-  },
-  {
-    uuid: "post-1-1",
-    author: mockUser,
-    team: mockTeam,
-    type: "colored",
-    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-    private: false,
-    createdAt: 1718000000000,
-    backgroundColor: "blue",
-    likeCount: 5,
-    commentCount: 2
-  },
-  {
-    uuid: "post-2",
-    author: mockUser,
-    type: "image",
-    image: {
-      imageUrl: "/karting.jpg",
-      caption: "A beautiful day"
-    },
-    private: false,
-    createdAt: 1718001000000,
-    likeCount: 3,
-    commentCount: 1
-  },
-  {
-    uuid: "post-3",
-    author: mockUser,
-    type: "badge",
-    badge: mockBadge,
-    team: mockTeam,
-    private: true,
-    createdAt: 1718002000000,
-    likeCount: 1,
-    commentCount: 0
-  },
-  {
-    uuid: "post-4",
-    author: mockUser,
-    type: "event",
-    team: mockTeam,
-    event: mockEvent,
-    private: false,
-    createdAt: 1718003000000,
-    likeCount: 0,
-    commentCount: 0
-  }
-]
+export const mockPosts: Post[] = []
 
 export const mockComments: PostComment[] = [
   {

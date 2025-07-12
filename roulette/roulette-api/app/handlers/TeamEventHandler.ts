@@ -44,14 +44,20 @@ export class TeamEventHandler {
   */
   @Get('/', { name: 'list', middleware: ['admin'] })
   async list (event: IncomingHttpEvent): Promise<Team[]> {
-    return await this.teamService.list(event.get<number>('limit', 10))
+    const teamsData = await this.teamService.list(event.get<number>('limit', 10))
+
+    return Promise.all(teamsData.map(async (team) => {
+      const members = await this.userService.listBy({ teamUuid: team.uuid }, 100)
+      team.members = members.map(v => this.teamService.toTeamMember(v))
+      return team
+    }))
   }
 
   /**
-   * Show team statistics
+   * Show team results
   */
-  @Get('/stats', { name: 'stats' })
-  async stats (): Promise<Array<Partial<Team>>> {
+  @Get('/results', { name: 'results' })
+  async results (): Promise<Array<Partial<Team>>> {
     const limit = this.blueprint.get<number>('app.team.defaultTotalMember', 10)
     return (await this.teamService.list(limit)).map(v => this.teamService.toStatTeam(v))
   }
@@ -72,7 +78,7 @@ export class TeamEventHandler {
     }
 
     const members = await this.userService.listBy({ teamUuid: team?.uuid }, limit)
-    team.members = members.map(user => ({ username: user.username, fullname: user.fullname }))
+    team.members = members.map(v => this.teamService.toTeamMember(v))
 
     return this.teamService.toStatTeam(team, true)
   }
@@ -83,15 +89,27 @@ export class TeamEventHandler {
    * @param event - IncomingHttpEvent
    * @returns Team
   */
-  @Get('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService }, middleware: ['admin'] })
+  @Get('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService } })
   async show (event: IncomingHttpEvent): Promise<Team | undefined> {
     const team = event.get<Team>('team')
     const limit = this.blueprint.get<number>('app.team.defaultTotalMember', 10)
     const members = await this.userService.listBy({ teamUuid: team?.uuid }, limit)
 
-    if (isNotEmpty<Team>(team)) { team.members = members }
+    if (isNotEmpty<Team>(team)) { team.members = members.map(v => this.teamService.toTeamMember(v)) }
 
     return team
+  }
+
+
+  /**
+   * Show a team
+   *
+   * @param event - IncomingHttpEvent
+   * @returns Team
+  */
+  @Get('/by-name/:team@name', { rules: { team: /\S{0,40}/ }, bindings: { team: TeamService } })
+  async showByName (event: IncomingHttpEvent): Promise<Team | undefined> {
+    return await this.show(event)
   }
 
   /**
@@ -113,7 +131,7 @@ export class TeamEventHandler {
    *
    * With explicit rules definition.
   */
-  @Patch('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService }, middleware: ['admin'] })
+  @Patch('/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService }, middleware: ['admin', 'captain'] })
   @JsonHttpResponse(201)
   async update (event: IncomingHttpEvent): Promise<Team> {
     const data = await this.validateTeamData(event.getBody<Team>())
@@ -124,6 +142,23 @@ export class TeamEventHandler {
     this.logger.info(`Team updated: ${team.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return updated
+  }
+
+  /**
+   * Generate signed URL for team asset (logo or banner)
+   */
+  @Post('/:team@uuid/upload', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService } })
+  @JsonHttpResponse(200)
+  async generateUploadLink (event: IncomingHttpEvent): Promise<{ uploadUrl: string, publicUrl: string }> {
+    const user = event.getUser<User>()
+    const team = event.get<Team>('team', {} as unknown as Team)
+    const data = event.getBody<{ type: 'logo' | 'banner', extension: string }>()
+
+    if (team.captainUuid !== user?.uuid && !user.roles?.includes('admin')) {
+      throw new BadRequestError('You are not the captain of this team')
+    }
+
+    return await this.teamService.generateUploadUrls(team, data?.type ?? 'logo', data?.extension ?? 'png')
   }
 
   /**

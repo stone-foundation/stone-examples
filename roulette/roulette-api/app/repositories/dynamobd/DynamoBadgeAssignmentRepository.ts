@@ -47,7 +47,7 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
       limit,
       page: cursor,
       items: (result.Items as BadgeAssignmentModel[]) ?? [],
-      nextPage: result.LastEvaluatedKey
+      nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
@@ -58,14 +58,15 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
     let keyName: string | undefined
     let indexName: string | undefined
 
-    if (isNotEmpty(conditions.badgeUuid)) {
-      indexName = 'badgeUuid-index'
-      keyName = 'badgeUuid'
-      keyValue = conditions.badgeUuid
-    } else if (isNotEmpty(conditions.memberUuid)) {
-      indexName = 'memberUuid-index'
-      keyName = 'memberUuid'
-      keyValue = conditions.memberUuid
+    const keys = ['badgeUuid', 'teamUuid', 'memberUuid']
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        keyName = key
+        keyValue = value
+        indexName = `${key}-index`
+        break
+      }
     }
 
     if (keyName) {
@@ -90,7 +91,7 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
         limit,
         page: cursor,
         items: (result.Items as BadgeAssignmentModel[]) ?? [],
-        nextPage: result.LastEvaluatedKey
+        nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
       }
@@ -104,17 +105,23 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
   }
 
   async findBy (conditions: Partial<BadgeAssignmentModel>): Promise<BadgeAssignmentModel | undefined> {
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'badgeUuid', 'teamUuid', 'memberUuid']
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
+          Limit: 1,
           TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid },
-          Limit: 1
-        })
-      )
-      return result.Items?.[0] as BadgeAssignmentModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as BadgeAssignmentModel | undefined
+      }
     }
     return undefined
   }

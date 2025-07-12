@@ -1,9 +1,9 @@
-import { User } from "./User"
-import { Team } from "./Team"
-import { Badge } from "./Badge"
-import { Event } from "@stone-js/core"
+import { User } from './User'
+import { Team } from './Team'
+import { Badge } from './Badge'
+import { Activity } from './Activity'
 
-export type PostType = 'text' | 'colored' | 'image' | 'event' | 'badge' | string
+export type PostType = 'text' | 'colored' | 'image' | 'activity' | 'badge' | string
 
 export type PostVisibility = 'public' | 'team-only' | 'private' | string
 
@@ -14,7 +14,7 @@ export interface PostModel {
   teamUuid?: string | null
   imageUrl?: string | null
   badgeUuid?: string | null
-  eventUuid?: string | null
+  activityUuid?: string | null
   authorUuid: string
   backgroundColor?: string | null
 
@@ -30,10 +30,10 @@ export interface PostModel {
 }
 
 export interface Post extends PostModel {
-  author?: User
-  event?: Event
-  badge?: Badge
   team?: Team
+  badge?: Badge
+  author?: User
+  activity?: Activity
 }
 
 export interface PostCommentModel {

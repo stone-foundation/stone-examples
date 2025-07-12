@@ -7,21 +7,21 @@ export interface User {
   team?: Team
   uuid: string
   phone: string
-  roles?: string | null
+  roles?: string
   fullname: string
   username: string
-  lastSeen?: number | null
+  lastSeen?: number
   isActive: boolean
   isOnline: boolean
   createdAt: number
-  teamUuid?: string | null
+  teamUuid?: string
   updatedAt: number
   isModerator?: boolean
   isAdmin?: boolean
   isPunched?: boolean
   isCaptain?: boolean
   avatarUrl?: string
-  avatarColor?: string | null
+  avatarColor?: string
 }
 
 /**

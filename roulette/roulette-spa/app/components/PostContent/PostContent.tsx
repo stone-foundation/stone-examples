@@ -5,14 +5,14 @@ import { COLOR_MAP } from "../../constants"
 
 interface PostContentProps {
   post: Post
-  currentUser: User
+  currentUser?: User
 }
 
 export const PostContent = ({ post, currentUser }: PostContentProps) => {
-  if (post.type === "image" && post.image?.imageUrl) {
+  if (post.type === "image" && post.imageUrl) {
     return (
       <div className="rounded-lg overflow-hidden border border-white/5 mt-2">
-        <img src={post.image.imageUrl} alt="Contenu du post" className="w-full h-auto object-cover" />
+        <img src={post.imageUrl} alt="Contenu du post" className="w-full h-auto object-cover" />
       </div>
     )
   }
@@ -85,7 +85,7 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
           )}
           {post.event.member && (
             <span className="px-2 py-1 bg-white/5 border border-white/10 rounded-md">
-              👤 {currentUser.isAdmin && `${post.event.member.username} - @`}{post.event.member.username}
+              👤 {currentUser?.isAdmin && `${post.event.member.username} - @`}{post.event.member.username}
             </span>
           )}
         </div>

@@ -1,12 +1,12 @@
-import { eq, and } from "drizzle-orm"
-import { isEmpty } from "@stone-js/core"
-import { LibSQLDatabase } from "drizzle-orm/libsql"
-import { ListMetadataOptions } from "../../models/App"
-import { RepositoryOptions } from "./ActivityRepository"
-import { activityAssignments } from "../../database/schema"
-import { ActivityAssignmentModel } from "../../models/Activity"
-import { IMetadataRepository } from "../contracts/IMetadataRepository"
-import { IActivityAssignmentRepository } from "../contracts/IActivityAssignmentRepository"
+import { eq, and } from 'drizzle-orm'
+import { isEmpty } from '@stone-js/core'
+import { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { ListMetadataOptions } from '../../models/App'
+import { RepositoryOptions } from './ActivityRepository'
+import { activityAssignments } from '../../database/schema'
+import { ActivityAssignmentModel } from '../../models/Activity'
+import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IActivityAssignmentRepository } from '../contracts/IActivityAssignmentRepository'
 
 export class ActivityAssignmentRepository implements IActivityAssignmentRepository {
   private readonly tableName: string

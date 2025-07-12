@@ -92,4 +92,39 @@ export class AxiosClient {
   async post<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, options?: AxiosRequestConfig<D>): Promise<T> {
     return await this.request<T, R, D>(url, data, { ...options, method: 'POST' })
   }
+
+  /**
+   * Make a PUT request
+   *
+   * @param url - The URL to request
+   * @param data - The data to send
+   * @param options - The request options
+   * @returns The response data
+   */
+  async put<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, options?: AxiosRequestConfig<D>): Promise<T> {
+    return await this.request<T, R, D>(url, data, { ...options, method: 'PUT' })
+  }
+
+  /**
+   * Make a PATCH request
+   *
+   * @param url - The URL to request
+   * @param data - The data to send
+   * @param options - The request options
+   * @returns The response data
+   */
+  async patch<T = any, R = AxiosResponse<T>, D = any>(url: string, data?: D, options?: AxiosRequestConfig<D>): Promise<T> {
+    return await this.request<T, R, D>(url, data, { ...options, method: 'PATCH' })
+  }
+
+  /**
+   * Make a DELETE request
+   *
+   * @param url - The URL to request
+   * @param options - The request options
+   * @returns The response data
+   */
+  async delete<T = any, R = AxiosResponse<T>, D = any>(url: string, options?: AxiosRequestConfig<D>): Promise<T> {
+    return await this.request<T, R, D>(url, undefined, { ...options, method: 'DELETE' })
+  }
 }

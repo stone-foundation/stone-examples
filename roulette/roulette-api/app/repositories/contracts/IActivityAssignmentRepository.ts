@@ -1,5 +1,5 @@
-import { ListMetadataOptions } from "../../models/App"
-import { ActivityAssignmentModel } from "../../models/Activity"
+import { ListMetadataOptions } from '../../models/App'
+import { ActivityAssignmentModel } from '../../models/Activity'
 
 /**
  * Activity Assignment Repository contract

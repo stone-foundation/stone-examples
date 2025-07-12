@@ -1,14 +1,12 @@
 import { X } from "lucide-react"
-import { Team } from "../../models/Team"
 import { SidebarMenu } from "../SidebarMenu/SidebarMenu"
 
 interface SidebarDrawerProps {
   open: boolean
-  teams: Team[]
   onClose: () => void
 }
 
-export const SidebarDrawer = ({ open, onClose, teams }: SidebarDrawerProps) => {
+export const SidebarDrawer = ({ open, onClose }: SidebarDrawerProps) => {
   return (
     <div
       className={`fixed inset-0 z-50 bg-black bg-opacity-40 transition-opacity duration-300 ${
@@ -30,7 +28,7 @@ export const SidebarDrawer = ({ open, onClose, teams }: SidebarDrawerProps) => {
         </div>
 
         <div className="overflow-y-auto h-full pt-4 pb-12 md:pb-0">
-          <SidebarMenu teams={teams} />
+          <SidebarMenu />
         </div>
       </div>
     </div>

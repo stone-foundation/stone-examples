@@ -28,20 +28,21 @@ export const ConfirmModal = ({
   if (!open) return undefined
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50'>
-      <div className='bg-neutral-900 text-white rounded-lg ml-6 mr-6 p-6 max-w-sm w-full shadow-xl border border-neutral-700'>
-        <h2 className='text-lg font-semibold mb-4'>{title}</h2>
-        <p className='text-sm text-neutral-300'>{message}</p>
-        <div className='flex justify-end gap-4 mt-6'>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/5 backdrop-blur-sm">
+      <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white rounded-xl shadow-2xl border border-white/10 w-full max-w-md mx-4 p-6">
+        <h2 className="text-xl font-semibold text-white mb-2">{title}</h2>
+        <p className="text-sm text-white/70">{message}</p>
+
+        <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className='text-sm text-white px-4 py-2 rounded-md border border-white/10 hover:bg-white/10 transition'
+            className="px-4 py-2 text-sm rounded-md border border-white/10 text-white/80 hover:bg-white/5 transition"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className='text-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition'
+            className="px-4 py-2 text-sm rounded-md bg-red-600 hover:bg-red-500 text-white transition shadow-sm"
           >
             {confirmText}
           </button>

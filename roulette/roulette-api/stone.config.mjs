@@ -11,9 +11,11 @@ export default defineConfig({
     bundle: {
       external: [
         '@libsql/client',
+        '@aws-sdk/client-s3',
         'drizzle-orm/libsql',
         '@aws-sdk/lib-dynamodb',
         '@aws-sdk/client-dynamodb',
+        '@aws-sdk/s3-request-presigner',
       ],
     }
   }

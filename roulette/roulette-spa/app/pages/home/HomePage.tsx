@@ -1,15 +1,33 @@
 import { JSX } from 'react'
 import { User } from '../../models/User'
+import { Post } from '../../models/Post'
+import { PostService } from '../../services/PostService'
 import { TimelineFeed } from '../../components/TimelineFeed/TimelineFeed'
 import { TimelineComposer } from '../../components/TimelineComposer/TimelineComposer'
 import { RightSidebarPanel } from '../../components/RightSidebarPanel/RightSidebarPanel'
 import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
 
 /**
+ * Home Page options.
+ */
+interface HomePageOptions {
+  postService: PostService
+}
+
+/**
  * Home Page component.
  */
-@Page('/', { layout: 'app' })
+@Page('/', { layout: 'app', middleware: ['auth'] })
 export class HomePage implements IPage<ReactIncomingEvent> {
+  private readonly postService: PostService
+
+  /**
+   * Create a new Login Page component.
+   */
+  constructor ({ postService }: HomePageOptions) {
+    this.postService = postService
+  }
+
   /**
    * Define the head of the page.
    *
@@ -28,18 +46,22 @@ export class HomePage implements IPage<ReactIncomingEvent> {
    * @returns The rendered component.
    */
   render ({ event }: PageRenderContext): JSX.Element {
-    const user = event.getUser<User>() ?? { username: 'Jonh', fullname: 'Doe' } as unknown as User
+    const user = event.getUser<User>()
 
     return (
       <>
         <main className="flex-1 min-w-0">
-          <TimelineComposer userName="Lolo" onPost={(v) => { console.log(v)}} />
-          <TimelineFeed currentUser={user} fetchPosts={(): any => {}} />
+          {user && <TimelineComposer currentUser={user} onPost={async (v) => await this.savePost(v)} />}
+          <TimelineFeed currentUser={user} fetchPosts={async (user, v) => await this.postService.list(user, v)} />
         </main>
-        <aside className="w-full lg:w-64 shrink-0 hidden xl:block sticky top-[80px] self-start h-[calc(100vh-80px)] overflow-y-auto">
+        <aside className="hidden xl:block w-64 shrink-0 sticky top-[80px] self-start h-[calc(100vh-80px)] overflow-y-auto">
           <RightSidebarPanel />
         </aside>
       </>
     )
+  }
+
+  async savePost (data: Partial<Post>): Promise<void> {
+    await this.postService.create(data)
   }
 }

@@ -1,5 +1,5 @@
-import { Team, TeamMember } from "./Team"
-import { User } from "./User"
+import { User } from './User'
+import { Team, TeamMember } from './Team'
 
 export interface BadgeModel {
   uuid: string
@@ -20,6 +20,7 @@ export interface BadgeModel {
 
 export interface Badge extends BadgeModel {
   author?: User
+  activityUuid?: string
 }
 
 export interface BadgeAssignmentModel {

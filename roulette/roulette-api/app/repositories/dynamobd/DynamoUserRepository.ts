@@ -79,45 +79,23 @@ export class DynamoUserRepository implements IUserRepository {
    * @returns The user or undefined if not found
    */
   async findBy (conditions: Partial<UserModel>): Promise<UserModel | undefined> {
-    if (isNotEmpty(conditions.phone)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          Limit: 1,
-          IndexName: 'phone-index',
-          TableName: this.tableName,
-          KeyConditionExpression: '#phone = :phone',
-          ExpressionAttributeNames: { '#phone': 'phone' },
-          ExpressionAttributeValues: { ':phone': conditions.phone }
-        })
-      )
-      return result.Items?.[0] as UserModel | undefined
-    }
-
-    if (isNotEmpty(conditions.username)) {
-      const result = await this.database.send(
-        new QueryCommand({
+    const keys = ['uuid', 'phone', 'username']
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+        const params: any = {
           Limit: 1,
           TableName: this.tableName,
-          IndexName: 'username-index',
-          KeyConditionExpression: '#username = :username',
-          ExpressionAttributeNames: { '#username': 'username' },
-          ExpressionAttributeValues: { ':username': conditions.username }
-        })
-      )
-      return result.Items?.[0] as UserModel | undefined
-    }
-
-    if (isNotEmpty(conditions.uuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          Limit: 1,
-          TableName: this.tableName,
-          KeyConditionExpression: '#uuid = :uuid',
-          ExpressionAttributeNames: { '#uuid': 'uuid' },
-          ExpressionAttributeValues: { ':uuid': conditions.uuid }
-        })
-      )
-      return result.Items?.[0] as UserModel | undefined
+          KeyConditionExpression: `#${key} = :${key}`,
+          ExpressionAttributeNames: { [`#${key}`]: key },
+          ExpressionAttributeValues: { [`:${key}`]: value }
+        }
+        // Use index if not primary key
+        if (key !== 'uuid') {
+          params.IndexName = `${key}-index`
+        }
+        const result = await this.database.send(new QueryCommand(params))
+        return result.Items?.[0] as UserModel | undefined
+      }
     }
 
     return undefined

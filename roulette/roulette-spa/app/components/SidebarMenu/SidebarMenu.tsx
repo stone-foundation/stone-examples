@@ -1,16 +1,28 @@
+import { useContext, useEffect, useState } from "react"
 import { Home } from "lucide-react"
 import { Team } from "../../models/Team"
-import { COLOR_MAP } from "../../constants"
-import { StoneLink } from "@stone-js/use-react"
-import { FollowUsCard } from "../FollowUsCard/FollowUsCard"
-import { RightSidebarPanel } from "../RightSidebarPanel/RightSidebarPanel"
 import { Avatar } from "../Avatar/Avatar"
+import { COLOR_MAP } from "../../constants"
+import { TeamService } from "../../services/TeamService"
+import { FollowUsCard } from "../FollowUsCard/FollowUsCard"
+import { StoneContext, StoneLink } from "@stone-js/use-react"
+import { RightSidebarPanel } from "../RightSidebarPanel/RightSidebarPanel"
 
-interface SidebarMenuProps {
-  teams: Team[]
-}
+export const SidebarMenu = () => {
+  const [teams, setTeams] = useState<Team[]>([])
+  const teamService = useContext(StoneContext).container.resolve<TeamService>(TeamService)
 
-export const SidebarMenu = ({ teams }: SidebarMenuProps) => {
+  useEffect(() => {
+    teamService
+      .list(50)
+      .then(teams => {
+        setTeams(teams)
+      })
+      .catch(error => {
+        console.error("Failed to fetch teams:", error)
+      })
+  }, [])
+
   return (
     <aside className="w-full sm:w-64 text-white">
       <StoneLink
@@ -48,7 +60,7 @@ const SidebarMenuItem = ({ team }: SidebarMenuItemProps) => {
 
   return (
     <StoneLink
-      to={`/page/${team.name}`}
+      to={`/page/${team.name}/`}
       className="sidebar-menu-link flex items-center gap-2 mb-1 justify-start w-full text-left bg-[#0d3a43] p-4 md:rounded-xl shadow-inner mb-4 transition-all hover:bg-white/10 hover:shadow-sm"
     >
       <Avatar size={40} name={team.name} imageUrl={team.logoUrl} className="bg-white/50 flex-shrink-0" />

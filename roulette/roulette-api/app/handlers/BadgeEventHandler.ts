@@ -4,6 +4,7 @@ import { Badge, BadgeModel } from '../models/Badge'
 import { ListMetadataOptions } from '../models/App'
 import { BadgeService } from '../services/BadgeService'
 import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
+import { ActivityService } from '../services/ActivityService'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
 import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
 
@@ -13,28 +14,39 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/
 export interface BadgeEventHandlerOptions {
   logger: ILogger
   badgeService: BadgeService
+  activityService: ActivityService
 }
 
 /**
  * Badge Event Handler
  */
-@EventHandler('/badges', { name: 'badges' })
+@EventHandler('/badges', { name: 'badges', middleware: ['auth'] })
 export class BadgeEventHandler {
   private readonly logger: ILogger
   private readonly badgeService: BadgeService
+  private readonly activityService: ActivityService
 
-  constructor ({ badgeService, logger }: BadgeEventHandlerOptions) {
+  constructor ({ badgeService, activityService, logger }: BadgeEventHandlerOptions) {
     this.logger = logger
     this.badgeService = badgeService
+    this.activityService = activityService
   }
 
   /**
    * List all badges
    */
-  @Get('/', { name: 'list', middleware: ['auth'] })
+  @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Badge>> {
-    return await this.badgeService.list(Number(event.get('limit', 10)), event.get('page'))
+    const metaActivities = await this.activityService.list(1000)
+    const meta = await this.badgeService.list(Number(event.get('limit', 10)), event.get('page'))
+
+    meta.items = await Promise.all(meta.items.map(async (v) => {
+      v.activityUuid = metaActivities.items.find(a => a.badgeUuid === v.uuid)?.uuid
+      return v
+    }))
+
+    return meta
   }
 
   /**
@@ -42,8 +54,7 @@ export class BadgeEventHandler {
    */
   @Get('/:badge@uuid', {
     rules: { badge: /\S{30,40}/ },
-    bindings: { badge: BadgeService },
-    middleware: ['admin']
+    bindings: { badge: BadgeService }
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<Badge | undefined> {
@@ -92,7 +103,7 @@ export class BadgeEventHandler {
         score: Number(v.score) || 0,
         categoryLabel: v.categoryLabel,
         visibility: v.visibility ?? 'public',
-        maxAssignments: Number(v.maxAssignments) || 1,
+        maxAssignments: Number(v.maxAssignments) || 1
       } as unknown as Badge
     })
 

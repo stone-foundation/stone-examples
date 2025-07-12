@@ -45,11 +45,11 @@ export class BadgeAssignmentService {
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<BadgeAssignment>> {
     const items = []
     const result = await this.badgeAssignmentRepository.list(limit, page)
-    
+
     for (const model of result.items) {
       items.push(await this.toAssignment(model))
     }
-    
+
     return { ...result, items }
   }
 
@@ -59,24 +59,24 @@ export class BadgeAssignmentService {
     page?: number | string
   ): Promise<ListMetadataOptions<BadgeAssignment>> {
     const items = []
-    
+
     const result = await this.badgeAssignmentRepository.listBy(conditions, limit, page)
 
     for (const model of result.items) {
       items.push(await this.toAssignment(model))
     }
-    
+
     return { ...result, items }
   }
 
   async findByUuid (uuid: string): Promise<BadgeAssignment | undefined> {
     const model = await this.badgeAssignmentRepository.findByUuid(uuid)
-    if (isNotEmpty<BadgeAssignmentModel>(model)) return this.toAssignment(model)
+    if (isNotEmpty<BadgeAssignmentModel>(model)) return await this.toAssignment(model)
   }
 
   async findBy (conditions: Partial<BadgeAssignmentModel>): Promise<BadgeAssignment> {
     const model = await this.badgeAssignmentRepository.findBy(conditions)
-    if (isNotEmpty<BadgeAssignmentModel>(model)) return this.toAssignment(model)
+    if (isNotEmpty<BadgeAssignmentModel>(model)) return await this.toAssignment(model)
     throw new NotFoundError(`Badge assignment not found with conditions: ${JSON.stringify(conditions)}`)
   }
 
@@ -90,7 +90,7 @@ export class BadgeAssignmentService {
 
   async unassign (assignmentUuid: string): Promise<boolean> {
     const assignment = await this.findByUuid(assignmentUuid)
-    if (!assignment) return false
+    if (assignment == null) return false
     return await this.delete(assignment)
   }
 
@@ -125,12 +125,12 @@ export class BadgeAssignmentService {
       issuedAt: now,
       revoked: false,
       uuid: randomUUID(),
-      issuedByUuid: issuedBy.uuid,
+      issuedByUuid: issuedBy.uuid
     } as BadgeAssignmentModel)
   }
 
   async createMany (assignments: BadgeAssignment[], issuedBy: User): Promise<Array<string | undefined>> {
-    const uuids: (string | undefined)[] = []
+    const uuids: Array<string | undefined> = []
 
     for (const assignment of assignments) {
       uuids.push(await this.create(assignment, issuedBy))
@@ -142,7 +142,7 @@ export class BadgeAssignmentService {
   async update (assignment: BadgeAssignment, data: Partial<BadgeAssignment>): Promise<BadgeAssignment> {
     data.issuedAt = Date.now()
     const model = await this.badgeAssignmentRepository.update(assignment, data)
-    if (isNotEmpty<BadgeAssignmentModel>(model)) return this.toAssignment(model)
+    if (isNotEmpty<BadgeAssignmentModel>(model)) return await this.toAssignment(model)
     throw new NotFoundError(`BadgeAssignment with ID ${assignment.uuid} not found`)
   }
 
@@ -150,12 +150,16 @@ export class BadgeAssignmentService {
     return await this.badgeAssignmentRepository.delete(assignment)
   }
 
+  async count (): Promise<number> {
+    return await this.badgeAssignmentRepository.count()
+  }
+
   async toAssignment (model: BadgeAssignmentModel): Promise<BadgeAssignment> {
     let team = model.teamUuid ? await this.teamService.findByUuid(model.teamUuid) : undefined
     let member = model.memberUuid ? await this.userService.findByUuid(model.memberUuid) : undefined
     const badge = model.badgeUuid ? await this.badgeService.findByUuid(model.badgeUuid) : undefined
-    let issuedBy = model.issuedByUuid ? await this.userService.findByUuid(model.issuedByUuid) : undefined
-    
+    const issuedBy = model.issuedByUuid ? await this.userService.findByUuid(model.issuedByUuid) : undefined
+
     if (isEmpty(badge) || isEmpty(issuedBy)) return { ...model } as unknown as BadgeAssignment
 
     if (isNotEmpty<TeamModel>(team)) {
@@ -165,13 +169,13 @@ export class BadgeAssignmentService {
     if (isNotEmpty<UserModel>(member)) {
       member = this.userService.toUser(member)
     }
-    
+
     return {
       ...model,
       team,
       member,
       issuedBy,
-      badge: this.badgeService.toBadge(badge),
+      badge: this.badgeService.toBadge(badge)
     }
   }
 }

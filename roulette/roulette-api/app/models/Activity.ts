@@ -1,6 +1,6 @@
-import { User } from "./User"
-import { Badge } from "./Badge"
-import { Team, TeamMember } from "./Team"
+import { User } from './User'
+import { Badge } from './Badge'
+import { Team, TeamMember } from './Team'
 
 export interface ActivityModel {
   uuid: string
@@ -34,6 +34,7 @@ export interface ActivityAssignmentModel {
   uuid: string
   activityUuid: string
   badgeUuid?: string | null
+  activityCategory?: string
 
   teamUuid?: string | null
   memberUuid?: string | null
@@ -67,7 +68,8 @@ export interface ActivityAssignmentModel {
 export interface ActivityAssignment extends ActivityAssignmentModel {
   team?: Team
   badge?: Badge
+  author?: User
   activity: Activity
+  validatedBy?: User
   member?: TeamMember
-  issuedByUser?: User
 }

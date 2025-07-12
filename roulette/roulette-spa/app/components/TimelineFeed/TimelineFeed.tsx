@@ -1,37 +1,38 @@
 import { User } from '../../models/User'
 import { useEffect, useState } from 'react'
-import { mockPosts } from '../../models/Post'
+import { mockPosts, Post } from '../../models/Post'
+import { ListMetadataOptions } from '../../models/App'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { TimelinePostCard } from '../TimelinePostCard/TimelinePostCard'
 
 interface TimelineFeedProps {
-  currentUser: User
-  fetchPosts: (cursor?: string) => Promise<{ posts: any[], nextCursor?: string }>
+  currentUser?: User
+  fetchPosts: (limit?: number, page?: string | number) => Promise<ListMetadataOptions<Post>>
 }
 
 export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => {
+  const limit = 50
   const [hasMore, setHasMore] = useState(true)
   const [posts, setPosts] = useState<any[]>(mockPosts)
-  const [nextCursor, setNextCursor] = useState<string | undefined>()
+  const [nextCursor, setNextCursor] = useState<string | number | undefined>()
 
   useEffect(() => {
-    // fetchInitial()
-    
+    fetchInitial()
   }, [])
 
   const fetchInitial = async () => {
     const res = await fetchPosts()
-    setPosts(res.posts)
-    setNextCursor(res.nextCursor)
-    setHasMore(Boolean(res.nextCursor))
+    setPosts(res.items)
+    setNextCursor(res.nextPage)
+    setHasMore(Boolean(res.nextPage))
   }
 
   const fetchMore = async () => {
     if (!nextCursor) return
-    const res = await fetchPosts(nextCursor)
-    setPosts((prev) => [...prev, ...res.posts])
-    setNextCursor(res.nextCursor)
-    setHasMore(Boolean(res.nextCursor))
+    const res = await fetchPosts(limit, nextCursor)
+    setPosts((prev) => [...prev, ...res.items])
+    setNextCursor(res.nextPage)
+    setHasMore(Boolean(res.nextPage))
   }
 
   const refresh = async () => {
@@ -47,7 +48,6 @@ export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => 
       refreshFunction={refresh}
       pullDownToRefreshThreshold={60}
       loader={<div className="text-white text-center py-4">Chargement...</div>}
-      endMessage={<p className="text-white text-center py-4">Aucun autre post.</p>}
       pullDownToRefreshContent={
         <h4 className="text-white text-center py-2">Tirez pour actualiser...</h4>
       }
@@ -55,11 +55,18 @@ export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => 
         <h4 className="text-white text-center py-2">Relâchez pour actualiser</h4>
       }
     >
-      <div className="space-y-4">
+      {posts.length > 0 ? (<div className="space-y-4">
         {posts.map((post) => (
           <TimelinePostCard key={post.id} post={post} currentUser={currentUser} />
         ))}
-      </div>
+      </div>) : (
+        <div className="text-white text-center py-4 border border-white/10 rounded-lg bg-white/5 mx-w-2xl mx-auto">
+          Aucune publication pour le moment.
+          <br />
+          <br />
+          Soiyez le premier à publier !
+        </div>
+      )}
     </InfiniteScroll>
   )
 }
