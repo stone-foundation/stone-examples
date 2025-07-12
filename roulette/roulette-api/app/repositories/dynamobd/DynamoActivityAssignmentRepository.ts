@@ -8,8 +8,8 @@ import {
 } from '@aws-sdk/lib-dynamodb'
 import { ListMetadataOptions } from '../../models/App'
 import { ActivityAssignmentModel } from '../../models/Activity'
-import { IBlueprint, isNotEmpty, isEmpty } from '@stone-js/core'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IBlueprint, isNotEmpty, isEmpty, Logger } from '@stone-js/core'
 import { IActivityAssignmentRepository } from '../contracts/IActivityAssignmentRepository'
 
 export interface DynamoActivityAssignmentRepositoryOptions {
@@ -36,7 +36,11 @@ export class DynamoActivityAssignmentRepository implements IActivityAssignmentRe
     }
 
     if (typeof cursor === 'string' && cursor.length > 0) {
-      params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+      try {
+          params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        } catch (error) {
+          Logger.warn('Failed to parse cursor:', error)
+        }
     }
 
     const total = await this.count()
@@ -80,7 +84,11 @@ export class DynamoActivityAssignmentRepository implements IActivityAssignmentRe
       }
 
       if (typeof cursor === 'string' && cursor.length > 0) {
-        params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        try {
+          params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        } catch (error) {
+          Logger.warn('Failed to parse cursor:', error)
+        }
       }
 
       const total = await this.count()

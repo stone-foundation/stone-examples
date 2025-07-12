@@ -1,6 +1,6 @@
+import { Post } from '../../models/Post'
 import { User } from '../../models/User'
 import { useEffect, useState } from 'react'
-import { mockPosts, Post } from '../../models/Post'
 import { ListMetadataOptions } from '../../models/App'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { TimelinePostCard } from '../TimelinePostCard/TimelinePostCard'
@@ -13,7 +13,7 @@ interface TimelineFeedProps {
 export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => {
   const limit = 50
   const [hasMore, setHasMore] = useState(true)
-  const [posts, setPosts] = useState<any[]>(mockPosts)
+  const [posts, setPosts] = useState<any[]>([])
   const [nextCursor, setNextCursor] = useState<string | number | undefined>()
 
   useEffect(() => {

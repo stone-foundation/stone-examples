@@ -1,10 +1,10 @@
 import { JSX } from 'react'
 import { User } from '../../models/User'
+import { Post } from '../../models/Post'
 import { Team } from '../../models/Team'
 import { TeamService } from '../../services/TeamService'
 import { PostService } from '../../services/PostService'
 import { ActivityAssignment } from '../../models/Activity'
-import { mockBadge, mockEvent, Post } from '../../models/Post'
 import { PageDetails } from '../../components/PageDetails/PageDetails'
 import { ActivityAssignmentService } from '../../services/ActivityAssignmentService'
 import { RightSidebarPanel } from '../../components/RightSidebarPanel/RightSidebarPanel'
@@ -47,7 +47,7 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
 
   async handle (event: ReactIncomingEvent): Promise<Record<string, any>> {
     const assignments = await this.listActivityAssignments(event.get<Team>('team', {} as any))
-    const badges = assignments.map((a) => a.badge).filter((b) => b !== undefined)
+    const badges = assignments.filter(v => v.status === 'approved').map((a) => a.badge).filter((b) => b !== undefined)
     
     return {
       badges,
@@ -88,12 +88,14 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
             activityAssignments={data.assignments ?? []}
             savePost={async (v) => await this.savePost(v, team)}
             onUpdateInfos={async (v) => await this.updateInfos(v, team)}
+            onLogoChange={async (file: File) => await this.updateImage(file, team, 'logo')}
             fetchPosts={async (u, v) => await this.postService.listByTeam(team.name, u, v)}
             onUpdateAssigmentStatus={async (u, v) => await this.onUpdateAssigmentStatus(u, v)}
+            onBannerChange={async (file: File) => await this.updateImage(file, team, 'banner')}
           />
         </main>
         <aside className="w-full lg:w-64 shrink-0 hidden xl:block">
-          <SingleTeamStatsPanel team={team} badges={[mockBadge]} events={[mockEvent]} />
+          <SingleTeamStatsPanel team={team} />
           <RightSidebarPanel />
         </aside>
       </>
@@ -102,6 +104,10 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
   
   async savePost (data: Partial<Post>, team: Team): Promise<void> {
     await this.postService.create({ ...data, teamUuid: team.uuid })
+  }
+
+  async updateImage (file: File, team: Team, type: 'logo' | 'banner'): Promise<void> {
+    await this.teamService.changeImage(team.uuid, file, type)
   }
   
   async updateInfos (data: Partial<Post>, team: Team): Promise<void> {

@@ -1,7 +1,7 @@
 import { Team } from '../models/Team'
 import { Service } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
-import { ActivityAssignment } from '../models/Activity'
+import { ActivityAssignment, TeamsStats } from '../models/Activity'
 import { ActivityAssignmentClient } from '../clients/ActivityAssignmentClient'
 
 /**
@@ -16,6 +16,7 @@ export interface ActivityAssignmentServiceOptions {
  */
 @Service({ alias: 'activityAssignmentService' })
 export class ActivityAssignmentService {
+  private statsCache?: TeamsStats
   private readonly client: ActivityAssignmentClient
 
   /**
@@ -44,6 +45,16 @@ export class ActivityAssignmentService {
    */
   async get (uuid: string): Promise<ActivityAssignment> {
     return await this.client.get(uuid)
+  }
+  
+  /**
+   * Stats of the team
+   *
+   * @returns The stats of the team
+   */
+  async stats (teamName?: string): Promise<TeamsStats> {
+    this.statsCache ??= await this.client.stats(teamName)
+    return this.statsCache
   }
 
   /**

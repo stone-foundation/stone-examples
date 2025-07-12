@@ -1,9 +1,9 @@
 import { User } from './User'
 import { Team } from './Team'
 import { Badge } from './Badge'
-import { Activity } from './Activity'
+import { Activity, ActivityAssignment } from './Activity'
 
-export type PostType = 'text' | 'colored' | 'image' | 'activity' | 'badge' | string
+export type PostType = 'text' | 'colored' | 'image' | 'activityAssignment' | string
 
 export type PostVisibility = 'public' | 'team-only' | 'private' | string
 
@@ -13,10 +13,9 @@ export interface PostModel {
   content?: string | null
   teamUuid?: string | null
   imageUrl?: string | null
-  badgeUuid?: string | null
-  activityUuid?: string | null
   authorUuid: string
   backgroundColor?: string | null
+  activityAssignmentUuid?: string | null
 
   visibility: PostVisibility
   createdAt: number
@@ -34,6 +33,8 @@ export interface Post extends PostModel {
   badge?: Badge
   author?: User
   activity?: Activity
+  comments?: PostComment[]
+  activityAssignment?: ActivityAssignment
 }
 
 export interface PostCommentModel {

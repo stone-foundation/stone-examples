@@ -54,7 +54,7 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
    */
   render ({ data = [] }: PageRenderContext<User[]>): JSX.Element {
     return (
-      <div className='w-full max-w-7xl mx-auto px-4'>
+      <div className='w-full max-w-7xl mx-auto px-4 mt-6'>
         <MemberList members={data} />
       </div>
     )

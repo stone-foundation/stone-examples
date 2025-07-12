@@ -1,25 +1,26 @@
-import { useContext, useEffect, useState } from "react"
 import { Home } from "lucide-react"
+import { Logger } from "@stone-js/core"
 import { Team } from "../../models/Team"
 import { Avatar } from "../Avatar/Avatar"
 import { COLOR_MAP } from "../../constants"
-import { TeamService } from "../../services/TeamService"
+import { useContext, useEffect, useState } from "react"
 import { FollowUsCard } from "../FollowUsCard/FollowUsCard"
 import { StoneContext, StoneLink } from "@stone-js/use-react"
 import { RightSidebarPanel } from "../RightSidebarPanel/RightSidebarPanel"
+import { ActivityAssignmentService } from "../../services/ActivityAssignmentService"
 
 export const SidebarMenu = () => {
   const [teams, setTeams] = useState<Team[]>([])
-  const teamService = useContext(StoneContext).container.resolve<TeamService>(TeamService)
+  const activityAssignmentService = useContext(StoneContext).container.resolve<ActivityAssignmentService>(ActivityAssignmentService)
 
   useEffect(() => {
-    teamService
-      .list(50)
-      .then(teams => {
-        setTeams(teams)
+    activityAssignmentService
+      .stats()
+      .then(v => {
+        setTeams(v.teams)
       })
       .catch(error => {
-        console.error("Failed to fetch teams:", error)
+        Logger.error("Failed to fetch teams:", error)
       })
   }, [])
 
@@ -56,7 +57,6 @@ interface SidebarMenuItemProps {
 
 const SidebarMenuItem = ({ team }: SidebarMenuItemProps) => {
   const color = COLOR_MAP[team.color] ?? "#444"
-  const ratio = Math.min(team.countMember / team.totalMember, 1)
 
   return (
     <StoneLink
@@ -70,9 +70,9 @@ const SidebarMenuItem = ({ team }: SidebarMenuItemProps) => {
           <div
             className="h-full"
             style={{
-              width: `${ratio * 100}%`,
               backgroundColor: color,
-              transition: "width 0.3s ease"
+              transition: "width 0.3s ease",
+              width: `${team.scorePercentage}%`
             }}
           />
         </div>

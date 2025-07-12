@@ -1,6 +1,6 @@
+import { Team, TeamStat } from '../models/Team'
 import { TeamClient } from '../clients/TeamClient'
 import { IContainer, Service } from '@stone-js/core'
-import { Team, TeamsAsideStats, TeamStat } from '../models/Team'
 
 /**
  * Team Service Options
@@ -53,15 +53,6 @@ export class TeamService {
   }
 
   /**
-   * Stats of the team
-   *
-   * @returns The stats of the team
-   */
-  async stats (): Promise<TeamsAsideStats> {
-    return await this.teamClient.stats()
-  }
-
-  /**
    * Results of the team
    *
    * @returns The results of the team
@@ -84,5 +75,13 @@ export class TeamService {
    */
   async update (uuid: string, data: Partial<Team>): Promise<Team> {
     return await this.teamClient.update(uuid, data)
+  }
+
+  /**
+   * Upload a logo for a team
+   */
+  async changeImage (uuid: string, file: File, type: 'logo' | 'banner'): Promise<void> {
+    const { uploadUrl } = await this.teamClient.generateUploadLink(uuid, type)
+    await this.teamClient.uploadFileToS3(uploadUrl, file)
   }
 }

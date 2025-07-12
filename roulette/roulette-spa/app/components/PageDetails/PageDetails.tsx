@@ -19,13 +19,15 @@ interface PageDetailsProps {
   currentUser: User
   activePath?: string
   activityAssignments: ActivityAssignment[]
+  onLogoChange?: (file: File) => Promise<void>
+  onBannerChange?: (file: File) => Promise<void>
   savePost: (payload: Partial<Post>) => Promise<void>
   onUpdateInfos: (data: Partial<Team>) => Promise<void>
   fetchPosts: (limit?: number, page?: string | number) => Promise<ListMetadataOptions<Post>>
   onUpdateAssigmentStatus: (assignment: ActivityAssignment, payload: Partial<ActivityAssignment>) => Promise<void>
 }
 
-export const PageDetails: React.FC<PageDetailsProps> = ({ onUpdateAssigmentStatus: onUpdateAssigment, activityAssignments, badges, team, onUpdateInfos, fetchPosts, savePost, currentUser, activePath = 'timeline' }) => {
+export const PageDetails: React.FC<PageDetailsProps> = ({ onLogoChange, onBannerChange, onUpdateAssigmentStatus: onUpdateAssigment, activityAssignments, badges, team, onUpdateInfos, fetchPosts, savePost, currentUser, activePath = 'timeline' }) => {
   const tabs: TabItem[] = [
     { path: `/page/${team.name}/`, label: 'Timeline' },
     { path: `/page/${team.name}/infos`, label: 'Infos' },
@@ -36,7 +38,7 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ onUpdateAssigmentStatu
 
   return (
     <div className="flex-1 flex flex-col w-full">
-      <PageHeader team={team} />
+      <PageHeader team={team} currentUser={currentUser} onLogoChange={onLogoChange} onBannerChange={onBannerChange} />
       <TabNavigation tabs={tabs} />
       <div className="flex flex-col-reverse lg:flex-row gap-6">
         <div className="flex-1">
@@ -46,7 +48,7 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ onUpdateAssigmentStatu
               <TimelineFeed currentUser={currentUser} fetchPosts={fetchPosts} />
             </>
           )}
-          {activePath === 'infos' && <PageInfo team={team} onUpdate={onUpdateInfos} />}
+          {activePath === 'infos' && <PageInfo currentUser={currentUser} team={team} onUpdate={onUpdateInfos} />}
           {activePath === 'soldiers' && <PageMembers members={team.members} currentUser={currentUser} />}
           {activePath === 'badges' && (
             <PageBadges

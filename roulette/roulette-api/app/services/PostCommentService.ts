@@ -1,5 +1,6 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
+import { UserService } from './UserService'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
 import { PostComment, PostCommentModel } from '../models/Post'
@@ -36,18 +37,14 @@ export class PostCommentService {
    * List all comments
    */
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<PostComment>> {
-    const result = await this.postCommentRepository.list(limit, page)
-    result.items = result.items.map(v => this.toPostComment(v))
-    return result
+    return await this.postCommentRepository.list(limit, page)
   }
 
   /**
    * List comments by conditions
    */
   async listBy (conditions: Partial<PostCommentModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<PostComment>> {
-    const result = await this.postCommentRepository.listBy(conditions, limit, page)
-    result.items = result.items.map(v => this.toPostComment(v))
-    return result
+    return await this.postCommentRepository.listBy(conditions, limit, page)
   }
 
   /**
@@ -55,7 +52,7 @@ export class PostCommentService {
    */
   async findByUuid (uuid: string): Promise<PostComment | undefined> {
     const model = await this.postCommentRepository.findByUuid(uuid)
-    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
+    if (isNotEmpty<PostCommentModel>(model)) return model
   }
 
   /**
@@ -63,7 +60,7 @@ export class PostCommentService {
    */
   async findBy (conditions: Partial<PostCommentModel>): Promise<PostComment> {
     const model = await this.postCommentRepository.findBy(conditions)
-    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
+    if (isNotEmpty<PostCommentModel>(model)) return model
     throw new NotFoundError(`Comment not found with conditions: ${JSON.stringify(conditions)}`)
   }
 
@@ -109,7 +106,7 @@ export class PostCommentService {
   async update (comment: PostComment, data: Partial<PostComment>): Promise<PostComment> {
     data.updatedAt = Date.now()
     const model = await this.postCommentRepository.update(comment, data)
-    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
+    if (isNotEmpty<PostCommentModel>(model)) return model
     throw new NotFoundError(`Comment with ID ${comment.uuid} not found`)
   }
 
@@ -119,14 +116,12 @@ export class PostCommentService {
   async delete (comment: PostComment): Promise<boolean> {
     return await this.postCommentRepository.delete(comment)
   }
-
-  /**
-   * Convert PostCommentModel to PostComment (safe)
-   */
-  toPostComment (model: PostCommentModel, author?: User): PostComment {
-    return {
-      ...model,
-      author
-    }
+    
+  toPostComment (result: PostComment[], userService: UserService): Promise<PostComment[]> {
+    return Promise.all(result.map(async (comment) => {
+      const author = comment.authorUuid ? await userService.findByUuid(comment.authorUuid) : undefined
+      comment.author = author ? userService.toUser(author) : undefined
+      return comment
+    }))
   }
 }

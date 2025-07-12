@@ -1,5 +1,5 @@
 import clsx from "clsx"
-import { Badge } from "lucide-react"
+import dayjs from "dayjs"
 import { FC, useState } from "react"
 import { User } from "../../models/User"
 import { ConfirmModal } from "../ConfirmModal/ConfirmModal"
@@ -98,6 +98,9 @@ export const ActivityCard: FC<ActivityCardProps> = ({
               💬 « {assignment.comment} »
             </div>
           )}
+          <div>
+            📅 « {dayjs(assignment.createdAt).format('D-MM-YYYY h:mm A')} »
+          </div>
           <div>
             📌 Statut :{" "}
             <span className="font-semibold capitalize text-white">

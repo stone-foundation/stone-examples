@@ -189,6 +189,7 @@ export const posts = sqliteTable('posts', {
   imageUrl: text('imageUrl'),
   badgeUuid: text('badgeUuid'),
   eventUuid: text('activityUuid'),
+  activityAssignmentUuid: text('activityAssignmentUuid'),
   authorUuid: text('authorUuid').notNull(),
   backgroundColor: text('backgroundColor'),
   visibility: text('visibility').notNull(), // 'private' | 'public'

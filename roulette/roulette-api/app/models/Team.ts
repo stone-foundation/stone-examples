@@ -1,3 +1,6 @@
+import { Badge } from "./Badge"
+import { Activity } from "./Activity"
+
 /**
  * Team Model Interface
 */
@@ -19,6 +22,7 @@ export interface TeamModel {
   countActivity: number
   countBadges: number
   countPresence: number
+  scorePercentage?: number
   chatLink?: string | null
   description?: string | null
   captainUuid?: string | null
@@ -28,8 +32,10 @@ export interface TeamModel {
  * Team Interface
 */
 export interface Team extends TeamModel {
+  badges?: Badge[]
   captain?: TeamMember
   members: TeamMember[]
+  activities?: Activity[]
 }
 
 /**

@@ -4,9 +4,9 @@ import { ListMetadataOptions } from '../models/App'
 import { PostService } from '../services/PostService'
 import { TeamService } from '../services/TeamService'
 import { UserService } from '../services/UserService'
-import { BadgeService } from '../services/BadgeService'
-import { ActivityService } from '../services/ActivityService'
 import { ILogger, isNotEmpty, isEmpty } from '@stone-js/core'
+import { PostCommentService } from '../services/PostCommentService'
+import { ActivityAssignmentService } from '../services/ActivityAssignmentService'
 import { EventHandler, Get, Post as HttpPost, Patch, Delete } from '@stone-js/router'
 import { JsonHttpResponse, BadRequestError, IncomingHttpEvent, NoContentHttpResponse } from '@stone-js/http-core'
 
@@ -18,8 +18,8 @@ export interface PostEventHandlerOptions {
   userService: UserService
   teamService: TeamService
   postService: PostService
-  badgeService: BadgeService
-  activityService: ActivityService
+  postCommentService: PostCommentService
+  activityAssignmentService: ActivityAssignmentService
 }
 
 /**
@@ -31,26 +31,26 @@ export class PostEventHandler {
   private readonly userService: UserService
   private readonly teamService: TeamService
   private readonly postService: PostService
-  private readonly badgeService: BadgeService
-  private readonly activityService: ActivityService
+  private readonly postCommentService: PostCommentService
+  private readonly activityAssignmentService: ActivityAssignmentService
 
-  constructor ({ postService, userService, teamService, badgeService, logger, activityService }: PostEventHandlerOptions) {
+  constructor ({ postService, postCommentService, activityAssignmentService, userService, teamService, logger }: PostEventHandlerOptions) {
     this.logger = logger
     this.teamService = teamService
     this.postService = postService
     this.userService = userService
-    this.badgeService = badgeService
-    this.activityService = activityService
+    this.postCommentService = postCommentService
+    this.activityAssignmentService = activityAssignmentService
   }
 
   /**
    * List all posts
    */
-  @Get('/', { name: 'list' })
+  @Get('/', { name: 'list', middleware: ['authOrNot'] })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Post>> {
     const result = await this.postService.list(Number(event.get('limit', 10)), event.get('page'))
-    result.items = await this.toPost(result.items)
+    result.items = await this.toPost(result.items, event.getUser<User>())
 
     return result
   }
@@ -58,13 +58,13 @@ export class PostEventHandler {
   /**
    * List all posts by team page
    */
-  @Get('/teams/:teamName', { name: 'list' })
+  @Get('/teams/:teamName', { name: 'list', middleware: ['authOrNot'] })
   @JsonHttpResponse(200)
   async listByTeam (event: IncomingHttpEvent): Promise<ListMetadataOptions<Post>> {
     const teamName = event.get<string>('teamName', '')
     const team = await this.teamService.findByName(teamName)
     const result = await this.postService.listBy({ teamUuid: team?.uuid }, Number(event.get('limit', 10)), event.get('page'))
-    result.items = await this.toPost(result.items)
+    result.items = await this.toPost(result.items, event.getUser<User>())
 
     return result
   }
@@ -157,13 +157,18 @@ export class PostEventHandler {
     return { statusCode: 204 }
   }
 
-  private toPost (result: Post[]): Promise<Post[]> {
+  private toPost (result: Post[], user: User): Promise<Post[]> {
     return Promise.all(result.map(async (post) => {
-      post.team = post.teamUuid ? await this.teamService.findByUuid(post.teamUuid) : undefined
-      post.badge = post.badgeUuid ? await this.badgeService.findByUuid(post.badgeUuid) : undefined
+      const comments = post.commentCount > 0 ? (await this.postCommentService.listBy({ postUuid: post.uuid }, 3)).items : []
       const author = post.authorUuid ? await this.userService.findByUuid(post.authorUuid) : undefined
-      post.activity = post.activityUuid ? await this.activityService.findByUuid(post.activityUuid) : undefined
+      
+      post.likedByMe = (post.likedByUuids as string[])?.includes(user?.uuid ?? '') ?? false
+      post.team = post.teamUuid ? await this.teamService.findByUuid(post.teamUuid) : undefined
+      post.activityAssignment = post.activityAssignmentUuid ? await this.activityAssignmentService.findByUuid(post.activityAssignmentUuid) : undefined
+      
+      post.comments = await this.postCommentService.toPostComment(comments, this.userService)
       post.author = author ? this.userService.toUser(author) : undefined
+      
       return post
     }))
   }

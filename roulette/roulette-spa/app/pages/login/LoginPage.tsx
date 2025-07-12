@@ -48,7 +48,7 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
     return (
       <LoginForm
         securityService={this.securityService}
-        onLogin={() => this.router.navigate('/spin')}
+        onLogin={() => this.router.navigate('/')}
         onActivate={() => this.router.navigate('/password')}
       />
     )

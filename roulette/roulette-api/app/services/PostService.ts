@@ -143,6 +143,18 @@ export class PostService {
   }
 
   /**
+   * Increment comment count for a post
+   */
+  async incrementCommentCount (postUuid: string, increment: number = 1): Promise<void> {
+    const post = await this.postRepository.findByUuid(postUuid)
+    if (!post) {
+      throw new NotFoundError(`Post with UUID ${postUuid} not found`)
+    }
+    post.commentCount += increment
+    await this.postRepository.update(post, { commentCount: post.commentCount })
+  }
+
+  /**
    * Generate upload URLs for user avatar
    *
    * @param user - The user for whom to generate the upload URLs

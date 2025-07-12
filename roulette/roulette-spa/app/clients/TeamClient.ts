@@ -1,11 +1,13 @@
+import { Axios } from 'axios'
 import { AxiosClient } from './AxiosClient'
-import { Team, TeamsAsideStats, TeamStat } from '../models/Team'
+import { Team, TeamStat } from '../models/Team'
 import { IBlueprint, Stone } from '@stone-js/core'
 
 /**
  * Team Client Options
  */
 export interface TeamClientOptions {
+  axios: Axios
   blueprint: IBlueprint
   httpClient: AxiosClient
 }
@@ -15,6 +17,7 @@ export interface TeamClientOptions {
  */
 @Stone({ alias: 'teamClient' })
 export class TeamClient {
+  private readonly axios: Axios
   private readonly path: string
   private readonly client: AxiosClient
 
@@ -23,7 +26,8 @@ export class TeamClient {
    *
    * @param options - The options to create the Team Client.
    */
-  constructor ({ blueprint, httpClient }: TeamClientOptions) {
+  constructor ({ axios, blueprint, httpClient }: TeamClientOptions) {
+    this.axios = axios
     this.client = httpClient
     this.path = blueprint.get('app.clients.team.path', '/teams')
   }
@@ -41,15 +45,6 @@ export class TeamClient {
    */
   async getByName (name: string): Promise<Team> {
     return await this.client.get<Team>(`${this.path}/by-name/${name}`)
-  }
-
-  /**
-   * Get the team stats
-   *
-   * @returns The team stats
-   */
-  async stats (): Promise<TeamsAsideStats> {
-    return await this.client.get(`${this.path}/stats`)
   }
 
   /**
@@ -75,5 +70,19 @@ export class TeamClient {
    */
   async update (uuid: string, data: Partial<Team>): Promise<Team> {
     return await this.client.patch<Team>(`${this.path}/${uuid}`, data)
+  }
+
+  /**
+   * Upload a logo for a team
+   */
+  async generateUploadLink (uuid: string, type: 'logo' | 'banner'): Promise<{ uploadUrl: string, publicUrl: string }> {
+    return await this.client.post<{ uploadUrl: string, publicUrl: string }>(`${this.path}/${uuid}/upload`, { type })
+  }
+
+  /**
+   * Upload a file to a signed S3 URL
+   */
+  async uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
+    await this.axios.put(uploadUrl, file, { headers: { 'Content-Type': file.type } })
   }
 }

@@ -9,8 +9,8 @@ import {
 import { BadgeModel } from '../../models/Badge'
 import { ListMetadataOptions } from '../../models/App'
 import { IBadgeRepository } from '../contracts/IBadgeRepository'
-import { IBlueprint, isNotEmpty, isEmpty } from '@stone-js/core'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IBlueprint, isNotEmpty, isEmpty, Logger } from '@stone-js/core'
 
 /**
  * Badge Repository Options
@@ -42,7 +42,11 @@ export class DynamoBadgeRepository implements IBadgeRepository {
     }
 
     if (typeof cursor === 'string' && cursor.length > 0) {
-      params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+      try {
+          params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        } catch (error) {
+          Logger.warn('Failed to parse cursor:', error)
+        }
     }
 
     const total = await this.count()
@@ -86,7 +90,11 @@ export class DynamoBadgeRepository implements IBadgeRepository {
       }
 
       if (typeof cursor === 'string' && cursor.length > 0) {
-        params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        try {
+          params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        } catch (error) {
+          Logger.warn('Failed to parse cursor:', error)
+        }
       }
 
       const total = await this.count()

@@ -37,8 +37,8 @@ export const BadgeList: FC<BadgeListProps> = ({
   const [assigningBadge, setAssigningBadge] = useState<Badge | undefined>()
 
   const FILTERS = badges.reduce((prev, badge) => {
-    return prev.some(f => f.value === badge.category) ? prev : [...prev, { value: badge.category, label: badge.categoryLabel }]
-  }, [] as { value: string, label: string }[])
+    return prev.some(f => f.value.toLowerCase() === badge.category.toLowerCase()) ? prev : [...prev, { value: badge.category, label: badge.categoryLabel }]
+  }, [] as { value: string, label: string }[]).slice(0, 5)
 
   const filteredBadges = badges.filter((badge) => {
     const matchSearch = badge.name.toLowerCase().includes(search.toLowerCase())

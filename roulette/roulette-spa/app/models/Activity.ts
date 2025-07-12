@@ -68,3 +68,17 @@ export interface ActivityAssignment {
   member?: TeamMember
   issuedByUser?: User
 }
+
+export interface TeamsStats {
+  teams: Team[]
+  totalPosts: number
+  totalScores: number
+  totalBadges: number
+  totalPresence: number
+  totalMembers: number
+  lastestBadges: Badge[]
+  totalActivities: number
+  totalBadgeScores: number
+  totalActivityScores: number
+  latestactivities: Activity[]
+}

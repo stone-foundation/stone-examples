@@ -22,16 +22,16 @@ export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Ele
 
   return (
     <div>
-      {isPage && <>
-        <h2 className='text-2xl font-bold text-center text-white mb-4 uppercase'>
-          Liste des soldats
-        </h2>
-        <p className='text-center text-white/70 mb-6'>
-          Filtrez les soldats selon leur unité
-        </p>
-
-        <FilterTabs value={filter} onChange={setFilter} />
-      </>}
+      {isPage && (
+        <>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-4xl font-bold">Soldats</h1>
+          </div>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+            <FilterTabs value={filter} onChange={setFilter} />
+          </div>
+        </>
+      )}
 
       <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6'>
         {filteredMembers.length > 0

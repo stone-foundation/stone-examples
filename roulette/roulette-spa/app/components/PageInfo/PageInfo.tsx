@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
 import { Team } from '../../models/Team'
+import { User } from '../../models/User'
 import { Pencil, Save, X } from 'lucide-react'
 
 interface PageInfoProps {
   team: Team
+  currentUser: User
   onUpdate: (data: Partial<Team>) => Promise<void>
 }
 
-export const PageInfo: React.FC<PageInfoProps> = ({ team, onUpdate }) => {
+export const PageInfo: React.FC<PageInfoProps> = ({ team, currentUser, onUpdate }) => {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<Team>>({
     slogan: team.slogan ?? '',
@@ -15,6 +17,8 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, onUpdate }) => {
     description: team.description ?? '',
     rules: team.rules ?? '',
   })
+
+  const canEdit = team.members.some(member => member.uuid === currentUser.uuid) || currentUser.isAdmin
 
   const handleChange = (key: keyof Team, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -39,7 +43,7 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, onUpdate }) => {
     <div className="bg-white/5 rounded-xl p-6 space-y-4 text-white">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{team.name}</h2>
-        {!editing && <button
+        {!editing && canEdit && <button
           onClick={() => setEditing(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 hover:bg-orange-500 rounded-md"
         >

@@ -22,18 +22,6 @@ export interface Badge {
   visibility: 'public' | 'private'
 }
 
-export interface BadgeTeam {
-  team: Team
-  uuid: string
-  badge: Badge
-  comment?: string
-  issuedAt: number
-  teamUuid: string
-  badgeUuid: string
-  member?: TeamMember
-  memberUuid?: string
-}
-
 export interface BadgeAssignPayload {
   team: Team
   badge: Badge

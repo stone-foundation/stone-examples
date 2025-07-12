@@ -44,4 +44,17 @@ export class UserService {
 
     return this._currentUser
   }
+
+  async toggleCaptainGrade (user: User): Promise<User> {
+    const roles = user.roles?.includes('captain') ? ['soldier'] : ['captain']
+    return await this.userClient.update(user.uuid, { roles })
+  }
+
+  /**
+   * Upload a logo for a user
+   */
+  async changeImage (uuid: string, file: File): Promise<void> {
+    const { uploadUrl } = await this.userClient.generateUploadLink(uuid)
+    await this.userClient.uploadFileToS3(uploadUrl, file)
+  }
 }

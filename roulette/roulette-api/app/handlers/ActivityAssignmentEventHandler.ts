@@ -8,6 +8,7 @@ import { PostService } from '../services/PostService'
 import { TeamService } from '../services/TeamService'
 import { BadgeService } from '../services/BadgeService'
 import { ActivityAssignment } from '../models/Activity'
+import { PRESENCE_EVENT_CATEGORY } from '../constants'
 import { ActivityService } from '../services/ActivityService'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
 import { ActivityAssignmentService } from '../services/ActivityAssignmentService'
@@ -52,31 +53,19 @@ export class ActivityAssignmentEventHandler {
   @Get('/')
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    const meta = await this.activityAssignmentService.list(Number(event.get('limit', 10)), event.get('page'))
-
-    meta.items = await this.populateActivityAssignment(meta.items)
-
-    return meta
+    return await this.activityAssignmentService.list(Number(event.get('limit', 10)), event.get('page'))
   }
 
   @Get('/team/:teamUuid', { middleware: ['authOrNot'] })
   @JsonHttpResponse(200)
   async listByTeam (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    const meta = await this.activityAssignmentService.listBy({ teamUuid: event.get('teamUuid') }, Number(event.get('limit', 10)), event.get('page'))
-    
-    meta.items = await this.populateActivityAssignment(meta.items)
-
-    return meta
+    return await this.activityAssignmentService.listBy({ teamUuid: event.get('teamUuid') }, Number(event.get('limit', 10)), event.get('page'))
   }
 
   @Get('/activity/:activityUuid', { middleware: ['authOrNot'] })
   @JsonHttpResponse(200)
   async listByActivity (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    const meta = await this.activityAssignmentService.listBy({ activityUuid: event.get('activityUuid') }, Number(event.get('limit', 10)), event.get('page'))
-    
-    meta.items = await this.populateActivityAssignment(meta.items)
-
-    return meta
+    return await this.activityAssignmentService.listBy({ activityUuid: event.get('activityUuid') }, Number(event.get('limit', 10)), event.get('page'))
   }
 
   @Get('/stats/:teamName?', { middleware: ['authOrNot'] })
@@ -122,7 +111,6 @@ export class ActivityAssignmentEventHandler {
       }
 
       data.activityUuid = activityUuid
-      this.userService.update(user, { presenceActivityUuid: data.activityCategory }) // Update user with category
       data.activityCategory = undefined // Clear category to avoid duplication
     }
 
@@ -184,42 +172,32 @@ export class ActivityAssignmentEventHandler {
   @JsonHttpResponse(200)
   async changeStatus (event: IncomingHttpEvent): Promise<ActivityAssignment> {
     const user = event.getUser<User>()
-    const assignment = event.get<ActivityAssignment>('assignment', {} as unknown as ActivityAssignment)
     const { status } = event.getBody<Partial<ActivityAssignment>>({})
+    const assignment = event.get<ActivityAssignment>('assignment', {} as unknown as ActivityAssignment)
 
     if (!status) throw new BadRequestError('Status is required')
 
+    const activity = await this.activityService.findByUuid(assignment.activityUuid)
     const updated = await this.activityAssignmentService.update(assignment, { status, validatedAt: Date.now(), validatedByUuid: user.uuid })
 
     if (status === 'approved' && assignment?.activityUuid) {
       this.postService.create({
-        type: 'activity',
         visibility: 'public',
-        authorUuid: assignment.uuid,
+        type: 'activityAssignment',
         content: assignment.comment,
         teamUuid: assignment.teamUuid,
-        activityUuid: assignment.activityUuid
+        authorUuid: assignment.authorUuid,
+        activityAssignmentUuid: assignment.uuid
       } as unknown as PostType, user)
+
+      // If the activity is a presence event, update the user's presence activity
+      if (activity?.category === PRESENCE_EVENT_CATEGORY) {
+        this.userService.update(user, { presenceActivityUuid: activity.uuid })
+      }
     }
 
     this.logger.info(`ActivityAssignment status changed to ${status}: ${assignment.uuid}`)
 
     return updated
-  }
-
-  private async populateActivityAssignment (assignments: ActivityAssignment[]): Promise<ActivityAssignment[]> {
-    return (await Promise.all(assignments.flatMap(async (assignment) => {
-       const activity = await this.activityService.findByUuid(assignment.activityUuid)
-      if (activity) {
-        assignment.activity = activity
-        assignment.activity.badge = assignment.activity.badgeUuid ? await this.badgeService.findByUuid(assignment.activity.badgeUuid) : undefined
-        const member = assignment?.memberUuid ? await this.userService.findByUuid(assignment?.memberUuid) : undefined
-        assignment.team = assignment?.teamUuid ? await this.teamService.findByUuid(assignment?.teamUuid) : undefined
-        assignment.member = member ? this.teamService.toTeamMember(member) : undefined
-
-        return assignment
-      }
-      return undefined
-    }))).filter(v => isNotEmpty<ActivityAssignment>(v))
   }
 }

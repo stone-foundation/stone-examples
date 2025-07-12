@@ -2,7 +2,7 @@ import { Team } from '../models/Team'
 import { AxiosClient } from './AxiosClient'
 import { IBlueprint, Stone } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
-import { ActivityAssignment } from '../models/Activity'
+import { ActivityAssignment, TeamsStats } from '../models/Activity'
 
 /**
  * Activity Assignment Client Options
@@ -39,6 +39,15 @@ export class ActivityAssignmentClient {
   async listByTeam (team: Team, limit: number = 10, page?: string): Promise<ListMetadataOptions<ActivityAssignment>> {
     const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
     return await this.client.get<ListMetadataOptions<ActivityAssignment>>(`${this.path}/team/${team.uuid}?${query.toString()}`)
+  }
+  
+  /**
+   * Get the team stats
+   *
+   * @returns The team stats
+   */
+  async stats (teamName?: string): Promise<TeamsStats> {
+    return await this.client.get(`${this.path}/stats/${teamName ?? ''}`)
   }
 
   /**

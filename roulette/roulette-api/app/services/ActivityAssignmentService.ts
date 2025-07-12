@@ -1,5 +1,4 @@
 import { User } from '../models/User'
-import { Team } from '../models/Team'
 import { Badge } from '../models/Badge'
 import { randomUUID } from 'node:crypto'
 import { TeamService } from './TeamService'
@@ -137,12 +136,7 @@ export class ActivityAssignmentService {
       .filter(item => item.status === 'approved' && item.activityUuid)
       .sort((a, b) => Number(b.validatedAt) - Number(a.validatedAt))
 
-    const teams = (await Promise.all(
-      assignments
-        .map(item => item.teamUuid)
-        .filter(v => isNotEmpty<string>(v))
-        .map(async uuid => await this.teamService.findByUuid(uuid))
-    )).reduce((acc, team) => acc.concat(acc.some(v => v.uuid === team?.uuid) ? [] : team ?? []), [] as Team[])
+    const teams = await this.teamService.list(1000)
 
     const latestactivities = (await Promise.all(
       assignments
@@ -182,24 +176,36 @@ export class ActivityAssignmentService {
         const score = Math.abs(activity.score ?? 0)
         return activity?.impact === 'negative' ? sum - score : sum + score
       }, 0)
+      team.badges = teamBadges
+      team.activities = teamActivities
       team.countBadges = teamBadges.length
       team.countActivity = teamActivities.length
       team.score = totalBadgeScores + totalActivityScores
       team.countPresence = teamActivities.filter(v => v.category === PRESENCE_EVENT_CATEGORY).length
     })
 
-    teams.sort((a, b) => b.score - a.score)
-    teams.forEach((team, index) => {
-      team.rank = index + 1
-    })
+    const totalTeamScores = teams.reduce((sum, team) => sum + (team.score ?? 0), 0)
 
-    const postCount = await this.postService.count()
+    teams.sort((a, b) => b.score - a.score)
+
+    for (const team of teams) {
+      const users = await this.userService.listBy({ teamUuid: team.uuid })
+      team.captain = users.find(member => member.roles?.includes('captain'))
+      team.countMember = users.length
+      team.rank = teams.findIndex(t => t.uuid === team.uuid) + 1
+      team.members = users.map(v => this.teamService.toTeamMember(v))
+      team.scorePercentage = totalTeamScores > 0 ? Math.round((team.score / totalTeamScores) * 100) : 0
+    }
+
+    const totalPosts = await this.postService.count()
+    const totalMembers = teams.reduce((sum, team) => sum + (team.countMember ?? 0), 0)
 
     return {
       teams,
-      postCount,
+      totalPosts,
       totalScores,
       totalBadges,
+      totalMembers,
       totalPresence,
       lastestBadges,
       totalActivities,

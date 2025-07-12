@@ -7,7 +7,7 @@ export interface User {
   team?: Team
   uuid: string
   phone: string
-  roles?: string
+  roles?: string[]
   fullname: string
   username: string
   lastSeen?: number

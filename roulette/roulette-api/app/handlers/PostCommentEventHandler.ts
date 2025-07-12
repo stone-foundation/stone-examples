@@ -1,7 +1,8 @@
 import { User } from '../models/User'
+import { ILogger, isEmpty } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
 import { UserService } from '../services/UserService'
-import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
+import { PostService } from '../services/PostService'
 import { PostComment, PostCommentModel } from '../models/Post'
 import { PostCommentService } from '../services/PostCommentService'
 import { EventHandler, Get, Post as HttpPost, Patch, Delete } from '@stone-js/router'
@@ -13,6 +14,7 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent, NoContentHttpResp
 export interface PostCommentEventHandlerOptions {
   logger: ILogger
   userService: UserService
+  postService: PostService
   postCommentService: PostCommentService
 }
 
@@ -23,11 +25,13 @@ export interface PostCommentEventHandlerOptions {
 export class PostCommentEventHandler {
   private readonly logger: ILogger
   private readonly userService: UserService
+  private readonly postService: PostService
   private readonly postCommentService: PostCommentService
 
-  constructor ({ userService, postCommentService, logger }: PostCommentEventHandlerOptions) {
+  constructor ({ userService, postService, postCommentService, logger }: PostCommentEventHandlerOptions) {
     this.logger = logger
     this.userService = userService
+    this.postService = postService
     this.postCommentService = postCommentService
   }
 
@@ -38,7 +42,7 @@ export class PostCommentEventHandler {
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<PostComment>> {
     const result = await this.postCommentService.list(Number(event.get('limit', 10)), event.get('page'))
-    result.items = await this.toPostComment(result.items)
+    result.items = await this.postCommentService.toPostComment(result.items, this.userService)
 
     return result
   }
@@ -51,7 +55,7 @@ export class PostCommentEventHandler {
   async listByPost (event: IncomingHttpEvent): Promise<ListMetadataOptions<PostComment>> {
     const postUuid = event.get<string>('postUuid')
     const result = await this.postCommentService.listBy({ postUuid }, Number(event.get('limit', 10)), event.get('page'))
-    result.items = await this.toPostComment(result.items)
+    result.items = await this.postCommentService.toPostComment(result.items, this.userService)
 
     return result
   }
@@ -65,8 +69,7 @@ export class PostCommentEventHandler {
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<PostComment | undefined> {
-    const comment = event.get<PostComment>('comment')
-    return isNotEmpty<PostCommentModel>(comment) ? this.postCommentService.toPostComment(comment) : undefined
+    return event.get<PostCommentModel>('comment')
   }
 
   /**
@@ -82,6 +85,8 @@ export class PostCommentEventHandler {
     }
 
     const uuid = await this.postCommentService.create(data, event.getUser<User>())
+
+    await this.postService.incrementCommentCount(data.postUuid, 1)
 
     this.logger.info(`Comment created: ${uuid}, by user: ${String(event.getUser<User>().uuid)}`)
 
@@ -139,16 +144,10 @@ export class PostCommentEventHandler {
 
     await this.postCommentService.delete(comment)
 
+    await this.postService.incrementCommentCount(comment.postUuid, -1)
+
     this.logger.info(`Comment deleted: ${comment.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
 
     return { statusCode: 204 }
-  }
-  
-  private toPostComment (result: PostComment[]): Promise<PostComment[]> {
-    return Promise.all(result.map(async (comment) => {
-      const author = comment.authorUuid ? await this.userService.findByUuid(comment.authorUuid) : undefined
-      comment.author = author ? this.userService.toUser(author) : undefined
-      return comment
-    }))
   }
 }

@@ -1,32 +1,31 @@
-import { BadgeTeam } from "../../models/Badge"
+import { Team } from "../../models/Team"
 import { StoneLink } from "@stone-js/use-react"
 
 interface RecentBadgesCardProps {
-  readonly badges: BadgeTeam[]
+  readonly teams: Team[]
 }
 
-export function RecentBadgesCard({ badges }: RecentBadgesCardProps) {
+export function RecentBadgesCard({ teams }: RecentBadgesCardProps) {
   return (
     <ul className="space-y-3">
-      {badges.map((badge) => (
+      {teams.filter(v => v.badges && v.badges.length > 0).map((team) => (
         <li
-          key={badge.uuid}
+          key={team.uuid}
           className="bg-white/5 border border-white/10 rounded-md p-3 text-white text-sm"
         >
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="font-semibold">{badge.badge.name}</span>
-              <span className="text-xs text-white/60">{badge.badge.description}</span>
-              {badge.team.name && (
+              <span className="font-semibold">{team.badges?.[0].name}</span>
+              <span className="text-xs text-white/60">{team.badges?.[0].description}</span>
+              {team.name && (
                 <span
                   className="mt-1 text-xs inline-block px-2 py-0.5 rounded-full text-white font-medium"
-                  style={{ backgroundColor: badge.team.color }}
+                  style={{ backgroundColor: team.color }}
                 >
-                  <StoneLink to={`/teams/${badge.team.name}`}>{badge.team.name}</StoneLink>
+                  <StoneLink to={`/page/${team.name}/badges`}>{team.name}</StoneLink>
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-white/40">{new Date(badge.issuedAt).toLocaleDateString()}</span>
           </div>
         </li>
       ))}

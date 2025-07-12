@@ -44,28 +44,29 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
   }
 
   // future case: type === "event"
-  if (post.type === "event" && post.event) {
+  if (post.type === "activityAssignment" && post.activityAssignment?.activity) {
     return (
       <div className="bg-gradient-to-br overflow-hidden from-white/5 to-white/10 border border-white/10 rounded-xl p-4 mt-2 text-white shadow-sm">
         <div className="flex items-center justify-between mb-1">
-          <h4 className="text-lg font-semibold text-orange-400">{post.event.name}</h4>
-          {post.event.score !== undefined && (
+          <h4 className="text-lg font-semibold text-orange-400">{post.activityAssignment.activity.name}</h4>
+          {post.activityAssignment.activity.score !== undefined && (
             <span className={clsx(
                 'text-sm px-3 py-1 rounded-full font-bold shadow-inner',
-                post.event.variant === 'plus' ? 'bg-green-600/80' : '',
-                post.event.variant === 'minus' ? 'bg-red-600/80' : ''
+                post.activityAssignment.activity.impact === 'positive' ? 'bg-green-600/80' : '',
+                post.activityAssignment.activity.impact === 'negative' ? 'bg-red-600/80' : '',
+                post.activityAssignment.activity.impact === 'neutral' ? 'bg-gray-600/80' : ''
               )}
             >
-              {post.event.variant === 'plus' ? '+' : ''}
-              {post.event.variant === 'minus' ? '-' : ''}
-              {post.event.score} pts
+              {post.activityAssignment.activity.impact === 'positive' ? '+' : ''}
+              {post.activityAssignment.activity.impact === 'negative' ? '-' : ''}
+              {post.activityAssignment.activity.score} pts
             </span>
           )}
         </div>
 
-        {post.event.description && (
+        {post.activityAssignment.activity.description && (
           <p className="text-sm text-white/80 leading-snug mb-2">
-            {post.event.description}
+            {post.activityAssignment.activity.description}
           </p>
         )}
 
@@ -78,14 +79,14 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
               {post.team.name}
             </span>
           )}
-          {post.event.type && (
+          {post.activityAssignment.activity.category && (
             <span className="px-2 py-1 bg-white/5 border border-white/10 rounded-md">
-              🎯 {post.event.typeLabel}
+              🎯 {post.activityAssignment.activity.categoryLabel}
             </span>
           )}
-          {post.event.member && (
+          {post.activityAssignment.member && (
             <span className="px-2 py-1 bg-white/5 border border-white/10 rounded-md">
-              👤 {currentUser?.isAdmin && `${post.event.member.username} - @`}{post.event.member.username}
+              👤 {currentUser?.isAdmin && `${post.activityAssignment.member.username} - @`}{post.activityAssignment.member.username}
             </span>
           )}
         </div>
@@ -93,12 +94,12 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
     )
   }
 
-  if (post.type === 'badge' && post.badge) {
+  if (post.type === "activityAssignment" && post.activityAssignment?.badge) {
     return (
       <div className="p-4 overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl border border-white/10 shadow-md text-white flex flex-col md:flex-row items-center gap-4">
         <div>
-          {post.badge.iconUrl
-            ? (<img src={post.badge.iconUrl} alt={post.badge.name} className="w-12 h-12 md:w-16 md:h-16 object-contain" />)
+          {post.activityAssignment.badge.iconUrl
+            ? (<img src={post.activityAssignment.badge.iconUrl} alt={post.activityAssignment.badge.name} className="w-12 h-12 md:w-16 md:h-16 object-contain" />)
             : (<span className="text-5xl md:text-6xl text-orange-400">🏅</span>)
           }
         </div>
@@ -107,9 +108,9 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
           <h3 className="text-lg md:text-xl font-semibold mb-1">
             Badge attribué à <span className="font-bold text-white">{post.team?.name ?? 'Équipe inconnue'}</span>
           </h3>
-          <p className="text-base font-bold text-orange-400">{post.badge.name}</p>
-          {post.badge.score && <p className="text-md font-bold text-orange-100 mt-1">{post.badge.score} pts</p>}
-          {post.badge.description && <p className="text-sm text-white/80 mt-1">{post.badge.description}</p>}
+          <p className="text-base font-bold text-orange-400">{post.activityAssignment.badge.name}</p>
+          <p className="text-md font-bold text-orange-100 mt-1">{post.activityAssignment.badge.score} pts</p>
+          {post.activityAssignment.badge.description && <p className="text-sm text-white/80 mt-1">{post.activityAssignment.badge.description}</p>}
         </div>
 
         {post.team?.color && (
