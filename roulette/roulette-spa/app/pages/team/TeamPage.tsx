@@ -86,12 +86,12 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
             currentUser={user}
             badges={data.badges ?? []}
             activityAssignments={data.assignments ?? []}
-            savePost={async (v) => await this.savePost(v, team)}
             onUpdateInfos={async (v) => await this.updateInfos(v, team)}
-            onLogoChange={async (file: File) => await this.updateImage(file, team, 'logo')}
+            savePost={async (v, file?: File) => await this.savePost(v, team, file)}
+            onLogoChange={async (file: File) => await this.updateImage(team, file)}
             fetchPosts={async (u, v) => await this.postService.listByTeam(team.name, u, v)}
             onUpdateAssigmentStatus={async (u, v) => await this.onUpdateAssigmentStatus(u, v)}
-            onBannerChange={async (file: File) => await this.updateImage(file, team, 'banner')}
+            onBannerChange={async (file: File) => await this.updateImage(team, undefined, file)}
           />
         </main>
         <aside className="w-full lg:w-64 shrink-0 hidden xl:block">
@@ -102,12 +102,12 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
     )
   }
   
-  async savePost (data: Partial<Post>, team: Team): Promise<void> {
-    await this.postService.create({ ...data, teamUuid: team.uuid })
+  async savePost (data: Partial<Post>, team: Team, file?: File): Promise<void> {
+    await this.postService.create({ ...data, teamUuid: team.uuid }, file)
   }
 
-  async updateImage (file: File, team: Team, type: 'logo' | 'banner'): Promise<void> {
-    await this.teamService.changeImage(team.uuid, file, type)
+  async updateImage (team: Team, logoFile?: File, bannerFile?: File): Promise<void> {
+    await this.teamService.update(team.uuid, {}, logoFile, bannerFile)
   }
   
   async updateInfos (data: Partial<Post>, team: Team): Promise<void> {

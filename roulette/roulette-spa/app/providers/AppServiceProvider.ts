@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import { AxiosClient } from '../clients/AxiosClient'
+import { WebsocketClient } from '../clients/WebsocketClient'
 import { IBlueprint, IContainer, IServiceProvider, Provider } from '@stone-js/core'
 
 /**
@@ -30,6 +31,13 @@ export class AppServiceProvider implements IServiceProvider {
   }
 
   /**
+   * Register the Websocket Client
+   */
+  boot (): void {
+    this.bootWebsocketClient()
+  }
+
+  /**
    * Get Axios instance
    *
    * @param container - The container
@@ -38,5 +46,13 @@ export class AppServiceProvider implements IServiceProvider {
   private getAxiosInstance (container: IContainer): AxiosInstance {
     const baseURL = container.make<IBlueprint>('blueprint').get<string>('app.clients.baseURL', 'http://localhost:8080')
     return axios.create({ baseURL })
+  }
+
+  /**
+   * Boot the Websocket Client
+   */
+  private bootWebsocketClient (): void {
+    const websocketClient = this.container.make<WebsocketClient>('websocketClient')
+    websocketClient.stop().start()
   }
 }

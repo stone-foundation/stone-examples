@@ -16,15 +16,15 @@ export interface SecurityServiceOptions {
 */
 @Service({ alias: 'securityService' })
 export class SecurityService {
+  private readonly client: SecurityClient
   private readonly tokenService: TokenService
-  private readonly securityClient: SecurityClient
 
   /**
    * Create a new Security Service
   */
   constructor ({ tokenService, securityClient }: SecurityServiceOptions) {
+    this.client = securityClient
     this.tokenService = tokenService
-    this.securityClient = securityClient
   }
 
   /**
@@ -34,7 +34,7 @@ export class SecurityService {
    * @return The user activation details
   */
   async activate (phone: string): Promise<UserActivation> {
-    return await this.securityClient.activate(phone)
+    return await this.client.activate(phone)
   }
 
   /**
@@ -44,7 +44,7 @@ export class SecurityService {
    * @returns The user token
   */
   async login (user: UserLogin): Promise<void> {
-    const token = await this.securityClient.login(user)
+    const token = await this.client.login(user)
     this.tokenService.saveToken(token)
   }
 
@@ -54,14 +54,14 @@ export class SecurityService {
    * @param user - The user to change the password
   */
   async changePassword (user: UserChangePassword): Promise<void> {
-    await this.securityClient.changePassword(user)
+    await this.client.changePassword(user)
   }
 
   /**
    * Logout a user
   */
   async logout (): Promise<void> {
-    await this.securityClient.logout()
+    await this.client.logout()
     this.tokenService.removeToken()
   }
 

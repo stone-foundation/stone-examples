@@ -21,8 +21,8 @@ interface PageDetailsProps {
   activityAssignments: ActivityAssignment[]
   onLogoChange?: (file: File) => Promise<void>
   onBannerChange?: (file: File) => Promise<void>
-  savePost: (payload: Partial<Post>) => Promise<void>
   onUpdateInfos: (data: Partial<Team>) => Promise<void>
+  savePost: (payload: Partial<Post>, file?: File) => Promise<void>
   fetchPosts: (limit?: number, page?: string | number) => Promise<ListMetadataOptions<Post>>
   onUpdateAssigmentStatus: (assignment: ActivityAssignment, payload: Partial<ActivityAssignment>) => Promise<void>
 }
@@ -44,7 +44,7 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ onLogoChange, onBanner
         <div className="flex-1">
           {activePath === 'timeline' && (
             <>
-            {currentUser && <TimelineComposer currentUser={currentUser} onPost={async (v) => await savePost(v)} />}
+            {currentUser && <TimelineComposer currentUser={currentUser} onPost={async (v, file) => await savePost(v, file)} />}
               <TimelineFeed currentUser={currentUser} fetchPosts={fetchPosts} />
             </>
           )}

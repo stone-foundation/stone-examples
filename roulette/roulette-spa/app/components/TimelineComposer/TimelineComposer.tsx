@@ -9,7 +9,7 @@ import { MediaUploader } from '../MediaUploader/MediaUploader'
 
 interface TimelineComposerProps {
   currentUser: User
-  onPost: (payload: Partial<Post>) => Promise<void>
+  onPost: (payload: Partial<Post>, file?: File) => Promise<void>
 }
 
 export const TimelineComposer = ({ onPost, currentUser }: TimelineComposerProps) => {
@@ -27,7 +27,7 @@ export const TimelineComposer = ({ onPost, currentUser }: TimelineComposerProps)
     
     setIsSaving(true)
 
-    onPost({ content: text.trim(), type, visibility: 'public', image, backgroundColor: selectedColor })
+    onPost({ content: text.trim(), type, visibility: 'public', backgroundColor: selectedColor }, image)
       .then(() => {
         setText('')
         setImage(undefined)

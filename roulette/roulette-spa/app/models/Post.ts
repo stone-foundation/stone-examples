@@ -12,7 +12,6 @@ export interface Post {
   team?: Team
   uuid: string
   author: User
-  image?: File
   badge?: Badge
   type: PostType
   content?: string

@@ -1,4 +1,3 @@
-import { Axios } from 'axios'
 import { Post } from '../models/Post'
 import { AxiosClient } from './AxiosClient'
 import { IBlueprint, Stone } from '@stone-js/core'
@@ -8,7 +7,6 @@ import { ListMetadataOptions } from '../models/App'
  * Post Client Options
  */
 export interface PostClientOptions {
-  axios: Axios
   blueprint: IBlueprint
   httpClient: AxiosClient
 }
@@ -18,12 +16,10 @@ export interface PostClientOptions {
  */
 @Stone({ alias: 'postClient' })
 export class PostClient {
-  private readonly axios: Axios
   private readonly path: string
   private readonly client: AxiosClient
 
-  constructor ({ axios, blueprint, httpClient }: PostClientOptions) {
-    this.axios = axios
+  constructor ({ blueprint, httpClient }: PostClientOptions) {
     this.client = httpClient
     this.path = blueprint.get('app.clients.post.path', '/posts')
   }
@@ -56,13 +52,6 @@ export class PostClient {
    */
   async create (data: Partial<Post & { extension: string }>): Promise<{ uuid?: string, uploadUrl?: string, publicUrl?: string, key?: string }> {
     return await this.client.post(`${this.path}`, data)
-  }
-
-  /**
-   * Upload a file to a signed S3 URL
-   */
-  async uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
-    await this.axios.put(uploadUrl, file, { headers: { 'Content-Type': file.type } })
   }
 
   /**

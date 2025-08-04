@@ -90,7 +90,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
           )}
           {assignment.locationCity && (
             <div>
-              📍 {assignment.locationCity}, {assignment.locationRegion}
+              📍 {decodeURIComponent(assignment.locationCity)}, {decodeURIComponent(assignment.locationRegion ?? '')}
             </div>
           )}
           {assignment.comment && (

@@ -5,6 +5,7 @@ import {
   IServiceProvider
 } from '@stone-js/core'
 import twilio from 'twilio'
+import OpenAI from 'openai'
 import { TwilioConfig } from '../models/App'
 import { S3Client } from '@aws-sdk/client-s3'
 
@@ -33,6 +34,7 @@ export class AppServiceProvider implements IServiceProvider {
   register (): void {
     this.registerS3Client()
     this.registerTwilioClient()
+    this.registerOpenAIClient()
   }
 
   /**
@@ -51,5 +53,13 @@ export class AppServiceProvider implements IServiceProvider {
   registerS3Client (): void {
     const region = this.blueprint.get('aws.region', 'us-east-2')
     this.container.instance('s3Client', new S3Client({ region }))
+  }
+
+  /**
+   * Register the OpenAI client
+   */
+  registerOpenAIClient (): void {
+    const apiKey = this.blueprint.get('openai.apiKey', '')
+    this.container.instance('openaiClient', new OpenAI({ apiKey }))
   }
 }

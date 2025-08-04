@@ -1,13 +1,15 @@
 import { Post } from '../models/Post'
-import { Service } from '@stone-js/core'
+import { MediaService } from './MediaService'
 import { PostClient } from '../clients/PostClient'
 import { ListMetadataOptions } from '../models/App'
+import { isNotEmpty, Service } from '@stone-js/core'
 
 /**
  * Post Service Options
  */
 export interface PostServiceOptions {
   postClient: PostClient
+  mediaService: MediaService
 }
 
 /**
@@ -16,12 +18,14 @@ export interface PostServiceOptions {
 @Service({ alias: 'postService' })
 export class PostService {
   private readonly client: PostClient
+  private readonly mediaService: MediaService
 
   /**
    * Create a new PostService
    */
-  constructor ({ postClient }: PostServiceOptions) {
+  constructor ({ postClient, mediaService }: PostServiceOptions) {
     this.client = postClient
+    this.mediaService = mediaService
   }
 
   /**
@@ -48,21 +52,9 @@ export class PostService {
   /**
    * Create a new post
    */
-  async create (data: Partial<Post & { extension: string }>): Promise<{ uuid?: string, uploadUrl?: string, publicUrl?: string, key?: string }> {
-    const result = await this.client.create({ ...data, image: undefined })
-
-    if (data.type === 'image' && result.uploadUrl !== undefined && data.image instanceof File) {
-      await this.uploadToS3(result.uploadUrl, data.image)
-    }
-
-    return result
-  }
-
-  /**
-   * Upload a file to S3 via pre-signed URL
-   */
-  async uploadToS3 (uploadUrl: string, file: File): Promise<void> {
-    return await this.client.uploadFileToS3(uploadUrl, file)
+  async create (data: Partial<Post>, file?: File): Promise<{ uuid?: string }> {
+    const imageUrl = await this.uploadFile('posts', file)
+    return await this.client.create({ ...data, imageUrl })
   }
 
   /**
@@ -75,8 +67,9 @@ export class PostService {
   /**
    * Update an existing post
    */
-  async update (uuid: string, data: Partial<Post>): Promise<Post> {
-    return await this.client.update(uuid, data)
+  async update (uuid: string, data: Partial<Post>, file?: File): Promise<Post> {
+    const imageUrl = await this.uploadFile('posts', file)
+    return await this.client.update(uuid, { ...data, imageUrl })
   }
 
   /**
@@ -84,5 +77,16 @@ export class PostService {
    */
   async delete (uuid: string): Promise<void> {
     return await this.client.delete(uuid)
+  }
+
+  /**
+   * Upload a file to the media service
+   * 
+   * @param group - The group to upload the file to
+   * @param file - The file to upload
+   * @returns The URL of the uploaded file
+   */
+  private async uploadFile(group: string, file?: File): Promise<string | undefined> {
+    return isNotEmpty<File>(file) ? await this.mediaService.uploadFile(file, group) : undefined
   }
 }

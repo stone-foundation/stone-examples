@@ -1,12 +1,14 @@
+import { MediaService } from './MediaService'
 import { Team, TeamStat } from '../models/Team'
 import { TeamClient } from '../clients/TeamClient'
-import { IContainer, Service } from '@stone-js/core'
+import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 
 /**
  * Team Service Options
 */
 export interface TeamServiceOptions {
   teamClient: TeamClient
+  mediaService: MediaService
 }
 
 /**
@@ -14,7 +16,8 @@ export interface TeamServiceOptions {
 */
 @Service({ alias: 'teamService' })
 export class TeamService {
-  private readonly teamClient: TeamClient
+  private readonly client: TeamClient
+  private readonly mediaService: MediaService
 
   /**
    * Resolve route binding
@@ -31,15 +34,16 @@ export class TeamService {
   /**
    * Create a new Team Service
   */
-  constructor ({ teamClient }: TeamServiceOptions) {
-    this.teamClient = teamClient
+  constructor ({ teamClient, mediaService }: TeamServiceOptions) {
+    this.client = teamClient
+    this.mediaService = mediaService
   }
 
   /**
    * List all posts
    */
   async list (limit?: number, page?: string | number): Promise<Team[]> {
-    return await this.teamClient.list(limit, page)
+    return await this.client.list(limit, page)
   }
 
   /**
@@ -49,7 +53,7 @@ export class TeamService {
    * @returns The found team
    */
   async getByName (name: string): Promise<Team> {
-    return await this.teamClient.getByName(name)
+    return await this.client.getByName(name)
   }
 
   /**
@@ -58,7 +62,7 @@ export class TeamService {
    * @returns The results of the team
    */
   async results (): Promise<TeamStat[]> {
-    return await this.teamClient.results()
+    return await this.client.results()
   }
 
   /**
@@ -67,21 +71,42 @@ export class TeamService {
    * @returns The current team
    */
   async currentTeam (): Promise<Team> {
-    return await this.teamClient.currentTeam()
-  }
-  
-  /**
-   * Update an existing team
-   */
-  async update (uuid: string, data: Partial<Team>): Promise<Team> {
-    return await this.teamClient.update(uuid, data)
+    return await this.client.currentTeam()
   }
 
   /**
-   * Upload a logo for a team
+   * Create a new team
    */
-  async changeImage (uuid: string, file: File, type: 'logo' | 'banner'): Promise<void> {
-    const { uploadUrl } = await this.teamClient.generateUploadLink(uuid, type)
-    await this.teamClient.uploadFileToS3(uploadUrl, file)
+  async create (data: Partial<Team>, logoFile?: File, bannerFile?: File): Promise<{ uuid?: string }> {
+    const logoUrl = await this.uploadFile('team-logos', logoFile)
+    const bannerUrl = await this.uploadFile('team-banners', bannerFile)
+    return await this.client.create({ ...data, logoUrl, bannerUrl })
+  }
+
+  /**
+   * Update an existing team
+   */
+  async update (uuid: string, data: Partial<Team>, logoFile?: File, bannerFile?: File): Promise<Team> {
+    const logoUrl = await this.uploadFile('team-logos', logoFile)
+    const bannerUrl = await this.uploadFile('team-banners', bannerFile)
+    return await this.client.update(uuid, { ...data, logoUrl, bannerUrl })
+  }
+
+  /**
+   * Delete a team
+   */
+  async delete (uuid: string): Promise<void> {
+    return await this.client.delete(uuid)
+  }
+
+  /**
+   * Upload a file to the media service
+   * 
+   * @param group - The group to upload the file to
+   * @param file - The file to upload
+   * @returns The URL of the uploaded file
+   */
+  private async uploadFile(group: string, file?: File): Promise<string | undefined> {
+    return isNotEmpty<File>(file) ? await this.mediaService.uploadFile(file, group) : undefined
   }
 }

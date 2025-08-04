@@ -1,7 +1,7 @@
 import { JSX, useState } from 'react'
-import { Team } from '../../models/Team'
 import { Footer } from '../../components/Footer/Footer'
 import { AppHeader } from '../../components/AppHeader/AppHeader'
+import { ChatProvider } from '../../components/Chatbot/ChatProvider'
 import { SidebarMenu } from '../../components/SidebarMenu/SidebarMenu'
 import { SidebarDrawer } from '../../components/SidebarDrawer/SidebarDrawer'
 import { IPageLayout, PageLayoutRenderContext, PageLayout, StoneOutlet } from '@stone-js/use-react'
@@ -37,6 +37,7 @@ export class AppLayout implements IPageLayout {
             {children}
           </StoneOutlet>
         </div>
+        <ChatProvider container={container} />
         <Footer />
       </div>
     )

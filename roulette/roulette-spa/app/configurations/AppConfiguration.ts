@@ -52,6 +52,15 @@ export class AppConfiguration implements IConfiguration {
         activityAssignment: {
           path: getString('API_CLIENT_ACTIVITY_ASSIGNMENT_PATH', '/activity-assignments')
         },
+        media: {
+          path: getString('API_CLIENT_MEDIA_PATH', '/medias')
+        },
+        mission: {
+          path: getString('API_CLIENT_MISSION_PATH', '/missions')
+        },
+        chat: {
+          path: getString('API_CLIENT_CHAT_PATH', '/chats')
+        },
         post: {
           path: getString('API_CLIENT_POST_PATH', '/posts')
         },

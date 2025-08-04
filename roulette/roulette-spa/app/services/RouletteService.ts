@@ -14,13 +14,13 @@ export interface RouletteServiceOptions {
 */
 @Service({ alias: 'rouletteService' })
 export class RouletteService {
-  private readonly rouletteClient: RouletteClient
+  private readonly client: RouletteClient
 
   /**
    * Create a new Roulette Service
   */
   constructor ({ rouletteClient }: RouletteServiceOptions) {
-    this.rouletteClient = rouletteClient
+    this.client = rouletteClient
   }
 
   /**
@@ -29,6 +29,6 @@ export class RouletteService {
    * @returns The color of the roulette
    */
   async spin (): Promise<SpinResult> {
-    return await this.rouletteClient.spin()
+    return await this.client.spin()
   }
 }

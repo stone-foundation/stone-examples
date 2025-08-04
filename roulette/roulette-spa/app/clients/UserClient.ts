@@ -1,4 +1,3 @@
-import { Axios } from 'axios'
 import { User } from '../models/User'
 import { AxiosClient } from './AxiosClient'
 import { IBlueprint, Stone } from '@stone-js/core'
@@ -7,7 +6,6 @@ import { IBlueprint, Stone } from '@stone-js/core'
  * User Client Options
  */
 export interface UserClientOptions {
-  axios: Axios
   blueprint: IBlueprint
   httpClient: AxiosClient
 }
@@ -17,7 +15,6 @@ export interface UserClientOptions {
  */
 @Stone({ alias: 'userClient' })
 export class UserClient {
-  private readonly axios: Axios
   private readonly path: string
   private readonly client: AxiosClient
 
@@ -26,8 +23,7 @@ export class UserClient {
    *
    * @param options - The options to create the User Client.
    */
-  constructor ({ axios, blueprint, httpClient }: UserClientOptions) {
-    this.axios = axios
+  constructor ({ blueprint, httpClient }: UserClientOptions) {
     this.client = httpClient
     this.path = blueprint.get('app.clients.user.path', '/users')
   }
@@ -52,6 +48,26 @@ export class UserClient {
   }
 
   /**
+   * Get a user by uuid
+   *
+   * @param uuid - The UUID of the user
+   * @returns The user
+   */
+  async get (uuid: string): Promise<User> {
+    return await this.client.get<User>(`${this.path}/${uuid}`)
+  }
+
+  /**
+   * Create a new user
+   *
+   * @param data - The user data to create
+   * @returns The created user
+   */
+  async create (data: Partial<User>): Promise<{ uuid?: string }> {
+    return await this.client.post<{ uuid?: string }>(`${this.path}`, data)
+  }
+
+  /**
    * Update an existing user
    */
   async update (uuid: string, data: Partial<User>): Promise<User> {
@@ -59,16 +75,12 @@ export class UserClient {
   }
 
   /**
-   * Upload a logo for a team
+   * Delete a user
+   *
+   * @param uuid - The UUID of the user
+   * @returns The deleted user
    */
-  async generateUploadLink (uuid: string): Promise<{ uploadUrl: string, publicUrl: string }> {
-    return await this.client.post<{ uploadUrl: string, publicUrl: string }>(`${this.path}/${uuid}/upload`)
-  }
-
-  /**
-   * Upload a file to a signed S3 URL
-   */
-  async uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
-    await this.axios.put(uploadUrl, file, { headers: { 'Content-Type': file.type } })
+  async delete (uuid: string): Promise<User> {
+    return await this.client.delete<User>(`${this.path}/${uuid}`)
   }
 }

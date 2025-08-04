@@ -1,4 +1,3 @@
-import { Axios } from 'axios'
 import { AxiosClient } from './AxiosClient'
 import { Team, TeamStat } from '../models/Team'
 import { IBlueprint, Stone } from '@stone-js/core'
@@ -7,7 +6,6 @@ import { IBlueprint, Stone } from '@stone-js/core'
  * Team Client Options
  */
 export interface TeamClientOptions {
-  axios: Axios
   blueprint: IBlueprint
   httpClient: AxiosClient
 }
@@ -17,7 +15,6 @@ export interface TeamClientOptions {
  */
 @Stone({ alias: 'teamClient' })
 export class TeamClient {
-  private readonly axios: Axios
   private readonly path: string
   private readonly client: AxiosClient
 
@@ -26,8 +23,7 @@ export class TeamClient {
    *
    * @param options - The options to create the Team Client.
    */
-  constructor ({ axios, blueprint, httpClient }: TeamClientOptions) {
-    this.axios = axios
+  constructor ({ blueprint, httpClient }: TeamClientOptions) {
     this.client = httpClient
     this.path = blueprint.get('app.clients.team.path', '/teams')
   }
@@ -66,6 +62,13 @@ export class TeamClient {
   }
 
   /**
+   * Create a new team
+   */
+  async create (data: Partial<Team>): Promise<{ uuid?: string }> {
+    return await this.client.post<{ uuid?: string }>(`${this.path}`, data)
+  }
+
+  /**
    * Update an existing team
    */
   async update (uuid: string, data: Partial<Team>): Promise<Team> {
@@ -73,16 +76,9 @@ export class TeamClient {
   }
 
   /**
-   * Upload a logo for a team
+   * Delete a team
    */
-  async generateUploadLink (uuid: string, type: 'logo' | 'banner'): Promise<{ uploadUrl: string, publicUrl: string }> {
-    return await this.client.post<{ uploadUrl: string, publicUrl: string }>(`${this.path}/${uuid}/upload`, { type })
-  }
-
-  /**
-   * Upload a file to a signed S3 URL
-   */
-  async uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
-    await this.axios.put(uploadUrl, file, { headers: { 'Content-Type': file.type } })
+  async delete (uuid: string): Promise<void> {
+    await this.client.delete(`${this.path}/${uuid}`)
   }
 }

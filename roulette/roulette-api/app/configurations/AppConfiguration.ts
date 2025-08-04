@@ -20,6 +20,7 @@ export class AppConfiguration implements IConfiguration {
       .set('stone.http.cors.preflightStop', true)
       .set('stone.http.cors.allowedHeaders', ['*'])
       .set(defineBlueprintMiddleware(CORSHeadersMiddleware))
+      .set('openai.apiKey', getString('OPENAI_API_KEY', { optional: true }))
   }
 
   /**
