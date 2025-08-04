@@ -1,0 +1,73 @@
+sequenceDiagram
+    autonumber
+    participant SPA
+    participant API
+    participant S3
+    SPA->>SPA: Upload picture
+    SPA->>API: Request S3 signed URL
+    API->>SPA: Return S3 signed URL + Picture URL
+    SPA->>S3: Upload picture to S3
+    S3->>SPA: Notify upload completed
+    SPA->>SPA: Show picture
+
+
+sequenceDiagram
+    autonumber
+    actor User
+    participant Cloudfront
+    participant Lambda
+    participant S3
+
+    User->>Cloudfront: GET /home
+
+    alt Cache hit
+        Cloudfront->>Cloudfront: return cached /home
+    else Cache missed
+        Cloudfront->>Lambda: GET /home
+        Lambda->>Cloudfront: Return /home
+        Cloudfront->>Cloudfront: cache /home
+    end
+    
+    Cloudfront->>User: Return /home
+
+    User->>Cloudfront: GET /assets/*
+
+    alt Cache hit
+        Cloudfront->>Cloudfront: return cached /assets/*
+    else Cache missed
+        Cloudfront->>S3: GET /assets/*
+        S3->>Cloudfront: Return /assets/*
+        Cloudfront->>Cloudfront: cache /assets/*
+    end
+
+    Cloudfront->>User: Return /assets/*
+
+sequenceDiagram
+    autonumber
+    participant SPA
+    participant API
+    participant Cloudfront
+    participant S3
+    Note over S3: Private Static Content Repository (SCR)
+    Note over Cloudfront: Content Delivery Network (CDN)
+    
+    SPA->>SPA: Upload picture
+    SPA->>API: Request S3 signed-URL + Picture-URL
+    API->>S3: Request signed-URL
+    S3->>API: Return signed-URL
+    API->>SPA: Return S3 signed-URL + Picture-URL
+    SPA->>S3: Upload picture to S3 [PUT /signed-URL]
+    S3->>SPA: Notify upload completed
+    SPA->>API: Save Picture-URL
+    SPA->>Cloudfront: GET /Picture-URL
+
+    alt Cache hit
+        Cloudfront->>Cloudfront: return cached /Picture-URL
+    else Cache missed
+        Cloudfront->>S3: GET /Picture-URL
+        S3->>Cloudfront: Return /Picture-URL
+        Cloudfront->>Cloudfront: cache /Picture-URL
+    end
+    
+    Cloudfront->>SPA: Return /Picture-URL
+    SPA->>SPA: Display picture
