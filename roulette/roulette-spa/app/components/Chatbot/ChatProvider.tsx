@@ -53,10 +53,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
     isTyping,
     sendAudio,
     sendMessage,
+    setMessages,
     isRecording,
     stopRecording,
     startRecording
-  }), [messages, isRecording, isTyping, sendMessage, sendAudio, startRecording, stopRecording])
+  }), [messages, isRecording, setMessages, isTyping, sendMessage, sendAudio, startRecording, stopRecording])
 
   useEffect(() => {
     const handleTypingNotification = () => {

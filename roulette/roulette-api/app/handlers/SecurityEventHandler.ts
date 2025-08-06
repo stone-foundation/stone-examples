@@ -43,8 +43,8 @@ export class SecurityEventHandler {
    * @param event - IncomingHttpEvent
    * @returns UserActivation
   */
-  @Post('/activate', { name: 'activate' })
-  async activate (event: IncomingHttpEvent): Promise<Partial<UserActivation>> {
+  @Post('/verify-activation', { name: 'verify-activation' })
+  async verifyActivation (event: IncomingHttpEvent): Promise<Partial<UserActivation>> {
     return await this.securityService.requestActivation(
       event.getBody<UserActivationRequest>({ phone: '' })
     )

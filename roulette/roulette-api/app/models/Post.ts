@@ -1,11 +1,10 @@
 import { User } from './User'
-import { Team } from './Team'
-import { Badge } from './Badge'
-import { Activity, ActivityAssignment } from './Activity'
+import { Team, TeamMember } from './Team'
+import { ActivityAssignment } from './Activity'
 
-export type PostType = 'text' | 'colored' | 'image' | 'activityAssignment' | string
+export type PostVisibility = 'public' | 'team-only' | 'private'
 
-export type PostVisibility = 'public' | 'team-only' | 'private' | string
+export type PostType = 'text' | 'colored' | 'image' | 'activityAssignment' | 'team' | 'member' | 'mission'
 
 export interface PostModel {
   uuid: string
@@ -14,6 +13,8 @@ export interface PostModel {
   teamUuid?: string | null
   imageUrl?: string | null
   authorUuid: string
+  missionUuid: string
+  teamMemberUuid?: string | null
   backgroundColor?: string | null
   activityAssignmentUuid?: string | null
 
@@ -30,9 +31,8 @@ export interface PostModel {
 
 export interface Post extends PostModel {
   team?: Team
-  badge?: Badge
   author?: User
-  activity?: Activity
+  teamMember?: TeamMember
   comments?: PostComment[]
   activityAssignment?: ActivityAssignment
 }

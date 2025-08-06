@@ -30,7 +30,7 @@ export const OTPActivation = ({
       value={otp}
       maxLength={6}
       inputMode='numeric'
-      placeholder='Entrez votre OTP'
+      placeholder='Mot de passe à usage unique (OTP)'
       onChange={(e) => onChangeOtp(e.target.value)}
     />
 

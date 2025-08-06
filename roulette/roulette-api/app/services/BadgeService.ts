@@ -74,11 +74,10 @@ export class BadgeService {
     const now = Date.now()
     return await this.badgeRepository.create({
       ...badge,
-      authorUuid: author.uuid,
-      uuid: randomUUID(),
       createdAt: now,
-      updatedAt: now
-    })
+      updatedAt: now,
+      uuid: randomUUID()
+    }, author)
   }
 
   /**
@@ -97,9 +96,9 @@ export class BadgeService {
   /**
    * Update badge
    */
-  async update (badge: Badge, data: Partial<Badge>): Promise<Badge> {
+  async update (badge: Badge, data: Partial<Badge>, author: User): Promise<Badge> {
     data.updatedAt = Date.now()
-    const model = await this.badgeRepository.update(badge, data)
+    const model = await this.badgeRepository.update(badge, data, author)
     if (isNotEmpty<BadgeModel>(model)) return this.toBadge(model)
     throw new NotFoundError(`Badge with ID ${badge.uuid} not found`)
   }
@@ -107,17 +106,14 @@ export class BadgeService {
   /**
    * Delete badge
    */
-  async delete (badge: Badge): Promise<boolean> {
-    return await this.badgeRepository.delete(badge)
+  async delete (badge: Badge, author: User): Promise<boolean> {
+    return await this.badgeRepository.delete(badge, author)
   }
 
   /**
    * Convert BadgeModel to Badge (safe)
    */
-  toBadge (model: BadgeModel, author?: User): Badge {
-    return {
-      ...model,
-      author
-    }
+  toBadge (model: BadgeModel): Badge {
+    return model
   }
 }

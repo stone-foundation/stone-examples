@@ -1,3 +1,4 @@
+import { User } from '../../models/User'
 import { ListMetadataOptions } from '../../models/App'
 import { ActivityAssignmentModel } from '../../models/Activity'
 
@@ -43,27 +44,33 @@ export interface IActivityAssignmentRepository {
    * Create a new assignment (manual or system)
    *
    * @param assignment - Assignment data
+   * @param author - User creating the assignment
    * @returns UUID of the new assignment
    */
-  create: (assignment: ActivityAssignmentModel) => Promise<string | undefined>
+  create: (assignment: ActivityAssignmentModel, author: User) => Promise<string | undefined>
 
   /**
    * Update an assignment (status, validation, metadata)
    *
    * @param assignment - Existing assignment
    * @param data - Fields to update
+   * @param author - User performing the update
+   * @returns Updated assignment model
    */
   update: (
     assignment: ActivityAssignmentModel,
-    data: Partial<ActivityAssignmentModel>
+    data: Partial<ActivityAssignmentModel>,
+    author: User
   ) => Promise<ActivityAssignmentModel | undefined>
 
   /**
    * Delete an assignment (if invalid or contested)
    *
    * @param assignment - Assignment to delete
+   * @param author - User performing the deletion
+   * @returns True if deleted, false if not found or not allowed
    */
-  delete: (assignment: ActivityAssignmentModel) => Promise<boolean>
+  delete: (assignment: ActivityAssignmentModel, author: User) => Promise<boolean>
 
   /**
    * Count total assignments (meta)

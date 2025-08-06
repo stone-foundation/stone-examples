@@ -2,13 +2,14 @@ import { useRef, useState, useCallback } from "react"
 
 export const useAudioRecorder = () => {
   const chunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
+      streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(streamRef.current)
 
       chunksRef.current = []
 
@@ -34,6 +35,11 @@ export const useAudioRecorder = () => {
         const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" })
         setIsRecording(false)
         resolve(audioBlob)
+      }
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
       }
 
       mediaRecorderRef.current.stop()

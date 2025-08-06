@@ -80,31 +80,31 @@ export class BadgeAssignmentService {
     throw new NotFoundError(`Badge assignment not found with conditions: ${JSON.stringify(conditions)}`)
   }
 
-  async assignToMember (badgeUuid: string, teamUuid: string, memberUuid: string, issuedBy: User): Promise<string | undefined> {
-    return await this.create({ badgeUuid, teamUuid, memberUuid }, issuedBy)
+  async assignToMember (badgeUuid: string, teamUuid: string, teamMemberUuid: string, author: User): Promise<string | undefined> {
+    return await this.create({ badgeUuid, teamUuid, teamMemberUuid }, author)
   }
 
-  async assignToTeam (badgeUuid: string, teamUuid: string, issuedBy: User): Promise<string | undefined> {
-    return await this.create({ badgeUuid, teamUuid }, issuedBy)
+  async assignToTeam (badgeUuid: string, teamUuid: string, author: User): Promise<string | undefined> {
+    return await this.create({ badgeUuid, teamUuid }, author)
   }
 
-  async unassign (assignmentUuid: string): Promise<boolean> {
+  async unassign (assignmentUuid: string, author: User): Promise<boolean> {
     const assignment = await this.findByUuid(assignmentUuid)
     if (assignment == null) return false
-    return await this.delete(assignment)
+    return await this.delete(assignment, author)
   }
 
-  async unassignAllFromBadge (badgeUuid?: string): Promise<number> {
+  async unassignAllFromBadge (badgeUuid: string | undefined, author: User): Promise<number> {
     const assignments = await this.listBy({ badgeUuid })
     let count = 0
     for (const assignment of assignments.items) {
-      if (await this.delete(assignment)) count++
+      if (await this.delete(assignment, author)) count++
     }
     return count
   }
 
-  async getAssignmentsForMember (memberUuid?: string): Promise<BadgeAssignment[]> {
-    const result = await this.listBy({ memberUuid })
+  async getAssignmentsForMember (teamMemberUuid?: string): Promise<BadgeAssignment[]> {
+    const result = await this.listBy({ teamMemberUuid })
     return result.items
   }
 
@@ -118,36 +118,36 @@ export class BadgeAssignmentService {
     return result.items
   }
 
-  async create (assignment: Partial<BadgeAssignment>, issuedBy: User): Promise<string | undefined> {
+  async create (assignment: Partial<BadgeAssignment>, author: User): Promise<string | undefined> {
     const now = Date.now()
     return await this.badgeAssignmentRepository.create({
       ...assignment,
       issuedAt: now,
       revoked: false,
       uuid: randomUUID(),
-      issuedByUuid: issuedBy.uuid
-    } as BadgeAssignmentModel)
+      issuedByUuid: author.uuid
+    } as BadgeAssignmentModel, author)
   }
 
-  async createMany (assignments: BadgeAssignment[], issuedBy: User): Promise<Array<string | undefined>> {
+  async createMany (assignments: BadgeAssignment[], author: User): Promise<Array<string | undefined>> {
     const uuids: Array<string | undefined> = []
 
     for (const assignment of assignments) {
-      uuids.push(await this.create(assignment, issuedBy))
+      uuids.push(await this.create(assignment, author))
     }
 
     return uuids
   }
 
-  async update (assignment: BadgeAssignment, data: Partial<BadgeAssignment>): Promise<BadgeAssignment> {
+  async update (assignment: BadgeAssignment, data: Partial<BadgeAssignment>, author: User): Promise<BadgeAssignment> {
     data.issuedAt = Date.now()
-    const model = await this.badgeAssignmentRepository.update(assignment, data)
+    const model = await this.badgeAssignmentRepository.update(assignment, data, author)
     if (isNotEmpty<BadgeAssignmentModel>(model)) return await this.toAssignment(model)
     throw new NotFoundError(`BadgeAssignment with ID ${assignment.uuid} not found`)
   }
 
-  async delete (assignment: BadgeAssignment): Promise<boolean> {
-    return await this.badgeAssignmentRepository.delete(assignment)
+  async delete (assignment: BadgeAssignment, author: User): Promise<boolean> {
+    return await this.badgeAssignmentRepository.delete(assignment, author)
   }
 
   async count (): Promise<number> {
@@ -156,8 +156,8 @@ export class BadgeAssignmentService {
 
   async toAssignment (model: BadgeAssignmentModel): Promise<BadgeAssignment> {
     let team = model.teamUuid ? await this.teamService.findByUuid(model.teamUuid) : undefined
-    let member = model.memberUuid ? await this.userService.findByUuid(model.memberUuid) : undefined
     const badge = model.badgeUuid ? await this.badgeService.findByUuid(model.badgeUuid) : undefined
+    let teamMember = model.issuedByUuid ? await this.userService.findByUuid(model.issuedByUuid) : undefined
     const issuedBy = model.issuedByUuid ? await this.userService.findByUuid(model.issuedByUuid) : undefined
 
     if (isEmpty(badge) || isEmpty(issuedBy)) return { ...model } as unknown as BadgeAssignment
@@ -166,15 +166,15 @@ export class BadgeAssignmentService {
       team = this.teamService.toTeam(team)
     }
 
-    if (isNotEmpty<UserModel>(member)) {
-      member = this.userService.toUser(member)
+    if (isNotEmpty<UserModel>(teamMember)) {
+      teamMember = this.userService.toUser(teamMember)
     }
 
     return {
       ...model,
       team,
-      member,
       issuedBy,
+      teamMember,
       badge: this.badgeService.toBadge(badge)
     }
   }

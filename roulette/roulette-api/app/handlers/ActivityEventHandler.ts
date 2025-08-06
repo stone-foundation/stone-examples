@@ -1,10 +1,9 @@
 import { User } from '../models/User'
 import { convertCSVtoJSON } from '../utils'
+import { ILogger, isEmpty } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
-import { BadgeService } from '../services/BadgeService'
 import { Activity, ActivityModel } from '../models/Activity'
 import { ActivityService } from '../services/ActivityService'
-import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
 import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
 
@@ -13,7 +12,6 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/
  */
 export interface ActivityEventHandlerOptions {
   logger: ILogger
-  badgeService: BadgeService
   activityService: ActivityService
 }
 
@@ -23,12 +21,10 @@ export interface ActivityEventHandlerOptions {
 @EventHandler('/activities', { name: 'activities', middleware: ['auth'] })
 export class ActivityEventHandler {
   private readonly logger: ILogger
-  private readonly badgeService: BadgeService
   private readonly activityService: ActivityService
 
-  constructor ({ activityService, badgeService, logger }: ActivityEventHandlerOptions) {
+  constructor ({ activityService, logger }: ActivityEventHandlerOptions) {
     this.logger = logger
-    this.badgeService = badgeService
     this.activityService = activityService
   }
 
@@ -38,13 +34,8 @@ export class ActivityEventHandler {
   @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Activity>> {
-    const meta = await this.activityService.list(Number(event.get('limit', 10)), event.get('page'))
-    meta.items = await Promise.all(meta.items.map(async (v) => {
-      v.badge = v.badgeUuid ? await this.badgeService.findByUuid(v.badgeUuid) : undefined
-      return v
-    }))
-
-    return meta
+    const missionUuid = event.get<string>('missionUuid')
+    return await this.activityService.listBy({ missionUuid }, Number(event.get('limit', 10)), event.get('page'))
   }
 
   /**
@@ -56,8 +47,7 @@ export class ActivityEventHandler {
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<Activity | undefined> {
-    const activity = event.get<Activity>('activity')
-    return isNotEmpty<Activity>(activity) ? this.activityService.toActivity(activity) : undefined
+    return event.get<Activity>('activity')
   }
 
   /**
@@ -66,54 +56,18 @@ export class ActivityEventHandler {
   @Post('/', { middleware: ['admin'] })
   @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
+    const user = event.getUser<User>()
     const data = event.getBody<Activity>()
 
     if (!data?.name || data.score == null) {
       throw new BadRequestError('Activity name and score are required')
     }
 
-    const uuid = await this.activityService.create(data, event.getUser<User>())
+    const uuid = await this.activityService.create(data, user)
 
-    this.logger.info(`Activity created: ${uuid}, by user: ${String(event.getUser<User>().uuid)}`)
+    this.logger.info(`Activity created: ${uuid}, by user: ${String(user.uuid)}`)
 
     return { uuid }
-  }
-
-  /**
-   * Bulk create activities from CSV
-   */
-  @Post('/from-csv', { middleware: ['admin'] })
-  @JsonHttpResponse(201)
-  async createManyFromCSV (event: IncomingHttpEvent): Promise<{ uuids?: Array<string | undefined> }> {
-    const tmpFile = event.getFile('file')?.[0]
-
-    if (isEmpty(tmpFile) || !tmpFile.isValid()) {
-      throw new BadRequestError('Invalid file')
-    }
-
-    const activities = convertCSVtoJSON<Array<Record<string, any>>>(tmpFile.getContent() ?? '').map<Activity>(v => {
-      return {
-        name: v.name,
-        description: v.description,
-        category: v.category,
-        categoryLabel: v.categoryLabel ??  v.category,
-        impact: v.impact ?? 'neutral',
-        score: Number(v.score) || 0,
-        badgeUuid: v.badgeUuid,
-        autoConvertToBadge: v.autoConvertToBadge === 'true',
-        conversionThreshold: v.conversionThreshold ? Number(v.conversionThreshold) : undefined,
-        conversionWindow: v.conversionWindow,
-        validityDuration: v.validityDuration ? Number(v.validityDuration) : undefined
-      } as unknown as Activity
-    })
-
-    tmpFile.remove(true)
-
-    const uuids = await this.activityService.createMany(activities, event.getUser<User>())
-
-    this.logger.info(`Activities created: ${String(uuids.join(', '))}, by user: ${String(event.getUser<User>().uuid)}`)
-
-    return { uuids }
   }
 
   /**
@@ -126,12 +80,13 @@ export class ActivityEventHandler {
   })
   @JsonHttpResponse(200)
   async update (event: IncomingHttpEvent): Promise<Activity> {
+    const user = event.getUser<User>()
     const data = event.getBody<Partial<Activity>>({})
     const activity = event.get<Activity>('activity', {} as unknown as ActivityModel)
 
-    const updated = await this.activityService.update(activity, data)
+    const updated = await this.activityService.update(activity, data, user)
 
-    this.logger.info(`Activity updated: ${activity.uuid}, by user: ${String(event.getUser<User>().uuid)}`)
+    this.logger.info(`Activity updated: ${activity.uuid}, by user: ${String(user.uuid)}`)
 
     return updated
   }
@@ -145,12 +100,51 @@ export class ActivityEventHandler {
     middleware: ['admin']
   })
   async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
+    const user = event.getUser<User>()
     const activity = event.get<Activity>('activity', {} as unknown as ActivityModel)
 
-    await this.activityService.delete(activity)
+    await this.activityService.delete(activity, user)
 
-    this.logger.info(`Activity deleted: ${activity.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`Activity deleted: ${activity.uuid}, by user: ${String(user.uuid)}`)
 
     return { statusCode: 204 }
+  }
+
+  /**
+   * Bulk create activities from CSV
+   */
+  @Post('/from-csv', { middleware: ['admin'] })
+  @JsonHttpResponse(201)
+  async createManyFromCSV (event: IncomingHttpEvent): Promise<{ uuids?: Array<string | undefined> }> {
+    const user = event.getUser<User>()
+    const tmpFile = event.getFile('file')?.[0]
+
+    if (isEmpty(tmpFile) || !tmpFile.isValid()) {
+      throw new BadRequestError('Invalid file')
+    }
+
+    const activities = convertCSVtoJSON<Array<Record<string, any>>>(tmpFile.getContent() ?? '').map<Activity>(v => {
+      return {
+        name: v.name,
+        category: v.category,
+        badgeUuid: v.badgeUuid,
+        description: v.description,
+        score: Number(v.score) || 0,
+        impact: v.impact ?? 'neutral',
+        conversionWindow: v.conversionWindow,
+        categoryLabel: v.categoryLabel ??  v.category,
+        autoConvertToBadge: v.autoConvertToBadge === 'true',
+        validityDuration: v.validityDuration ? Number(v.validityDuration) : undefined,
+        conversionThreshold: v.conversionThreshold ? Number(v.conversionThreshold) : undefined,
+      } as unknown as Activity
+    })
+
+    tmpFile.remove(true)
+
+    const uuids = await this.activityService.createMany(activities, user)
+
+    this.logger.info(`Activities created: ${String(uuids.join(', '))}, by user: ${String(user.uuid)}`)
+
+    return { uuids }
   }
 }

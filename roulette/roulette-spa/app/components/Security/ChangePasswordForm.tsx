@@ -34,7 +34,7 @@ export const ChangePasswordForm = ({ onChange, securityService }: ChangePassword
   return (
     <form onSubmit={onSubmit}>
       <AlertBox>
-        <strong className='text-green-300 font-medium'>Ajoutez un mot de passe à votre compte pour profiter pleinement de l’Opération Adrénaline.</strong> <br />
+        <strong className='text-green-300 font-medium'>Ajoutez un mot de passe à votre compte pour profiter pleinement de Tralala.</strong> <br />
         Vous pouvez le faire dès maintenant ou plus tard, c’est vous qui décidez.
         <br />
         <strong className='text-green-300 font-medium'>Important : </strong> Vous disposez de <strong className='text-green-300 font-medium'>5 OTP (One-Time Password)</strong> maximum. <br />

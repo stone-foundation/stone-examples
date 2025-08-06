@@ -3,24 +3,24 @@ import { AlertBox } from '../AlertBox/AlertBox'
 import { FormInput } from '../FormInput/FormInput'
 import { FormButton } from '../FormButton/FormButton'
 
-interface PhoneStepProps {
+interface VerificationStepProps {
   phone: string
   error?: string
   loading?: boolean
   onChangePhone: (value: string) => void
 }
 
-export const PhoneStep = ({
+export const VerificationStep = ({
   phone,
   error,
   onChangePhone,
   loading = false
-}: PhoneStepProps): JSX.Element => (
+}: VerificationStepProps): JSX.Element => (
   <>
     <FormInput
       type='tel'
       name='phone'
-      placeholder='Entrez votre numéro de téléphone'
+      placeholder='Numéro de téléphone'
       value={phone}
       onChange={(e) => onChangePhone(e.target.value)}
       inputMode='tel'

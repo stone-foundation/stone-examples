@@ -1,3 +1,4 @@
+import { User } from '../../models/User'
 import { ListMetadataOptions } from '../../models/App'
 import { BadgeAssignmentModel } from '../../models/Badge'
 
@@ -55,10 +56,12 @@ export interface IBadgeAssignmentRepository {
    * Create a badge assignment
    *
    * @param assignment - Assignment to create
+   * @param author - User creating the assignment
    * @returns UUID of created assignment
    */
   create: (
-    assignment: BadgeAssignmentModel
+    assignment: BadgeAssignmentModel,
+    author: User
   ) => Promise<string | undefined>
 
   /**
@@ -66,21 +69,25 @@ export interface IBadgeAssignmentRepository {
    *
    * @param assignment - Current assignment
    * @param data - Fields to update
+   * @param author - User performing the update
    * @returns Updated assignment or undefined
    */
   update: (
     assignment: BadgeAssignmentModel,
-    data: Partial<BadgeAssignmentModel>
+    data: Partial<BadgeAssignmentModel>,
+    author: User
   ) => Promise<BadgeAssignmentModel | undefined>
 
   /**
    * Delete a badge assignment
    *
    * @param assignment - Assignment to delete
+   * @param author - User performing the deletion
    * @returns True if deleted, false otherwise
    */
   delete: (
-    assignment: BadgeAssignmentModel
+    assignment: BadgeAssignmentModel,
+    author: User
   ) => Promise<boolean>
 
   /**

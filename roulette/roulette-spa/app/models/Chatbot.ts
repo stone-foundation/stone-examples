@@ -30,6 +30,7 @@ export interface ChatContextType {
   isTyping: boolean
   isRecording: boolean
   messages: ChatMessage[]
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>
   sendAudio: (file: File) => void
   stopRecording: () => Promise<Blob>
   startRecording: () => Promise<void>

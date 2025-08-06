@@ -1,3 +1,4 @@
+import { User } from '../../models/User'
 import { BadgeModel } from '../../models/Badge'
 import { ListMetadataOptions } from '../../models/App'
 
@@ -42,26 +43,29 @@ export interface IBadgeRepository {
    * Create a badge model
    *
    * @param badge - Badge model to create
+   * @param author - User creating the badge
    * @returns UUID of the created badge
    */
-  create: (badge: BadgeModel) => Promise<string | undefined>
+  create: (badge: BadgeModel, author: User) => Promise<string | undefined>
 
   /**
    * Update a badge model
    *
    * @param badge - Existing badge model
    * @param data - Fields to update
+   * @param author - User performing the update
    * @returns Updated badge model or undefined
    */
-  update: (badge: BadgeModel, data: Partial<BadgeModel>) => Promise<BadgeModel | undefined>
+  update: (badge: BadgeModel, data: Partial<BadgeModel>, author: User) => Promise<BadgeModel | undefined>
 
   /**
    * Delete a badge model
    *
    * @param badge - Badge model to delete
+   * @param author - User performing the deletion
    * @returns True if deleted, false otherwise
    */
-  delete: (badge: BadgeModel) => Promise<boolean>
+  delete: (badge: BadgeModel, author: User) => Promise<boolean>
 
   /**
    * Get total badge count (from meta, not scan)

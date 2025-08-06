@@ -42,7 +42,7 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Membres',
+      title: 'Tralala - Membres',
       description: 'Liste des membres de votre unité. Découvrez leurs rôles et statistiques.'
     }
   }

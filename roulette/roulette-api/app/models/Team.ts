@@ -1,3 +1,4 @@
+import { User } from "./User"
 import { Badge } from "./Badge"
 import { Activity } from "./Activity"
 
@@ -8,8 +9,8 @@ export interface TeamModel {
   uuid: string
   name: string
   rank: number
-  color: string
   score: number
+  color?: string | null
   motto?: string | null
   rules?: string | null
   slogan?: string | null
@@ -17,11 +18,12 @@ export interface TeamModel {
   bannerUrl?: string | null
   createdAt: number
   updatedAt: number
-  totalMember: number
-  countMember: number
-  countActivity: number
+  totalMembers: number
+  countMembers: number
+  countActivities: number
   countBadges: number
-  countPresence: number
+  missionUuid: string
+  countPresences: number
   scorePercentage?: number
   chatLink?: string | null
   description?: string | null
@@ -38,16 +40,26 @@ export interface Team extends TeamModel {
   activities?: Activity[]
 }
 
+export type TeamMemberRole = 'member' | 'captain' | 'admin'
+
+export interface TeamMemberModel {
+  uuid: string
+  name: string
+  isLate: boolean
+  userUuid: string
+  teamUuid: string
+  joinedAt: number
+  isActive: boolean
+  isPresent: boolean
+  missionUuid: string
+  role: TeamMemberRole
+  leftAt?: number | null
+}
+
 /**
  * Team Member Interface
 */
-export interface TeamMember {
-  uuid: string
-  phone?: string
-  isLate?: boolean
-  fullname: string
-  username: string
-  isSoldier?: boolean
-  isCaptain?: boolean
-  isPresent?: boolean
+export interface TeamMember extends TeamMemberModel {
+  user: Partial<User>
+  team: Partial<Team>
 }

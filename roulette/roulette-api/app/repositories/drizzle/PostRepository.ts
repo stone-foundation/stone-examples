@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { User } from '../../models/User'
 import { posts } from '../../database/schema'
 import { PostModel } from '../../models/Post'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -6,21 +7,25 @@ import { isEmpty, IBlueprint } from '@stone-js/core'
 import { ListMetadataOptions } from '../../models/App'
 import { IPostRepository } from '../contracts/IPostRepository'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 export interface RepositoryOptions {
   blueprint: IBlueprint
   database: LibSQLDatabase
   metadataRepository: IMetadataRepository
+  userHistoryRepository: IUserHistoryRepository
 }
 
 export class PostRepository implements IPostRepository {
   private readonly tableName: string
   private readonly database: LibSQLDatabase
   private readonly metadataRepository: IMetadataRepository
+  private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ blueprint, database, metadataRepository }: RepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository, userHistoryRepository }: RepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
+    this.userHistoryRepository = userHistoryRepository
     this.tableName = blueprint.get('drizzle.tables.posts.name', 'posts')
   }
 
@@ -39,10 +44,11 @@ export class PostRepository implements IPostRepository {
   async listBy (conditions: Partial<PostModel>, limit?: number, page?: number | string): Promise<ListMetadataOptions<PostModel>> {
     const whereClauses = []
 
+    if (conditions.type) whereClauses.push(eq(posts.type, conditions.type))
     if (conditions.teamUuid) whereClauses.push(eq(posts.teamUuid, conditions.teamUuid))
     if (conditions.authorUuid) whereClauses.push(eq(posts.authorUuid, conditions.authorUuid))
-    if (conditions.type) whereClauses.push(eq(posts.type, conditions.type))
     if (conditions.visibility) whereClauses.push(eq(posts.visibility, conditions.visibility))
+    if (conditions.missionUuid) whereClauses.push(eq(posts.missionUuid, conditions.missionUuid))
 
     limit ??= 10
     page = isEmpty(page) ? 1 : Number(page)
@@ -72,20 +78,36 @@ export class PostRepository implements IPostRepository {
     return await this.database.select().from(posts).where(and(...whereClauses)).get()
   }
 
-  async create (post: PostModel): Promise<string | undefined> {
+  async create (post: PostModel, author: User): Promise<string | undefined> {
     await this.database.insert(posts).values(post)
     await this.metadataRepository.increment(this.tableName, { lastUuid: post.uuid })
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'post',
+      action: 'created',
+      itemUuid: post.uuid,
+    }, author)
     return post.uuid
   }
 
-  async update ({ uuid }: PostModel, data: Partial<PostModel>): Promise<PostModel | undefined> {
-    return await this.database.update(posts).set(data).where(eq(posts.uuid, uuid)).returning().get()
+  async update ({ uuid }: PostModel, data: Partial<PostModel>, author: User): Promise<PostModel | undefined> {
+    const post = await this.database.update(posts).set(data).where(eq(posts.uuid, uuid)).returning().get()
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'post',
+      itemUuid: uuid,
+      action: 'updated',
+    }, author)
+    return post
   }
 
-  async delete ({ uuid }: PostModel): Promise<boolean> {
+  async delete ({ uuid }: PostModel, author: User): Promise<boolean> {
     const result = await this.database.delete(posts).where(eq(posts.uuid, uuid)).run()
     if (result.rowsAffected > 0) {
       await this.metadataRepository.decrement(this.tableName)
+      await this.userHistoryRepository.makeHistoryEntry({
+        type: 'post',
+        itemUuid: uuid,
+        action: 'deleted',
+      }, author)
       return true
     }
     return false

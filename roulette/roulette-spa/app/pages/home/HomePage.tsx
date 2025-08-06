@@ -35,8 +35,8 @@ export class HomePage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Timeline',
-      description: 'Vivez l\'Opération Adrénaline avec la timeline interactive !',
+      title: 'Tralala - Timeline',
+      description: 'Vivez l\'Tralala avec la timeline interactive !',
     }
   }
 
@@ -51,7 +51,7 @@ export class HomePage implements IPage<ReactIncomingEvent> {
     return (
       <>
         <main className="flex-1 min-w-0">
-          {user && <TimelineComposer currentUser={user} onPost={async (v) => await this.savePost(v)} />}
+          {user && <TimelineComposer currentUser={user} onPost={async (v, file) => await this.savePost(v, file)} />}
           <TimelineFeed currentUser={user} fetchPosts={async (user, v) => await this.postService.list(user, v)} />
         </main>
         <aside className="hidden xl:block w-64 shrink-0 sticky top-[80px] self-start h-[calc(100vh-80px)] overflow-y-auto">
@@ -61,7 +61,7 @@ export class HomePage implements IPage<ReactIncomingEvent> {
     )
   }
 
-  async savePost (data: Partial<Post>): Promise<void> {
-    await this.postService.create(data)
+  async savePost (data: Partial<Post>, file?: File): Promise<void> {
+    await this.postService.create(data, file)
   }
 }

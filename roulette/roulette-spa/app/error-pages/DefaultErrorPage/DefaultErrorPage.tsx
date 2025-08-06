@@ -64,7 +64,7 @@ export class DefaultErrorPage implements IErrorPage<ReactIncomingEvent> {
   head ({ data, statusCode }: ErrorPageHeadContext): HeadContext {
     return {
       description: data.message,
-      title: `Opération Adrénaline - Erreur ${String(statusCode)}`
+      title: `Tralala - Erreur ${String(statusCode)}`
     }
   }
 

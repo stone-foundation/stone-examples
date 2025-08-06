@@ -1,11 +1,13 @@
 import { and, eq } from 'drizzle-orm'
-import { IBlueprint, isEmpty } from '@stone-js/core'
+import { User } from '../../models/User'
 import { badges } from '../../database/schema'
 import { BadgeModel } from '../../models/Badge'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { IBlueprint, isEmpty } from '@stone-js/core'
 import { ListMetadataOptions } from '../../models/App'
 import { IBadgeRepository } from '../contracts/IBadgeRepository'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 /**
  * Badge Repository Options
@@ -14,6 +16,7 @@ export interface BadgeRepositoryOptions {
   blueprint: IBlueprint
   database: LibSQLDatabase
   metadataRepository: IMetadataRepository
+  userHistoryRepository: IUserHistoryRepository
 }
 
 /**
@@ -23,10 +26,12 @@ export class BadgeRepository implements IBadgeRepository {
   private readonly tableName: string
   private readonly database: LibSQLDatabase
   private readonly metadataRepository: IMetadataRepository
+  private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ blueprint, database, metadataRepository }: BadgeRepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository, userHistoryRepository }: BadgeRepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
+    this.userHistoryRepository = userHistoryRepository
     this.tableName = blueprint.get('drizzle.tables.badges.name', 'badges')
   }
 
@@ -57,21 +62,10 @@ export class BadgeRepository implements IBadgeRepository {
     limit ??= 10
     const whereClauses = []
 
-    if (conditions.authorUuid) {
-      whereClauses.push(eq(badges.authorUuid, conditions.authorUuid))
-    }
-
-    if (conditions.category) {
-      whereClauses.push(eq(badges.category, conditions.category))
-    }
-
-    if (conditions.visibility) {
-      whereClauses.push(eq(badges.visibility, conditions.visibility))
-    }
-
-    if (conditions.name) {
-      whereClauses.push(eq(badges.name, conditions.name))
-    }
+    if (conditions.name) whereClauses.push(eq(badges.name, conditions.name))
+    if (conditions.category) whereClauses.push(eq(badges.category, conditions.category))
+    if (conditions.visibility) whereClauses.push(eq(badges.visibility, conditions.visibility))
+    if (conditions.missionUuid) whereClauses.push(eq(badges.missionUuid, conditions.missionUuid))
 
     const offset = (Number(page) - 1) * limit
 
@@ -111,17 +105,10 @@ export class BadgeRepository implements IBadgeRepository {
   async findBy (conditions: Partial<BadgeModel>): Promise<BadgeModel | undefined> {
     const whereClauses = []
 
-    if (conditions.uuid) {
-      whereClauses.push(eq(badges.uuid, conditions.uuid))
-    }
-
-    if (conditions.name) {
-      whereClauses.push(eq(badges.name, conditions.name))
-    }
-
-    if (conditions.category) {
-      whereClauses.push(eq(badges.category, conditions.category))
-    }
+    if (conditions.uuid) whereClauses.push(eq(badges.uuid, conditions.uuid))
+    if (conditions.name) whereClauses.push(eq(badges.name, conditions.name))
+    if (conditions.category) whereClauses.push(eq(badges.category, conditions.category))
+    if (conditions.missionUuid) whereClauses.push(eq(badges.missionUuid, conditions.missionUuid))
 
     if (whereClauses.length === 0) return undefined
 
@@ -134,24 +121,34 @@ export class BadgeRepository implements IBadgeRepository {
     return result ?? undefined
   }
 
-  async create (badge: BadgeModel): Promise<string | undefined> {
+  async create (badge: BadgeModel, author: User): Promise<string | undefined> {
     await this.database.insert(badges).values(badge)
     await this.metadataRepository.increment(this.tableName, { lastUuid: badge.uuid })
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'badge',
+      action: 'created',
+      itemUuid: badge.uuid,
+    }, author)
     return badge.uuid
   }
 
-  async update ({ uuid }: BadgeModel, data: Partial<BadgeModel>): Promise<BadgeModel | undefined> {
+  async update ({ uuid }: BadgeModel, data: Partial<BadgeModel>, author: User): Promise<BadgeModel | undefined> {
     const result = await this.database
       .update(badges)
       .set(data)
       .where(eq(badges.uuid, uuid))
       .returning()
       .get()
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'badge',
+      itemUuid: uuid,
+      action: 'updated',
+    }, author)
 
     return result ?? undefined
   }
 
-  async delete ({ uuid }: BadgeModel): Promise<boolean> {
+  async delete ({ uuid }: BadgeModel, author: User): Promise<boolean> {
     const result = await this.database
       .delete(badges)
       .where(eq(badges.uuid, uuid))
@@ -159,6 +156,11 @@ export class BadgeRepository implements IBadgeRepository {
 
     if (result.rowsAffected > 0) {
       await this.metadataRepository.decrement(this.tableName)
+      await this.userHistoryRepository.makeHistoryEntry({
+        type: 'badge',
+        itemUuid: uuid,
+        action: 'deleted',
+      }, author)
       return true
     }
 

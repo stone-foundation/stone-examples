@@ -21,7 +21,7 @@ export const SidebarDrawer = ({ open, onClose }: SidebarDrawerProps) => {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-4 py-6 border-b border-white/10">
-          <span className="text-white font-semibold">Opération Adrénaline</span>
+          <span className="text-white font-semibold">Tralala</span>
           <button onClick={onClose} className="text-white">
             <X size={20} />
           </button>

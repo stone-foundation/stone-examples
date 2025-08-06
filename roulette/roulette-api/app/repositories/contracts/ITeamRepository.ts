@@ -1,55 +1,76 @@
+import { User } from '../../models/User'
 import { TeamModel } from '../../models/Team'
+import { ListMetadataOptions } from '../../models/App'
 
 /**
  * Team Repository contract
  */
 export interface ITeamRepository {
   /**
-   * List teams
+   * List all team models
    *
-   * @param limit - The limit of teams to list
-   * @returns The list of teams
+   * @param limit - Maximum number of teams to return
+   * @param page - Page number for pagination
+   * @returns List of team models
    */
-  list: (limit: number) => Promise<TeamModel[]>
+  list: (limit?: number, page?: number | string) => Promise<ListMetadataOptions<TeamModel>>
 
   /**
-   * Find a team by uuid
+   * List team models by conditions
    *
-   * @param uuid - The uuid of the team to find
-   * @returns The team or undefined if not found
+   * @param conditions - Partial filter for team model fields
+   * @param limit - Max number of results
+   * @param page - Page number for pagination
+   * @returns Filtered team models
+   */
+  listBy: (conditions: Partial<TeamModel>, limit?: number, page?: number | string) => Promise<ListMetadataOptions<TeamModel>>
+
+  /**
+   * Find a team model by its UUID
+   *
+   * @param uuid - Team UUID
+   * @returns The team model or undefined
    */
   findByUuid: (uuid: string) => Promise<TeamModel | undefined>
 
   /**
-   * Find a team by dynamic conditions
+   * Find a team model by conditions
    *
-   * @param conditions - Conditions to match the team
-   * @returns The team or undefined if not found
+   * @param conditions - Partial team model fields
+   * @returns The team model or undefined
    */
   findBy: (conditions: Partial<TeamModel>) => Promise<TeamModel | undefined>
 
   /**
-   * Create a team
+   * Create a team model
    *
-   * @param team - The team to create
-   * @returns The uuid of the created team
+   * @param team - Team model to create
+   * @param author - User creating the team
+   * @returns UUID of the created team
    */
-  create: (team: TeamModel) => Promise<string | undefined>
+  create: (team: TeamModel, author: User) => Promise<string | undefined>
 
   /**
-   * Update a team
+   * Update a team model
    *
-   * @param team - The team to update
-   * @param data - The data to update in the team
-   * @returns The updated team or undefined if not found
+   * @param team - Existing team model
+   * @param data - Fields to update
+   * @param author - User performing the update
+   * @returns Updated team model or undefined
    */
-  update: (team: TeamModel, data: Partial<TeamModel>) => Promise<TeamModel | undefined>
+  update: (team: TeamModel, data: Partial<TeamModel>, author: User) => Promise<TeamModel | undefined>
 
   /**
-   * Delete a team
+   * Delete a team model
    *
-   * @param team - The team to delete
-   * @returns `true` if the team was deleted, `false` if not
+   * @param team - Team model to delete
+   * @param author - User performing the deletion
+   * @returns True if deleted, false otherwise
    */
-  delete: (team: TeamModel) => Promise<boolean>
+  delete: (team: TeamModel, author: User) => Promise<boolean>
+
+  /**
+   * Get total team count (from meta, not scan)
+   */
+  count: () => Promise<number>
 }

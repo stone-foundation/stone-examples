@@ -1,3 +1,4 @@
+import { User } from '../../models/User'
 import { PostCommentModel } from '../../models/Post'
 import { ListMetadataOptions } from '../../models/App'
 
@@ -44,26 +45,29 @@ export interface IPostCommentRepository {
    * Create a new comment
    *
    * @param comment - Comment to persist
+   * @param author - User creating the comment
    * @returns UUID of created comment
    */
-  create: (comment: PostCommentModel) => Promise<string | undefined>
+  create: (comment: PostCommentModel, author: User) => Promise<string | undefined>
 
   /**
    * Update a comment
    *
    * @param comment - Existing comment
    * @param data - Fields to update
+   * @param author - User performing the update
    * @returns Updated comment
    */
-  update: (comment: PostCommentModel, data: Partial<PostCommentModel>) => Promise<PostCommentModel | undefined>
+  update: (comment: PostCommentModel, data: Partial<PostCommentModel>, author: User) => Promise<PostCommentModel | undefined>
 
   /**
    * Delete a comment
    *
    * @param comment - Comment to delete
+   * @param author - User performing the deletion
    * @returns True if deleted
    */
-  delete: (comment: PostCommentModel) => Promise<boolean>
+  delete: (comment: PostCommentModel, author: User) => Promise<boolean>
 
   /**
    * Count total number of comments

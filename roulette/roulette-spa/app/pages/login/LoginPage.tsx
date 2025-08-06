@@ -1,5 +1,5 @@
 import { JSX } from 'react'
-import { LoginForm } from '../../components/LoginForm/LoginForm'
+import { LoginForm } from '../../components/Security/LoginForm'
 import { SecurityService } from '../../services/SecurityService'
 import { Page, ReactIncomingEvent, IPage, IRouter, HeadContext } from '@stone-js/use-react'
 
@@ -34,8 +34,8 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Connexion',
-      description: 'Connectez-vous pour participer à l’Opération Adrénaline. Entrez votre numéro de téléphone pour commencer.'
+      title: 'Tralala - Connexion',
+      description: 'Connectez-vous pour participer à Tralala. Entrez votre numéro de téléphone pour commencer.'
     }
   }
 

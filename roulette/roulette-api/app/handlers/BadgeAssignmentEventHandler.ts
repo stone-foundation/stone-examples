@@ -1,10 +1,10 @@
 import { User } from '../models/User'
+import { ILogger } from '@stone-js/core'
 import { BadgeAssignment } from '../models/Badge'
 import { ListMetadataOptions } from '../models/App'
-import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
 import { EventHandler, Get, Post, Delete } from '@stone-js/router'
 import { BadgeAssignmentService } from '../services/BadgeAssignmentService'
-import { JsonHttpResponse, BadRequestError, IncomingHttpEvent, NotFoundError } from '@stone-js/http-core'
+import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
 
 /**
  * Badge Assignment Event Handler Options
@@ -33,7 +33,8 @@ export class BadgeAssignmentEventHandler {
   @Get('/', { name: 'list', middleware: ['auth'] })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<BadgeAssignment>> {
-    return await this.badgeAssignmentService.list(Number(event.get('limit', 10)), event.get('page'))
+    const missionUuid = event.get<string>('missionUuid')
+    return await this.badgeAssignmentService.listBy({ missionUuid }, Number(event.get('limit', 10)), event.get('page'))
   }
 
   /**
@@ -46,38 +47,13 @@ export class BadgeAssignmentEventHandler {
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<BadgeAssignment | undefined> {
-    const assignment = event.get<BadgeAssignment>('assignment')
-    return isNotEmpty(assignment) ? assignment : undefined
-  }
-
-  /**
-   * Assign a badge to a member
-   */
-  @Post('/assign-member', { middleware: ['admin'] })
-  @JsonHttpResponse(201)
-  async assignToMember (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
-    const body = event.getBody<{ badgeUuid: string, memberUuid: string, teamUuid: string }>()
-
-    if (!body?.badgeUuid || !body?.memberUuid || !body?.teamUuid) {
-      throw new BadRequestError('badgeUuid, teamUuid and memberUuid are required')
-    }
-
-    const uuid = await this.badgeAssignmentService.assignToMember(
-      body.badgeUuid,
-      body.teamUuid,
-      body.memberUuid,
-      event.getUser<User>()
-    )
-
-    this.logger.info(`Badge assigned to member: ${uuid}`)
-
-    return { uuid }
+    return event.get<BadgeAssignment>('assignment')
   }
 
   /**
    * Assign a badge to a team
    */
-  @Post('/assign-team', { middleware: ['admin'] })
+  @Post('/teams', { middleware: ['admin'] })
   @JsonHttpResponse(201)
   async assignToTeam (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
     const body = event.getBody<{ badgeUuid: string, teamUuid: string }>()
@@ -97,18 +73,27 @@ export class BadgeAssignmentEventHandler {
   }
 
   /**
-   * Get all assignments for a member
+   * Assign a badge to a team member
    */
-  @Get('/member/:uuid', { middleware: ['auth'] })
-  @JsonHttpResponse(200)
-  async getAssignmentsForMember (event: IncomingHttpEvent): Promise<BadgeAssignment[]> {
-    const result = await this.badgeAssignmentService.getAssignmentsForMember(event.getParam<string>('uuid'))
+  @Post('/team-members', { middleware: ['admin'] })
+  @JsonHttpResponse(201)
+  async assignToTeamMember (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
+    const body = event.getBody<{ badgeUuid: string, teamMemberUuid: string, teamUuid: string }>()
 
-    if (isEmpty(result)) {
-      throw new NotFoundError(`No badge assignments found for member: ${event.getParam<string>('uuid')}`)
+    if (!body?.badgeUuid || !body?.teamMemberUuid || !body?.teamUuid) {
+      throw new BadRequestError('badgeUuid, teamUuid and teamMemberUuid are required')
     }
 
-    return result
+    const uuid = await this.badgeAssignmentService.assignToMember(
+      body.teamUuid,
+      body.badgeUuid,
+      body.teamMemberUuid,
+      event.getUser<User>()
+    )
+
+    this.logger.info(`Badge assigned to team member: ${uuid}`)
+
+    return { uuid }
   }
 
   /**
@@ -117,28 +102,25 @@ export class BadgeAssignmentEventHandler {
   @Get('/team/:uuid', { middleware: ['auth'] })
   @JsonHttpResponse(200)
   async getAssignmentsForTeam (event: IncomingHttpEvent): Promise<BadgeAssignment[]> {
-    const result = await this.badgeAssignmentService.getAssignmentsForTeam(event.getParam('uuid'))
+    return await this.badgeAssignmentService.getAssignmentsForTeam(event.getParam('uuid'))
+  }
 
-    if (isEmpty(result)) {
-      throw new NotFoundError(`No badge assignments found for team: ${event.getParam<string>('uuid')}`)
-    }
-
-    return result
+  /**
+   * Get all assignments for a team member
+   */
+  @Get('/team-members/:uuid', { middleware: ['auth'] })
+  @JsonHttpResponse(200)
+  async getAssignmentsForMember (event: IncomingHttpEvent): Promise<BadgeAssignment[]> {
+    return await this.badgeAssignmentService.getAssignmentsForMember(event.getParam<string>('uuid'))
   }
 
   /**
    * Get all assignments for a badge
    */
-  @Get('/badge/:uuid', { middleware: ['auth'] })
+  @Get('/badges/:uuid', { middleware: ['auth'] })
   @JsonHttpResponse(200)
   async getAssignmentsForBadge (event: IncomingHttpEvent): Promise<BadgeAssignment[]> {
-    const result = await this.badgeAssignmentService.getAssignmentsForBadge(event.getParam('uuid'))
-
-    if (isEmpty(result)) {
-      throw new NotFoundError(`No badge assignments found for badge: ${event.getParam<string>('uuid')}`)
-    }
-
-    return result
+    return await this.badgeAssignmentService.getAssignmentsForBadge(event.getParam('uuid'))
   }
 
   /**
@@ -151,19 +133,21 @@ export class BadgeAssignmentEventHandler {
   })
   @JsonHttpResponse(204)
   async delete (event: IncomingHttpEvent): Promise<void> {
+    const user = event.getUser<User>()
     const assignment = event.get<BadgeAssignment>('assignment', {} as unknown as BadgeAssignment)
-    await this.badgeAssignmentService.delete(assignment)
+    await this.badgeAssignmentService.delete(assignment, user)
     this.logger.info(`Badge assignment deleted: ${assignment.uuid}`)
   }
 
   /**
    * Unassign all assignments for a badge
    */
-  @Delete('/badge/:uuid', { middleware: ['admin'] })
+  @Delete('/badges/:uuid', { middleware: ['admin'] })
   @JsonHttpResponse(200)
   async unassignAllFromBadge (event: IncomingHttpEvent): Promise<{ removed: number }> {
+    const user = event.getUser<User>()
     const badgeUuid = event.getParam<string>('uuid')
-    const count = await this.badgeAssignmentService.unassignAllFromBadge(badgeUuid)
+    const count = await this.badgeAssignmentService.unassignAllFromBadge(badgeUuid, user)
     this.logger.info(`All assignments removed for badge: ${String(badgeUuid)} (${count})`)
     return { removed: count }
   }

@@ -79,7 +79,7 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
           <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center">
             <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full" />
           </div>
-          <span className="hidden md:inline text-lg font-bold text-left uppercase tracking-wide">Opération Adrénaline</span>
+          <span className="hidden md:inline text-lg font-bold text-left uppercase tracking-wide">Tralala</span>
         </StoneLink>
 
         {user && !user.isPunched && (

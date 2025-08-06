@@ -76,7 +76,7 @@ export class PostCommentService {
       createdAt: now,
       updatedAt: now,
       likeCount: 0
-    })
+    }, author)
   }
 
   /**
@@ -97,15 +97,15 @@ export class PostCommentService {
     await this.update(comment, {
       likeCount,
       likedByUuids
-    })
+    }, user)
   }
 
   /**
    * Update comment
    */
-  async update (comment: PostComment, data: Partial<PostComment>): Promise<PostComment> {
+  async update (comment: PostComment, data: Partial<PostComment>, author: User): Promise<PostComment> {
     data.updatedAt = Date.now()
-    const model = await this.postCommentRepository.update(comment, data)
+    const model = await this.postCommentRepository.update(comment, data, author)
     if (isNotEmpty<PostCommentModel>(model)) return model
     throw new NotFoundError(`Comment with ID ${comment.uuid} not found`)
   }
@@ -113,8 +113,8 @@ export class PostCommentService {
   /**
    * Delete comment
    */
-  async delete (comment: PostComment): Promise<boolean> {
-    return await this.postCommentRepository.delete(comment)
+  async delete (comment: PostComment, author: User): Promise<boolean> {
+    return await this.postCommentRepository.delete(comment, author)
   }
     
   toPostComment (result: PostComment[], userService: UserService): Promise<PostComment[]> {

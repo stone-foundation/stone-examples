@@ -1,7 +1,7 @@
 import { convertCSVtoJSON } from '../utils'
 import { User, UserModel } from '../models/User'
+import { ListMetadataOptions } from '../models/App'
 import { UserService } from '../services/UserService'
-import { TeamService } from '../services/TeamService'
 import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
 import { Delete, EventHandler, Get, Patch, Post } from '@stone-js/router'
 import { BadRequestError, IncomingHttpEvent, JsonHttpResponse } from '@stone-js/http-core'
@@ -11,7 +11,6 @@ import { BadRequestError, IncomingHttpEvent, JsonHttpResponse } from '@stone-js/
 */
 export interface UserEventHandlerOptions {
   logger: ILogger
-  teamService: TeamService
   userService: UserService
 }
 
@@ -21,7 +20,6 @@ export interface UserEventHandlerOptions {
 @EventHandler('/users', { name: 'users', middleware: ['auth'] })
 export class UserEventHandler {
   private readonly logger: ILogger
-  private readonly teamService: TeamService
   private readonly userService: UserService
 
   /**
@@ -30,9 +28,8 @@ export class UserEventHandler {
    * @param userService
    * @param logger
    */
-  constructor ({ logger, teamService, userService }: UserEventHandlerOptions) {
+  constructor ({ logger, userService }: UserEventHandlerOptions) {
     this.logger = logger
-    this.teamService = teamService
     this.userService = userService
   }
 
@@ -41,31 +38,10 @@ export class UserEventHandler {
    *
    * With explicit json response type.
   */
-  @Get('/private-list', { name: 'list', middleware: ['admin'] })
+  @Get('/', { name: 'list', middleware: ['admin'] })
   @JsonHttpResponse(200)
-  async list (event: IncomingHttpEvent): Promise<UserModel[]> {
-    return await this.userService.sensitiveList(event.get<number>('limit', 10))
-  }
-
-  /**
-   * List all users
-   *
-   * With explicit json response type.
-  */
-  @Get('/', { name: 'list' })
-  @JsonHttpResponse(200)
-  async publicList (event: IncomingHttpEvent): Promise<Array<Partial<User>>> {
-    const currentUser = event.getUser<UserModel>()
-    const teams = await this.teamService.list(event.get<number>('limit', 10))
-    const users = await this.userService.sensitiveList(event.get<number>('limit', 10))
-
-    return users.filter(v => !v.roles?.includes('admin')).map(v => {
-      const user: Partial<User> = this.userService.toUser(v)
-      user.team = teams.find(team => team.uuid === user.teamUuid)
-      user.phone = currentUser.roles?.includes('admin') ? user.phone : undefined
-      user.fullname = currentUser.roles?.includes('admin') ? user.fullname : undefined
-      return user
-    })
+  async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<User>> {
+    return await this.userService.listBy({}, Number(event.get('limit', 20)), event.get('page'))
   }
 
   /**
@@ -97,11 +73,12 @@ export class UserEventHandler {
   @Post('/', { middleware: ['admin'] })
   @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
+    const author = event.getUser<User>()
     const data = await this.validateUserData(event.getBody<User>(), true)
 
-    const uuid = await this.userService.create(data)
+    const uuid = await this.userService.create(data, author)
 
-    this.logger.info(`User created: ${String(uuid)}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`User created: ${String(uuid)}, by user: ${String(author?.uuid)}`)
 
     return { uuid }
   }
@@ -128,9 +105,10 @@ export class UserEventHandler {
 
     tmpFile.remove(true)
 
-    const uuids = await this.userService.createMany(users)
+    const author = event.getUser<User>()
+    const uuids = await this.userService.createMany(users, author)
 
-    this.logger.info(`User created: ${String(uuids.join(', '))}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`User created: ${String(uuids.join(', '))}, by user: ${String(author?.uuid)}`)
 
     return { uuids }
   }
@@ -143,26 +121,15 @@ export class UserEventHandler {
   @Patch('/:user@uuid', { rules: { uuid: /\S{30,40}/ }, bindings: { user: UserService }, middleware: ['admin'] })
   @JsonHttpResponse(201)
   async update (event: IncomingHttpEvent): Promise<User> {
-    const data = await this.validateUserData(event.getBody<User>())
+    const author = event.getUser<User>()
     const user = event.get<User>('user', {} as unknown as User)
+    const data = await this.validateUserData(event.getBody<User>())
 
-    const updated = await this.userService.update(user, data)
+    const updated = await this.userService.update(user, data, author)
 
-    this.logger.info(`User updated: ${user.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`User updated: ${user.uuid}, by user: ${String(author?.uuid)}`)
 
     return updated
-  }
-
-  /**
-   * Generate signed URL for team asset (logo or banner)
-   */
-  @Post('/:user@uuid/upload', { rules: { user: /\S{30,40}/ }, bindings: { user: UserService }, middleware: ['auth'] })
-  @JsonHttpResponse(200)
-  async generateUploadLink (event: IncomingHttpEvent): Promise<{ uploadUrl: string, publicUrl: string }> {
-    const user = event.getUser<User>()
-    const data = event.getBody<{ extension: string }>()
-
-    return await this.userService.generateUploadUrls(user, data?.extension ?? 'png')
   }
 
   /**
@@ -172,15 +139,16 @@ export class UserEventHandler {
   */
   @Delete('/:user@uuid', { rules: { uuid: /\S{30,40}/ }, bindings: { user: UserService }, middleware: ['admin'] })
   async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
-    if (event.getUser<User>()?.uuid === event.get<string>('uuid', '')) {
+    const author = event.getUser<User>()
+    if (author?.uuid === event.get<string>('uuid', '')) {
       throw new BadRequestError('You cannot delete yourself')
     }
 
     const user = event.get<User>('user', {} as unknown as User)
 
-    await this.userService.delete(user)
+    await this.userService.delete(user, author)
 
-    this.logger.info(`User deleted: ${user.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
+    this.logger.info(`User deleted: ${user.uuid}, by user: ${String(author?.uuid)}`)
 
     return { statusCode: 204 }
   }

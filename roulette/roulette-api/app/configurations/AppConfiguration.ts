@@ -32,8 +32,8 @@ export class AppConfiguration implements IConfiguration {
         limit: getNumber('BET_LIMIT', 100)
       },
       team: {
-        defaultMaxTeam: getNumber('TEAM_DEFAULT_MAX_TEAM', 10),
-        defaultTotalMember: getNumber('TEAM_DEFAULT_TOTAL_MEMBER', 10)
+        defaultMaxTeams: getNumber('TEAM_DEFAULT_MAX_TEAMS', 10),
+        defaultTotalMembers: getNumber('TEAM_DEFAULT_TOTAL_MEMBERS', 10)
       }
     }
   }

@@ -1,10 +1,9 @@
 import { User } from '../models/User'
 import { convertCSVtoJSON } from '../utils'
+import { ILogger, isEmpty } from '@stone-js/core'
 import { Badge, BadgeModel } from '../models/Badge'
 import { ListMetadataOptions } from '../models/App'
 import { BadgeService } from '../services/BadgeService'
-import { ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
-import { ActivityService } from '../services/ActivityService'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
 import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
 
@@ -14,7 +13,6 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/
 export interface BadgeEventHandlerOptions {
   logger: ILogger
   badgeService: BadgeService
-  activityService: ActivityService
 }
 
 /**
@@ -24,12 +22,10 @@ export interface BadgeEventHandlerOptions {
 export class BadgeEventHandler {
   private readonly logger: ILogger
   private readonly badgeService: BadgeService
-  private readonly activityService: ActivityService
 
-  constructor ({ badgeService, activityService, logger }: BadgeEventHandlerOptions) {
+  constructor ({ badgeService, logger }: BadgeEventHandlerOptions) {
     this.logger = logger
     this.badgeService = badgeService
-    this.activityService = activityService
   }
 
   /**
@@ -38,15 +34,8 @@ export class BadgeEventHandler {
   @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<Badge>> {
-    const metaActivities = await this.activityService.list(1000)
-    const meta = await this.badgeService.list(Number(event.get('limit', 10)), event.get('page'))
-
-    meta.items = await Promise.all(meta.items.map(async (v) => {
-      v.activityUuid = metaActivities.items.find(a => a.badgeUuid === v.uuid)?.uuid
-      return v
-    }))
-
-    return meta
+    const missionUuid = event.get<string>('missionUuid')
+    return await this.badgeService.listBy({ missionUuid }, Number(event.get('limit', 10)), event.get('page'))
   }
 
   /**
@@ -58,8 +47,7 @@ export class BadgeEventHandler {
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<Badge | undefined> {
-    const badge = event.get<Badge>('badge')
-    return isNotEmpty<BadgeModel>(badge) ? this.badgeService.toBadge(badge) : undefined
+    return event.get<Badge>('badge')
   }
 
   /**
@@ -68,17 +56,58 @@ export class BadgeEventHandler {
   @Post('/', { middleware: ['admin'] })
   @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
+    const user = event.getUser<User>()
     const data = event.getBody<Badge>()
 
     if (!data?.name || !data.score) {
       throw new BadRequestError('Badge name and score are required')
     }
 
-    const uuid = await this.badgeService.create(data, event.getUser<User>())
+    const uuid = await this.badgeService.create(data, user)
 
-    this.logger.info(`Badge created: ${uuid}, by user: ${String(event.getUser<User>().uuid)}`)
+    this.logger.info(`Badge created: ${uuid}, by user: ${String(user.uuid)}`)
 
     return { uuid }
+  }
+
+  /**
+   * Update a badge
+   */
+  @Patch('/:badge@uuid', {
+    rules: { badge: /\S{30,40}/ },
+    bindings: { badge: BadgeService },
+    middleware: ['admin']
+  })
+  @JsonHttpResponse(200)
+  async update (event: IncomingHttpEvent): Promise<Badge> {
+    const user = event.getUser<User>()
+    const data = event.getBody<Partial<Badge>>({})
+    const badge = event.get<Badge>('badge', {} as unknown as BadgeModel)
+
+    const updated = await this.badgeService.update(badge, data, user)
+
+    this.logger.info(`Badge updated: ${badge.uuid}, by user: ${String(user.uuid)}`)
+
+    return updated
+  }
+
+  /**
+   * Delete a badge
+   */
+  @Delete('/:badge@uuid', {
+    rules: { badge: /\S{30,40}/ },
+    bindings: { badge: BadgeService },
+    middleware: ['admin']
+  })
+  async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
+    const user = event.getUser<User>()
+    const badge = event.get<Badge>('badge', {} as unknown as BadgeModel)
+
+    await this.badgeService.delete(badge, user)
+
+    this.logger.info(`Badge deleted: ${badge.uuid}, by user: ${String(user.uuid)}`)
+
+    return { statusCode: 204 }
   }
 
   /**
@@ -109,48 +138,11 @@ export class BadgeEventHandler {
 
     tmpFile.remove(true)
 
-    const uuids = await this.badgeService.createMany(badges, event.getUser<User>())
+    const user = event.getUser<User>()
+    const uuids = await this.badgeService.createMany(badges, user)
 
-    this.logger.info(`Badges created: ${String(uuids.join(', '))}, by user: ${String(event.getUser<User>().uuid)}`)
+    this.logger.info(`Badges created: ${String(uuids.join(', '))}, by user: ${String(user.uuid)}`)
 
     return { uuids }
-  }
-
-  /**
-   * Update a badge
-   */
-  @Patch('/:badge@uuid', {
-    rules: { badge: /\S{30,40}/ },
-    bindings: { badge: BadgeService },
-    middleware: ['admin']
-  })
-  @JsonHttpResponse(200)
-  async update (event: IncomingHttpEvent): Promise<Badge> {
-    const data = event.getBody<Partial<Badge>>({})
-    const badge = event.get<Badge>('badge', {} as unknown as BadgeModel)
-
-    const updated = await this.badgeService.update(badge, data)
-
-    this.logger.info(`Badge updated: ${badge.uuid}, by user: ${String(event.getUser<User>().uuid)}`)
-
-    return updated
-  }
-
-  /**
-   * Delete a badge
-   */
-  @Delete('/:badge@uuid', {
-    rules: { badge: /\S{30,40}/ },
-    bindings: { badge: BadgeService },
-    middleware: ['admin']
-  })
-  async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
-    const badge = event.get<Badge>('badge', {} as unknown as BadgeModel)
-
-    await this.badgeService.delete(badge)
-
-    this.logger.info(`Badge deleted: ${badge.uuid}, by user: ${String(event.getUser<User>()?.uuid)}`)
-
-    return { statusCode: 204 }
   }
 }

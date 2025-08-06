@@ -10,16 +10,15 @@ export interface BadgeModel {
   category: string
   createdAt: number
   updatedAt: number
-  authorUuid: string
   description: string
+  missionUuid: string
   categoryLabel: string
   maxAssignments: number
   expirationDays?: number | null
-  visibility: 'public' | 'private' | string
+  visibility: 'public' | 'private'
 }
 
 export interface Badge extends BadgeModel {
-  author?: User
   activityUuid?: string
 }
 
@@ -27,19 +26,20 @@ export interface BadgeAssignmentModel {
   uuid: string
   issuedAt: number
   revoked: boolean
+  missionUuid: string
   issuedByUuid: string
   comment?: string | null
   revokedBy?: User | null
   badgeUuid: string
   teamUuid?: string | null
   revokedAt?: number | null
-  memberUuid?: string | null
-  origin: 'manual' | 'system' | 'event' | string
+  teamMemberUuid?: string | null
+  origin: 'manual' | 'system' | 'event'
 }
 
 export interface BadgeAssignment extends BadgeAssignmentModel {
-  badge: Badge
   team?: Team
+  badge: Badge
   issuedBy: User
-  member?: TeamMember
+  teamMember?: TeamMember
 }

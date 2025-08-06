@@ -9,7 +9,7 @@ import {
 import { Config } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
 import { DatabaseClient } from '../database/DatabaseClient'
-import { BetRepository } from '../repositories/drizzle/BetRepository'
+import { SpinRepository } from '../repositories/drizzle/SpinRepository'
 import { TeamRepository } from '../repositories/drizzle/TeamRepository'
 import { PostRepository } from '../repositories/drizzle/PostRepository'
 import { UserRepository } from '../repositories/drizzle/UserRepository'
@@ -88,7 +88,7 @@ export class DrizzleServiceProvider implements IServiceProvider {
    */
   registerRepositories (): void {
     this.container
-      .autoBinding(BetRepository, BetRepository, true, ['betRepository'])
+      .autoBinding(SpinRepository, SpinRepository, true, ['spinRepository'])
       .autoBinding(UserRepository, UserRepository, true, ['userRepository'])
       .autoBinding(TeamRepository, TeamRepository, true, ['teamRepository'])
       .autoBinding(PostRepository, PostRepository, true, ['postRepository'])

@@ -25,7 +25,7 @@ export const PasswordLogin = ({
       name='password'
       type='password'
       value={password}
-      placeholder='Entrez votre mot de passe'
+      placeholder='Mot de passe'
       onChange={(e) => onChangePassword(e.target.value)}
     />
 

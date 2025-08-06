@@ -1,18 +1,18 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
+import { MediaService } from './MediaService'
 import { NotFoundError } from '@stone-js/http-core'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { ListMetadataOptions } from '../models/App'
 import { Team, TeamMember, TeamModel } from '../models/Team'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { IBlueprint, IContainer, isNotEmpty, Service } from '@stone-js/core'
 import { ITeamRepository } from '../repositories/contracts/ITeamRepository'
+import { IBlueprint, IContainer, isNotEmpty, Service } from '@stone-js/core'
 
 /**
  * Team Service Options
 */
 export interface TeamServiceOptions {
-  s3Client: S3Client
   blueprint: IBlueprint
+  mediaService: MediaService
   teamRepository: ITeamRepository
 }
 
@@ -21,8 +21,8 @@ export interface TeamServiceOptions {
 */
 @Service({ alias: 'teamService' })
 export class TeamService {
-  private readonly s3Client: S3Client
   private readonly blueprint: IBlueprint
+  private readonly mediaService: MediaService
   private readonly teamRepository: ITeamRepository
 
   /**
@@ -40,19 +40,28 @@ export class TeamService {
   /**
    * Create a new Team Service
   */
-  constructor ({ s3Client, blueprint, teamRepository }: TeamServiceOptions) {
-    this.s3Client = s3Client
+  constructor ({ blueprint, teamRepository, mediaService }: TeamServiceOptions) {
     this.blueprint = blueprint
+    this.mediaService = mediaService
     this.teamRepository = teamRepository
   }
 
   /**
-   * List teams
-   *
-   * @param limit - The limit of teams to list
+   * List all teams
    */
-  async list (limit: number = 10): Promise<Team[]> {
-    return (await this.teamRepository.list(limit)).map(v => this.toTeam(v))
+  async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Team>> {
+    const result = await this.teamRepository.list(limit, page)
+    const items = result.items.map(v => this.toTeam(v))
+    return { ...result, items }
+  }
+
+  /**
+   * List teams by conditions
+   */
+  async listBy (conditions: Partial<TeamModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Team>> {
+    const result = await this.teamRepository.listBy(conditions, limit, page)
+    const items = result.items.map(v => this.toTeam(v))
+    return { ...result, items }
   }
 
   /**
@@ -104,18 +113,20 @@ export class TeamService {
    * Create a team
    *
    * @param team - The team to create
+   * @param author - The user who is creating the team
+   * @returns The created team
    */
-  async create (team: Team): Promise<string | undefined> {
-    const totalMember = this.blueprint.get<number>('app.team.defaultTotalMember', team.totalMember ?? 10)
+  async create (team: Team, author: User): Promise<string | undefined> {
+    const totalMembers = team.totalMembers ?? this.blueprint.get<number>('app.team.defaultTotalMembers', 10)
 
     return await this.teamRepository.create({
       ...team,
-      totalMember,
-      countMember: 0,
+      totalMembers,
+      countMembers: 0,
       uuid: randomUUID(),
       createdAt: Date.now(),
       updatedAt: Date.now()
-    })
+    }, author)
   }
 
   /**
@@ -123,10 +134,11 @@ export class TeamService {
    *
    * @param team - The team to update
    * @param data - The data to update in the team
+   * @param author - The user who is updating the team
    * @returns The updated team
    */
-  async update (team: Team, data: Partial<Team>): Promise<Team> {
-    const teamModel = await this.teamRepository.update(team, data)
+  async update (team: Team, data: Partial<Team>, author: User): Promise<Team> {
+    const teamModel = await this.teamRepository.update(team, data, author)
     if (isNotEmpty<TeamModel>(teamModel)) return this.toTeam(teamModel)
     throw new NotFoundError(`Team with ID ${team.uuid} not found`)
   }
@@ -135,43 +147,13 @@ export class TeamService {
    * Delete a team
    *
    * @param team - The team to delete
+   * @param author - The user who is deleting the team
+   * @returns True if the team was deleted, false otherwise
    */
-  async delete (team: Team): Promise<boolean> {
-    return await this.teamRepository.delete(team)
-  }
-
-  /**
-   * Generate upload URLs for team logo or banner
-   *
-   * @param team - The team for which to generate the upload URLs
-   * @param type - The type of the image (logo or banner)
-   * @param extension - The file extension of the image (default is 'png')
-   * @returns An object containing the upload URL, public URL, and key
-   */
-  async generateUploadUrls (team: Team, type: 'logo' | 'banner', extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
-    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'teams')
-    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
-    const s3BucketFolder = this.blueprint.get<string>('aws.s3.teamsFolderName', 'teams')
-    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
-    const key = `${s3BucketFolder}/${team.uuid}/${type}.${extension}`
-
-    const command = new PutObjectCommand({
-      Key: key,
-      Bucket: bucketName,
-      ContentType: `image/${extension}`
-    })
-
-    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
-
-    const publicUrl = `${cloudfrontStaticUrl}/${key}`
-
-    if (type === 'logo') {
-      await this.update(team, { logoUrl: publicUrl, updatedAt: Date.now() })
-    } else if (type === 'banner') {
-      await this.update(team, { bannerUrl: publicUrl, updatedAt: Date.now() })
-    }
-
-    return { uploadUrl, publicUrl, key }
+  async delete (team: Team, author: User): Promise<boolean> {
+    await this.mediaService.deleteS3Object(team.logoUrl)
+    await this.mediaService.deleteS3Object(team.bannerUrl)
+    return await this.teamRepository.delete(team, author)
   }
 
   /**
@@ -195,15 +177,15 @@ export class TeamService {
     return {
       name: team.name,
       color: team.color,
-      totalMember: team.totalMember,
-      countMember: team.countMember,
+      totalMembers: team.totalMembers,
+      countMembers: team.countMembers,
       members: withDetails ? team.members : undefined,
       chatLink: withDetails ? team.chatLink : undefined
     }
   }
 
   toTeamMember (member: User): TeamMember {
-    const isCaptain = member.roles?.includes('captain') || false
+    const isCaptain = Array().concat(member.roles ?? []).includes('captain') || false
 
     return {
       isCaptain,
@@ -212,7 +194,7 @@ export class TeamService {
       isSoldier: !isCaptain,
       fullname: member.fullname,
       username: member.username,
-      isPresent: isNotEmpty(member.presenceActivityUuid)
+      isPresent: false // TODO: Implement presence logic
     }
   }
 }

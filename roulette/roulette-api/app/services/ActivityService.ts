@@ -51,9 +51,8 @@ export class ActivityService {
       createdAt: now,
       updatedAt: now,
       uuid: randomUUID(),
-      authorUuid: author.uuid,
       badgeUuid: isNotEmpty<string>(data.badgeUuid) ? data.badgeUuid : undefined
-    } as ActivityModel)
+    } as ActivityModel, author)
   }
 
   async createMany (activities: ActivityModel[], author: User): Promise<Array<string | undefined>> {
@@ -66,15 +65,15 @@ export class ActivityService {
     return uuids
   }
 
-  async update (activity: ActivityModel, data: Partial<ActivityModel>): Promise<Activity> {
+  async update (activity: ActivityModel, data: Partial<ActivityModel>, author: User): Promise<Activity> {
     data.updatedAt = Date.now()
-    const model = await this.activityRepository.update(activity, data)
+    const model = await this.activityRepository.update(activity, data, author)
     if (isNotEmpty<ActivityModel>(model)) return this.toActivity(model)
     throw new NotFoundError(`Activity with ID ${activity.uuid} not found`)
   }
 
-  async delete (activity: ActivityModel): Promise<boolean> {
-    return await this.activityRepository.delete(activity)
+  async delete (activity: ActivityModel, author: User): Promise<boolean> {
+    return await this.activityRepository.delete(activity, author)
   }
 
   toActivity (model: ActivityModel): Activity {

@@ -8,7 +8,7 @@ export const LandingPage = (): JSX.Element => {
   return (
     <main className='min-h-screen bg-[#0b2e36] text-white flex flex-col items-center px-6 py-10'>
       <h1 className='text-4xl sm:text-5xl font-bold text-center uppercase tracking-wide mb-4 mt-5'>
-        Opération Adrénaline
+        Tralala
       </h1>
       <p className='text-center text-lg sm:text-xl text-white/90 max-w-2xl mb-8'>
         Es-tu prêt à vivre une expérience de pur adrénaline entre amis ? Karting, Paintball, défis, rires, et surprises t’attendent dans cette opération spéciale.

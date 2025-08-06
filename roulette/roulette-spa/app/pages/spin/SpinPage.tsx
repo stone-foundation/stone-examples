@@ -39,8 +39,8 @@ export class SpinPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Accueil',
-      description: 'Bienvenue sur la page d’accueil de l’Opération Adrénaline. Découvrez votre équipe et leurs statistiques.'
+      title: 'Tralala - Accueil',
+      description: 'Bienvenue sur la page d’accueil de Tralala. Découvrez votre équipe et leurs statistiques.'
     }
   }
 

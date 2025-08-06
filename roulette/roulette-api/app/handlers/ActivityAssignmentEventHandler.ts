@@ -1,15 +1,12 @@
 import { User } from '../models/User'
 import { Team } from '../models/Team'
-import { Post as PostType } from '../models/Post'
+import { PostModel } from '../models/Post'
+import { PostEvent } from '../events/PostEvent'
 import { ListMetadataOptions } from '../models/App'
-import { ILogger, isNotEmpty } from '@stone-js/core'
-import { UserService } from '../services/UserService'
-import { PostService } from '../services/PostService'
 import { TeamService } from '../services/TeamService'
-import { BadgeService } from '../services/BadgeService'
 import { ActivityAssignment } from '../models/Activity'
-import { PRESENCE_EVENT_CATEGORY } from '../constants'
 import { ActivityService } from '../services/ActivityService'
+import { EventEmitter, ILogger, isNotEmpty } from '@stone-js/core'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
 import { ActivityAssignmentService } from '../services/ActivityAssignmentService'
 import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
@@ -19,73 +16,64 @@ import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/
  */
 export interface ActivityAssignmentEventHandlerOptions {
   logger: ILogger
-  userService: UserService
-  postService: PostService
   teamService: TeamService
-  badgeService: BadgeService
-  activityService: ActivityService
+  eventEmitter: EventEmitter
   activityAssignmentService: ActivityAssignmentService
 }
 
 /**
  * Activity Assignment Event Handler
  */
-@EventHandler('/activity-assignments', { name: 'activityAssignments' })
+@EventHandler('/activity-assignments', { name: 'activityAssignments', middleware: ['auth'] })
 export class ActivityAssignmentEventHandler {
   private readonly logger: ILogger
-  private readonly postService: PostService
-  private readonly userService: UserService
   private readonly teamService: TeamService
-  private readonly badgeService: BadgeService
-  private readonly activityService: ActivityService
+  private readonly eventEmitter: EventEmitter
   private readonly activityAssignmentService: ActivityAssignmentService
 
-  constructor ({ logger, teamService, badgeService, postService, userService, activityService, activityAssignmentService }: ActivityAssignmentEventHandlerOptions) {
+  constructor ({ logger, teamService, eventEmitter, activityAssignmentService }: ActivityAssignmentEventHandlerOptions) {
     this.logger = logger
-    this.postService = postService
-    this.userService = userService
     this.teamService = teamService
-    this.badgeService = badgeService
-    this.activityService = activityService
+    this.eventEmitter = eventEmitter
     this.activityAssignmentService = activityAssignmentService
   }
 
   @Get('/')
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    return await this.activityAssignmentService.list(Number(event.get('limit', 10)), event.get('page'))
+    const missionUuid = event.get<string>('missionUuid')
+    return await this.activityAssignmentService.listBy({ missionUuid }, Number(event.get('limit', 10)), event.get('page'))
   }
 
-  @Get('/team/:teamUuid', { middleware: ['authOrNot'] })
+  @Get('/teams/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService } })
   @JsonHttpResponse(200)
   async listByTeam (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    return await this.activityAssignmentService.listBy({ teamUuid: event.get('teamUuid') }, Number(event.get('limit', 10)), event.get('page'))
+    return await this.activityAssignmentService.listBy({ teamUuid: event.get('uuid') }, Number(event.get('limit', 10)), event.get('page'))
   }
 
-  @Get('/activity/:activityUuid', { middleware: ['authOrNot'] })
+  @Get('/activities/:activity@uuid', { rules: { activity: /\S{30,40}/ }, bindings: { activity: ActivityService } })
   @JsonHttpResponse(200)
   async listByActivity (event: IncomingHttpEvent): Promise<ListMetadataOptions<ActivityAssignment>> {
-    return await this.activityAssignmentService.listBy({ activityUuid: event.get('activityUuid') }, Number(event.get('limit', 10)), event.get('page'))
+    return await this.activityAssignmentService.listBy({ activityUuid: event.get('uuid') }, Number(event.get('limit', 10)), event.get('page'))
   }
 
-  @Get('/stats/:teamName?', { middleware: ['authOrNot'] })
+  @Get('/stats/:teamName?')
   @JsonHttpResponse(200)
   async stats (event: IncomingHttpEvent): Promise<Record<string, unknown>> {
     const name = event.get('teamName')
+    const missionUuid = event.get<string>('missionUuid')
     const team = isNotEmpty(name) ? this.teamService.findBy({ name }) : undefined
-    const conditions = isNotEmpty<Team>(team) ? { teamUuid: team?.uuid } : {}
+    const conditions = isNotEmpty<Team>(team) ? { teamUuid: team?.uuid, missionUuid } : { missionUuid }
     return await this.activityAssignmentService.statistics(conditions)
   }
 
   @Get('/:assignment@uuid', {
     rules: { assignment: /\S{30,40}/ },
-    bindings: { assignment: ActivityAssignmentService },
-    middleware: ['authOrNot']
+    bindings: { assignment: ActivityAssignmentService }
   })
   @JsonHttpResponse(200)
   async show (event: IncomingHttpEvent): Promise<ActivityAssignment | undefined> {
-    const assignment = event.get<ActivityAssignment>('assignment')
-    return isNotEmpty(assignment) ? assignment : undefined
+    return event.get<ActivityAssignment>('assignment')
   }
 
   @Post('/', { middleware: ['auth'] })
@@ -94,24 +82,8 @@ export class ActivityAssignmentEventHandler {
     const user = event.getUser<User>()
     const data = event.getBody<ActivityAssignment>()
 
-    if ((!data?.activityCategory && !data?.activityUuid) || !data?.teamUuid) {
+    if (!data?.activityUuid || !data?.teamUuid) {
       throw new BadRequestError('Activity UUID and team UUID are required')
-    }
-
-    // For presence activities, we need to find the activity UUID by category
-    if (isNotEmpty<string>(data?.activityCategory)) {
-      if (isNotEmpty(user.presenceActivityUuid)) {
-        throw new BadRequestError(`User already has a presence activity assigned for category ${data.activityCategory}`)
-      }
-
-      const activityUuid = (await this.activityService.findBy({ category: data.activityCategory })).uuid
-
-      if (!activityUuid) {
-        throw new BadRequestError(`Activity with category ${data.activityCategory} not found`)
-      }
-
-      data.activityUuid = activityUuid
-      data.activityCategory = undefined // Clear category to avoid duplication
     }
 
     data.origin = 'manual'
@@ -141,12 +113,13 @@ export class ActivityAssignmentEventHandler {
   })
   @JsonHttpResponse(200)
   async validateOrUpdate (event: IncomingHttpEvent): Promise<ActivityAssignment> {
+    const user = event.getUser<User>()
     const data = event.getBody<Partial<ActivityAssignment>>({})
     const assignment = event.get<ActivityAssignment>('assignment', {} as unknown as ActivityAssignment)
 
-    const updated = await this.activityAssignmentService.update(assignment, data)
+    const updated = await this.activityAssignmentService.update(assignment, data, user)
 
-    this.logger.info(`ActivityAssignment updated: ${assignment.uuid}, by admin: ${String(event.getUser<User>().uuid)}`)
+    this.logger.info(`ActivityAssignment updated: ${assignment.uuid}, by admin: ${String(user.uuid)}`)
 
     return updated
   }
@@ -158,9 +131,10 @@ export class ActivityAssignmentEventHandler {
   })
   @JsonHttpResponse(204)
   async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
+    const user = event.getUser<User>()
     const assignment = event.get<ActivityAssignment>('assignment', {} as unknown as ActivityAssignment)
-    await this.activityAssignmentService.delete(assignment)
-    this.logger.info(`ActivityAssignment deleted: ${assignment.uuid}, by admin: ${String(event.getUser<User>().uuid)}`)
+    await this.activityAssignmentService.delete(assignment, user)
+    this.logger.info(`ActivityAssignment deleted: ${assignment.uuid}, by admin: ${String(user.uuid)}`)
     return { statusCode: 204 }
   }
 
@@ -177,23 +151,19 @@ export class ActivityAssignmentEventHandler {
 
     if (!status) throw new BadRequestError('Status is required')
 
-    const activity = await this.activityService.findByUuid(assignment.activityUuid)
-    const updated = await this.activityAssignmentService.update(assignment, { status, validatedAt: Date.now(), validatedByUuid: user.uuid })
+    const updated = await this.activityAssignmentService.update(assignment, { status, validatedAt: Date.now(), validatedByUuid: user.uuid }, user)
 
     if (status === 'approved' && assignment?.activityUuid) {
-      this.postService.create({
+      const post: Partial<PostModel> = {
         visibility: 'public',
+        authorUuid: user.uuid,
         type: 'activityAssignment',
         content: assignment.comment,
         teamUuid: assignment.teamUuid,
-        authorUuid: assignment.authorUuid,
+        missionUuid: assignment.missionUuid,
         activityAssignmentUuid: assignment.uuid
-      } as unknown as PostType, user)
-
-      // If the activity is a presence event, update the user's presence activity
-      if (activity?.category === PRESENCE_EVENT_CATEGORY) {
-        this.userService.update(user, { presenceActivityUuid: activity.uuid })
       }
+      await this.eventEmitter.emit(new PostEvent(PostEvent.TIMELINE_PUBLISH, post))
     }
 
     this.logger.info(`ActivityAssignment status changed to ${status}: ${assignment.uuid}`)

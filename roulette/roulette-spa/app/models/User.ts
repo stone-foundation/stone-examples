@@ -1,10 +1,7 @@
-import { Team } from './Team'
-
 /**
  * User Interface
 */
 export interface User {
-  team?: Team
   uuid: string
   phone: string
   roles?: string[]
@@ -14,14 +11,17 @@ export interface User {
   isActive: boolean
   isOnline: boolean
   createdAt: number
-  teamUuid?: string
   updatedAt: number
-  isModerator?: boolean
   isAdmin?: boolean
-  isPunched?: boolean
-  isCaptain?: boolean
   avatarUrl?: string
+  isModerator?: boolean
   avatarColor?: string
+}
+
+export interface UserRegistration {
+  phone: string
+  mission: string
+  fullname: string
 }
 
 /**
@@ -49,8 +49,7 @@ export interface UserToken {
  * User Change Password Interface
 */
 export interface UserChangePassword {
-  otp?: string
-  password?: string
+  otp: string
   newPassword: string
 }
 
@@ -58,5 +57,5 @@ export interface UserChangePassword {
  * User Activation Interface
 */
 export interface UserActivation {
-  isActive: boolean
+  status: 'active' | 'inactive' | 'not_found'
 }

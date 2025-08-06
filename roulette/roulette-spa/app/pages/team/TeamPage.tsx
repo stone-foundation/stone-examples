@@ -62,8 +62,8 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline  - Team - Timeline',
-      description: 'Vivez l\'Opération Adrénaline avec la timeline interactive !',
+      title: 'Tralala  - Team - Timeline',
+      description: 'Vivez l\'Tralala avec la timeline interactive !',
     }
   }
 

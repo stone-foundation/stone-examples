@@ -67,7 +67,7 @@ export class ActivityPage implements IPage<ReactIncomingEvent> {
 
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Activités',
+      title: 'Tralala - Activités',
       description: 'Gérez les activités de l\'opération Adrénaline',
     }
   }

@@ -1,64 +1,75 @@
-import { UserModel } from '../../models/User'
+import { User, UserModel } from '../../models/User'
+import { ListMetadataOptions } from '../../models/App'
 
 /**
  * User Repository contract
  */
 export interface IUserRepository {
   /**
-   * List users
+   * List all user models
    *
-   * @param limit - The limit of users to list
-   * @returns The list of users
+   * @param limit - Maximum number of users to return
+   * @param page - Page number for pagination
+   * @returns List of user models
    */
-  list: (limit: number) => Promise<UserModel[]>
+  list: (limit?: number, page?: number | string) => Promise<ListMetadataOptions<UserModel>>
 
   /**
-   * List users by dynamic conditions
+   * List user models by conditions
    *
-   * @param conditions - Conditions to filter users
-   * @param limit - The limit of users to list
-   * @returns The list of users
+   * @param conditions - Partial filter for user model fields
+   * @param limit - Max number of results
+   * @param page - Page number for pagination
+   * @returns Filtered user models
    */
-  listBy: (conditions: Partial<UserModel>, limit: number) => Promise<UserModel[]>
+  listBy: (conditions: Partial<UserModel>, limit?: number, page?: number | string) => Promise<ListMetadataOptions<UserModel>>
 
   /**
-   * Find a user by uuid
+   * Find a user model by its UUID
    *
-   * @param uuid - The uuid of the user to find
-   * @returns The user or undefined if not found
+   * @param uuid - User UUID
+   * @returns The user model or undefined
    */
   findByUuid: (uuid: string) => Promise<UserModel | undefined>
 
   /**
-   * Find a user by dynamic conditions
+   * Find a user model by conditions
    *
-   * @param conditions - Conditions to match the user
-   * @returns The user or undefined if not found
+   * @param conditions - Partial user model fields
+   * @returns The user model or undefined
    */
   findBy: (conditions: Partial<UserModel>) => Promise<UserModel | undefined>
 
   /**
-   * Create a user
+   * Create a user model
    *
-   * @param user - The user to create
-   * @returns The uuid of the created user
+   * @param user - User model to create
+   * @param author - User creating the user
+   * @returns UUID of the created user
    */
-  create: (user: UserModel) => Promise<string | undefined>
+  create: (user: UserModel, author: User) => Promise<string | undefined>
 
   /**
-   * Update a user
+   * Update a user model
    *
-   * @param user - The user to update
-   * @param data - The data to update in the user
-   * @returns The updated user or undefined if not found
+   * @param user - Existing user model
+   * @param data - Fields to update
+   * @param author - User performing the update
+   * @returns Updated user model or undefined
    */
-  update: (user: UserModel, data: Partial<UserModel>) => Promise<UserModel | undefined>
+  update: (user: UserModel, data: Partial<UserModel>, author: User) => Promise<UserModel | undefined>
 
   /**
-   * Delete a user
+   * Delete a user model
    *
-   * @param user - The user to delete
-   * @returns `true` if the user was deleted, `false` if not
+   * @param user - User model to delete
+   * @param author - User performing the deletion
+   * @returns True if deleted, false otherwise
    */
-  delete: (user: UserModel) => Promise<boolean>
+  delete: (user: UserModel, author: User) => Promise<boolean>
+
+  /**
+   * Get total user count (from meta, not scan)
+   */
+  count: () => Promise<number>
 }

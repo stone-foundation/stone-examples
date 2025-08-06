@@ -1,6 +1,6 @@
 import { JSX } from 'react'
 import { SecurityService } from '../../services/SecurityService'
-import { ChangePasswordForm } from '../../components/ChangePasswordForm/ChangePasswordForm'
+import { ChangePasswordForm } from '../../components/Security/ChangePasswordForm'
 import { Page, ReactIncomingEvent, IPage, IRouter, HeadContext } from '@stone-js/use-react'
 
 /**
@@ -34,7 +34,7 @@ export class ChangePasswordPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Password',
+      title: 'Tralala - Password',
       description: 'Ajoutez un mot de passe pour votre compte.'
     }
   }

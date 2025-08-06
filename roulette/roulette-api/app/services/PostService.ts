@@ -1,19 +1,17 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
+import { MediaService } from './MediaService'
 import { Post, PostModel } from '../models/Post'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { isNotEmpty, Service, IContainer } from '@stone-js/core'
 import { IPostRepository } from '../repositories/contracts/IPostRepository'
-import { isNotEmpty, Service, IContainer, IBlueprint } from '@stone-js/core'
 
 /**
  * Post Service Options
  */
 export interface PostServiceOptions {
-  s3Client: S3Client
-  blueprint: IBlueprint
+  mediaService: MediaService
   postRepository: IPostRepository
 }
 
@@ -22,13 +20,11 @@ export interface PostServiceOptions {
  */
 @Service({ alias: 'postService' })
 export class PostService {
-  private readonly s3Client: S3Client
-  private readonly blueprint: IBlueprint
+  private readonly mediaService: MediaService
   private readonly postRepository: IPostRepository
 
-  constructor ({ s3Client, blueprint, postRepository }: PostServiceOptions) {
-    this.s3Client = s3Client
-    this.blueprint = blueprint
+  constructor ({ mediaService, postRepository }: PostServiceOptions) {
+    this.mediaService = mediaService
     this.postRepository = postRepository
   }
 
@@ -78,23 +74,19 @@ export class PostService {
   /**
    * Create post
    */
-  async create (post: Post, author: User): Promise<Record<string, string>> {
+  async create (post: Post, author: User): Promise<string | undefined> {
     const now = Date.now()
     const uuid = randomUUID()
-    const urls = post.type === 'image' ? await this.generateUploadUrls({ ...post, uuid }) : undefined
 
-    await this.postRepository.create({
+    return await this.postRepository.create({
       ...post,
       uuid,
-      imageUrl: urls?.publicUrl,
-      authorUuid: author.uuid,
+      likeCount: 0,
       createdAt: now,
       updatedAt: now,
-      likeCount: 0,
-      commentCount: 0
-    })
-    
-    return { uuid, ...urls }
+      commentCount: 0,
+      authorUuid: author.uuid
+    }, author)
   }
 
   /**
@@ -115,15 +107,15 @@ export class PostService {
     await this.update(post, {
       likeCount,
       likedByUuids
-    })
+    }, user)
   }
 
   /**
    * Update post
    */
-  async update (post: Post, data: Partial<Post>): Promise<Post> {
+  async update (post: Post, data: Partial<Post>, author: User): Promise<Post> {
     data.updatedAt = Date.now()
-    const model = await this.postRepository.update(post, data)
+    const model = await this.postRepository.update(post, data, author)
     if (isNotEmpty<PostModel>(model)) return this.toPost(model)
     throw new NotFoundError(`Post with ID ${post.uuid} not found`)
   }
@@ -131,8 +123,9 @@ export class PostService {
   /**
    * Delete post
    */
-  async delete (post: Post): Promise<boolean> {
-    return await this.postRepository.delete(post)
+  async delete (post: Post, author: User): Promise<boolean> {
+    await this.mediaService.deleteS3Object(post.imageUrl)
+    return await this.postRepository.delete(post, author)
   }
 
   /**
@@ -145,40 +138,13 @@ export class PostService {
   /**
    * Increment comment count for a post
    */
-  async incrementCommentCount (postUuid: string, increment: number = 1): Promise<void> {
+  async incrementCommentCount (postUuid: string, increment: number, author: User): Promise<void> {
     const post = await this.postRepository.findByUuid(postUuid)
     if (!post) {
       throw new NotFoundError(`Post with UUID ${postUuid} not found`)
     }
-    post.commentCount += increment
-    await this.postRepository.update(post, { commentCount: post.commentCount })
-  }
-
-  /**
-   * Generate upload URLs for user avatar
-   *
-   * @param user - The user for whom to generate the upload URLs
-   * @param extension - The file extension for the avatar (default is 'png')
-   * @returns An object containing the upload URL, public URL, and key for the avatar
-   */
-  async generateUploadUrls (post: Post, extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
-    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'posts')
-    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
-    const s3BucketFolder = this.blueprint.get<string>('aws.s3.postsFolderName', 'posts')
-    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
-    const key = `${s3BucketFolder}/${post.uuid}/image.${extension}`
-
-    const command = new PutObjectCommand({
-      Key: key,
-      Bucket: bucketName,
-      ContentType: `image/${extension}`
-    })
-
-    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
-
-    const publicUrl = `${cloudfrontStaticUrl}/${key}`
-
-    return { uploadUrl, publicUrl, key }
+    post.commentCount += increment ?? 1
+    await this.postRepository.update(post, { commentCount: post.commentCount }, author)
   }
 
   /**

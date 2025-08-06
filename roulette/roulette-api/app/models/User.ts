@@ -1,6 +1,10 @@
-import { Team } from './Team'
 import jwt from 'jsonwebtoken'
+import { Mission } from './Mission'
 import { Session } from './Session'
+import { Team, TeamMember } from './Team'
+import { Post, PostComment } from './Post'
+import { Badge, BadgeAssignment } from './Badge'
+import { Activity, ActivityAssignment } from './Activity'
 
 /**
  * User Model Interface
@@ -9,7 +13,7 @@ export interface UserModel {
   uuid: string
   otp?: string | null
   phone: string
-  roles?: string[] | null // Array of roles, e.g., ['admin', 'moderator']
+  roles?: unknown
   fullname: string
   username: string
   otpCount?: number | null
@@ -17,30 +21,19 @@ export interface UserModel {
   isActive: boolean
   isOnline: boolean
   createdAt: number
-  teamUuid?: string | null
   password?: string | null
   updatedAt: number
   avatarUrl?: string | null
   otpExpiresAt?: number | null
-  presenceActivityUuid?: string | null
 }
 
 /**
  * User Interface
 */
 export interface User extends UserModel {
-  team?: Team
-  isModerator?: boolean
-  isAdmin?: boolean
-  isPunched?: boolean
-  isCaptain?: boolean
-  isPresent?: boolean
-  isLate?: boolean
-  otp: undefined
   session?: Session
-  otpCount: undefined
-  password: undefined
-  otpExpiresAt: undefined
+  isAdmin?: boolean
+  isModerator?: boolean
 }
 
 /**
@@ -58,7 +51,7 @@ export interface UserActivation {
   uuid: string
   phone: string
   username: string
-  isActive: boolean
+  status: 'active' | 'inactive' | 'not_found'
 }
 
 /**
@@ -104,4 +97,28 @@ export interface UserToken {
 export interface UserTokenPayload extends jwt.JwtPayload {
   user: User
   session: Session
+}
+
+export type UserHistoryType = 'user' | 'team' | 'post' | 'badge' | 'mission' | 'activity' | 'team_member' | 'post_comment' | 'badge_assignment' | 'activity_assignment'
+export interface UserHistoryModel {
+  id: number
+  uuid: string
+  itemUuid: string
+  createdAt: number
+  authorUuid: string
+  action: 'created' | 'updated' | 'deleted'
+  type: UserHistoryType
+}
+
+export interface UserHistory extends UserHistoryModel {
+  author: User
+  team?: Team
+  post?: Post
+  badge?: Badge
+  mission?: Mission
+  activity?: Activity
+  postComment?: PostComment
+  teamMember?: TeamMember
+  badgeAssignment?: BadgeAssignment
+  activityAssignment?: ActivityAssignment
 }

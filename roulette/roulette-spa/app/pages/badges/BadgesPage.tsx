@@ -75,7 +75,7 @@ export class BadgesPage implements IPage<ReactIncomingEvent> {
    */
   head (): HeadContext {
     return {
-      title: 'Opération Adrénaline - Badges',
+      title: 'Tralala - Badges',
       description: 'Gerez les badges de l\'opération Adrénaline',
     }
   }

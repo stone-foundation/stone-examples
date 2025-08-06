@@ -4,16 +4,18 @@ import { ChatMessages } from "./ChatMessages"
 import { MessageCircleMore } from "lucide-react"
 import { StoneContext } from "@stone-js/use-react"
 import React, { useContext, useState } from "react"
+import { useChat } from "../../context/ChatContext"
 import { ChatService } from "../../services/ChatService"
 
 export const Chatbox: React.FC = () => {
+  const { setMessages } = useChat()
   const [isClosed, setIsClosed] = useState(true)
   const container = useContext(StoneContext).container
   const chatService = container.make<ChatService>(ChatService)
 
   const handleDeleteAll = () => {
-    chatService.deleteAll().catch((error) => {
-      console.error("Error deleting all messages:", error)
+    chatService.deleteAll().then(() => {
+      setMessages([])
     })
   }
 

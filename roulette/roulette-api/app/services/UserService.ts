@@ -1,18 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import { normalizePhone } from '../utils'
+import { MediaService } from './MediaService'
 import { User, UserModel } from '../models/User'
 import { NotFoundError } from '@stone-js/http-core'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { ListMetadataOptions } from '../models/App'
+import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 import { IUserRepository } from '../repositories/contracts/IUserRepository'
-import { IBlueprint, IContainer, isNotEmpty, Service } from '@stone-js/core'
 
 /**
  * User Service Options
 */
 export interface UserServiceOptions {
-  s3Client: S3Client
-  blueprint: IBlueprint
+  mediaService: MediaService
   userRepository: IUserRepository
 }
 
@@ -21,8 +20,7 @@ export interface UserServiceOptions {
 */
 @Service({ alias: 'userService' })
 export class UserService {
-  private readonly s3Client: S3Client
-  private readonly blueprint: IBlueprint
+  private readonly mediaService: MediaService
   private readonly userRepository: IUserRepository
 
   /**
@@ -41,39 +39,27 @@ export class UserService {
   /**
    * Create a new User Service
   */
-  constructor ({ s3Client, blueprint, userRepository }: UserServiceOptions) {
-    this.s3Client = s3Client
-    this.blueprint = blueprint
+  constructor ({ userRepository, mediaService }: UserServiceOptions) {
+    this.mediaService = mediaService
     this.userRepository = userRepository
   }
 
   /**
-   * List users
-   *
-   * @param limit - The limit of users to list
+   * List all users with pagination
    */
-  async list (limit: number = 10): Promise<User[]> {
-    return (await this.userRepository.list(limit)).map(v => this.toUser(v))
+  async list (limit: number = 10, page?: number | string, displaySensitiveData: boolean = false): Promise<ListMetadataOptions<User>> {
+    const result = await this.userRepository.list(limit, page)
+    const items = result.items.map(v => this.toUser(v, displaySensitiveData))
+    return { ...result, items }
   }
 
   /**
-   * Sensitive list of users, without converting to User type
-   * This is used only for internal purposes where sensitive data is needed.
-   *
-   * @param limit - The limit of users to list
+   * List users by conditions with pagination
    */
-  async sensitiveList (limit: number = 10): Promise<UserModel[]> {
-    return (await this.userRepository.list(limit))
-  }
-
-  /**
-   * List users by conditions
-   *
-   * @param conditions - The conditions to filter users
-   * @param limit - The limit of users to list
-   */
-  async listBy (conditions: Record<string, any>, limit: number = 10): Promise<User[]> {
-    return (await this.userRepository.listBy(conditions, limit)).map(v => this.toUser(v))
+  async listBy (conditions: Partial<UserModel>, limit: number = 10, page?: number | string, displaySensitiveData: boolean = false): Promise<ListMetadataOptions<User>> {
+    const result = await this.userRepository.listBy(conditions, limit, page)
+    const items = result.items.map(v => this.toUser(v, displaySensitiveData))
+    return { ...result, items }
   }
 
   /**
@@ -82,12 +68,12 @@ export class UserService {
    * @param conditions - The conditions to find the user
    * @returns The found user
    */
-  async findBy (conditions: Record<string, any>): Promise<User> {
+  async findBy (conditions: Record<string, any>, displaySensitiveData: boolean = false): Promise<User> {
     // Normalize phone number if provided
     conditions.phone = normalizePhone(conditions.phone)
     // Find the user by conditions
     const userModel = await this.userRepository.findBy(conditions)
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
     throw new NotFoundError(`The user with conditions ${JSON.stringify(conditions)} not found`)
   }
 
@@ -97,9 +83,9 @@ export class UserService {
    * @param uuid - The uuid of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByUuid (uuid: string): Promise<User | undefined> {
+  async findByUuid (uuid: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
     const userModel = await this.userRepository.findByUuid(uuid)
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
   }
 
   /**
@@ -108,10 +94,10 @@ export class UserService {
    * @param rawPhone - The phone number of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByPhone (rawPhone: string): Promise<User | undefined> {
+  async findByPhone (rawPhone: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
     const phone = normalizePhone(rawPhone)
     const userModel = await this.userRepository.findBy({ phone })
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
   }
 
   /**
@@ -120,9 +106,9 @@ export class UserService {
    * @param username - The username of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByUsername (username: string): Promise<User | undefined> {
+  async findByUsername (username: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
     const userModel = await this.userRepository.findBy({ username })
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
   }
 
   /**
@@ -130,7 +116,7 @@ export class UserService {
    *
    * @param user - The user to create
    */
-  async create (user: User): Promise<string | undefined> {
+  async create (user: User, author: User): Promise<string | undefined> {
     user.phone = normalizePhone(user.phone, true)
 
     return await this.userRepository.create({
@@ -140,7 +126,7 @@ export class UserService {
       uuid: randomUUID(),
       createdAt: Date.now(),
       updatedAt: Date.now()
-    })
+    }, author)
   }
 
   /**
@@ -149,8 +135,8 @@ export class UserService {
    * @param users - The users to create
    * @returns An array of user UUIDs or undefined if creation failed
    */
-  async createMany (users: User[]): Promise<Array<string | undefined>> {
-    return await Promise.all(users.map(async v => await this.create(v)))
+  async createMany (users: User[], author: User): Promise<Array<string | undefined>> {
+    return await Promise.all(users.map(async v => await this.create(v, author)))
   }
 
   /**
@@ -160,13 +146,13 @@ export class UserService {
    * @param data - The user data to update
    * @returns The updated user
    */
-  async update (user: User, data: Partial<User>): Promise<User> {
+  async update (user: User, data: Partial<User>, author: User): Promise<User> {
     // Set updatedAt to current timestamp
     data.updatedAt = Date.now()
     // Normalize phone number if provided
     data.phone = normalizePhone(data.phone)
     // Save the user
-    const userModel = await this.userRepository.update(user, data)
+    const userModel = await this.userRepository.update(user, data, author)
     if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
     throw new NotFoundError(`User with ID ${user.uuid} not found`)
   }
@@ -176,37 +162,9 @@ export class UserService {
    *
    * @param user - The user to delete
    */
-  async delete (user: User): Promise<boolean> {
-    return await this.userRepository.delete(user)
-  }
-
-  /**
-   * Generate upload URLs for user avatar
-   *
-   * @param user - The user for whom to generate the upload URLs
-   * @param extension - The file extension for the avatar (default is 'png')
-   * @returns An object containing the upload URL, public URL, and key for the avatar
-   */
-  async generateUploadUrls (user: User, extension: string = 'png'): Promise<{ uploadUrl: string, publicUrl: string, key: string }> {
-    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'users')
-    const expiresIn = this.blueprint.get<number>('aws.s3.signedUrlExpireSeconds', 300)
-    const s3BucketFolder = this.blueprint.get<string>('aws.s3.usersFolderName', 'users')
-    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
-    const key = `${s3BucketFolder}/${user.uuid}/avatar.${extension}`
-
-    const command = new PutObjectCommand({
-      Key: key,
-      Bucket: bucketName,
-      ContentType: `image/${extension}`
-    })
-
-    const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn })
-
-    const publicUrl = `${cloudfrontStaticUrl}/${key}`
-
-    await this.update(user, { avatarUrl: publicUrl, updatedAt: Date.now() })
-
-    return { uploadUrl, publicUrl, key }
+  async delete (user: User, author: User): Promise<boolean> {
+    await this.mediaService.deleteS3Object(user.avatarUrl)
+    return await this.userRepository.delete(user, author)
   }
 
   /**
@@ -215,21 +173,19 @@ export class UserService {
    * @param userModel - The user model to convert
    * @returns The converted user
    */
-  toUser (userModel: UserModel): User {
-    const isAdmin = userModel.roles?.includes('admin') || false
-    const isCaptain = userModel.roles?.includes('captain') || false
-    const isModerator = isAdmin || userModel.roles?.includes('moderator') || false
-    
+  toUser (userModel: UserModel, displaySensitiveData: boolean = false): User {
+    const isAdmin = Array().concat(userModel.roles ?? []).includes('admin') || false
+    const isModerator = isAdmin || Array().concat(userModel.roles ?? []).includes('moderator') || false
+
     return {
       ...userModel,
       isAdmin,
-      isCaptain,
       isModerator,
-      
-      otp: undefined, // Omit sensitive data
-      otpCount: undefined, // Omit OTP count
-      password: undefined, // Omit password
-      otpExpiresAt: undefined // Omit OTP expiration time
+
+      otp: displaySensitiveData ? userModel.otp : undefined, // Omit sensitive data
+      otpCount: displaySensitiveData ? userModel.otpCount : undefined, // Omit OTP count
+      password: displaySensitiveData ? userModel.password : undefined, // Omit password
+      otpExpiresAt: displaySensitiveData ? userModel.otpExpiresAt : undefined // Omit OTP expiration time
     }
   }
 }

@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { User } from '../../models/User'
 import { activities } from '../../database/schema'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { IBlueprint, isEmpty } from '@stone-js/core'
@@ -6,21 +7,25 @@ import { ActivityModel } from '../../models/Activity'
 import { ListMetadataOptions } from '../../models/App'
 import { IActivityRepository } from '../contracts/IActivityRepository'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 export interface RepositoryOptions {
   blueprint: IBlueprint
   database: LibSQLDatabase
   metadataRepository: IMetadataRepository
+  userHistoryRepository: IUserHistoryRepository
 }
 
 export class ActivityRepository implements IActivityRepository {
   private readonly tableName: string
   private readonly database: LibSQLDatabase
   private readonly metadataRepository: IMetadataRepository
+  private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ blueprint, database, metadataRepository }: RepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository, userHistoryRepository }: RepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
+    this.userHistoryRepository = userHistoryRepository
     this.tableName = blueprint.get('drizzle.tables.activities.name', 'activities')
   }
 
@@ -39,9 +44,10 @@ export class ActivityRepository implements IActivityRepository {
   async listBy (conditions: Partial<ActivityModel>, limit?: number, page?: number | string): Promise<ListMetadataOptions<ActivityModel>> {
     const whereClauses = []
 
-    if (conditions.category) whereClauses.push(eq(activities.category, conditions.category))
     if (conditions.impact) whereClauses.push(eq(activities.impact, conditions.impact))
+    if (conditions.category) whereClauses.push(eq(activities.category, conditions.category))
     if (conditions.badgeUuid) whereClauses.push(eq(activities.badgeUuid, conditions.badgeUuid))
+    if (conditions.missionUuid) whereClauses.push(eq(activities.missionUuid, conditions.missionUuid))
 
     limit ??= 10
     page = isEmpty(page) ? 1 : Number(page)
@@ -71,20 +77,36 @@ export class ActivityRepository implements IActivityRepository {
     return await this.database.select().from(activities).where(and(...whereClauses)).get()
   }
 
-  async create (activity: ActivityModel): Promise<string | undefined> {
+  async create (activity: ActivityModel, author: User): Promise<string | undefined> {
     await this.database.insert(activities).values(activity)
     await this.metadataRepository.increment(this.tableName, { lastUuid: activity.uuid })
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'activity',
+      action: 'created',
+      itemUuid: activity.uuid
+    }, author)
     return activity.uuid
   }
 
-  async update ({ uuid }: ActivityModel, data: Partial<ActivityModel>): Promise<ActivityModel | undefined> {
-    return await this.database.update(activities).set(data).where(eq(activities.uuid, uuid)).returning().get()
+  async update ({ uuid }: ActivityModel, data: Partial<ActivityModel>, author: User): Promise<ActivityModel | undefined> {
+    const activity =  await this.database.update(activities).set(data).where(eq(activities.uuid, uuid)).returning().get()
+    await this.userHistoryRepository.makeHistoryEntry({
+      itemUuid: uuid,
+      action: 'updated',
+      type: 'activity',
+    }, author)
+    return activity
   }
 
-  async delete ({ uuid }: ActivityModel): Promise<boolean> {
+  async delete ({ uuid }: ActivityModel, author: User): Promise<boolean> {
     const result = await this.database.delete(activities).where(eq(activities.uuid, uuid)).run()
     if (result.rowsAffected > 0) {
       await this.metadataRepository.decrement(this.tableName)
+      await this.userHistoryRepository.makeHistoryEntry({
+        itemUuid: uuid,
+        type: 'activity',
+        action: 'deleted',
+      }, author)
       return true
     }
     return false

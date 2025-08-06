@@ -4,9 +4,9 @@ import {
   QueryCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { BetModel } from '../../models/Bet'
+import { BetModel } from '../../models/Spin'
 import { IBlueprint, isNotEmpty } from '@stone-js/core'
-import { IBetRepository } from '../contracts/IBetRepository'
+import { IBetRepository } from '../contracts/ISpinRepository'
 
 /**
  * Bet Repository Options

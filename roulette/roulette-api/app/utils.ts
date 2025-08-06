@@ -52,3 +52,16 @@ export function normalizePhone (phone?: string, mustThrow: boolean = false): str
 
   return phoneNumber ?? undefined
 }
+
+/**
+ * Generates a random code with a given prefix and count.
+ *
+ * @param prefix - The prefix for the code.
+ * @param max - The maximum length of the generated code.
+ * @returns A string representing the generated code.
+ */
+export function generateRandomCode (prefix: string, max: number): string {
+  const endedLength = max - prefix.length
+  const randomNumber = Math.random() * Math.pow(10, endedLength) << 0
+  return `${prefix}${randomNumber}`
+}

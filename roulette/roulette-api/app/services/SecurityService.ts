@@ -6,8 +6,8 @@ import { SessionService } from './SessionService'
 import { BadCredentialsError } from '../errors/CredentialsError'
 import { UserActivationEvent } from '../events/UserActivationEvent'
 import { IUserRepository } from '../repositories/contracts/IUserRepository'
-import { EventEmitter, IBlueprint, isEmpty, isNotEmpty, Logger, Service } from '@stone-js/core'
 import { BadRequestError, IncomingHttpEvent, UnauthorizedError } from '@stone-js/http-core'
+import { EventEmitter, IBlueprint, IContainer, isEmpty, isNotEmpty, Logger, Service } from '@stone-js/core'
 import { UserCredentials, UserToken, UserChangePassword, UserModel, UserTokenPayload, User, UserActivation, UserActivationRequest, UserRegister } from '../models/User'
 
 /**
@@ -15,6 +15,7 @@ import { UserCredentials, UserToken, UserChangePassword, UserModel, UserTokenPay
 */
 export interface SecurityServiceOptions {
   blueprint: IBlueprint
+  container: IContainer
   eventEmitter: EventEmitter
   sessionService: SessionService
   userRepository: IUserRepository
@@ -26,6 +27,7 @@ export interface SecurityServiceOptions {
 @Service({ alias: 'securityService' })
 export class SecurityService {
   private readonly blueprint: IBlueprint
+  private readonly container: IContainer
   private readonly eventEmitter: EventEmitter
   private readonly sessionService: SessionService
   private readonly userRepository: IUserRepository
@@ -33,11 +35,32 @@ export class SecurityService {
   /**
    * Create a new Security Service
   */
-  constructor ({ blueprint, eventEmitter, userRepository, sessionService }: SecurityServiceOptions) {
+  constructor ({ container, blueprint, eventEmitter, userRepository, sessionService }: SecurityServiceOptions) {
+    this.container = container
     this.blueprint = blueprint
     this.eventEmitter = eventEmitter
     this.userRepository = userRepository
     this.sessionService = sessionService
+  }
+
+  /**
+   * Get the current authenticated user from the event
+   * Must not be called in global middleware but only in route handlers or route middleware.
+   * 
+   * @returns The authenticated user
+  */
+  getAuthUser (): UserModel {
+    return this.container.make<IncomingHttpEvent>('event').getUser<UserModel>()
+  }
+
+  /**
+   * Check if the current authenticated user is an admin
+   * Must not be called in global middleware but only in route handlers or route middleware.
+   * 
+   * @returns True if the user is an admin, false otherwise
+  */
+  isAuthUserAdmin (): boolean {
+    return this.isAdmin(this.getAuthUser())
   }
 
   /**
@@ -62,7 +85,7 @@ export class SecurityService {
       adminUser.updatedAt = Date.now()
       adminUser.password = await this.hashPassword(adminUser.password ?? '')
 
-      return await this.userRepository.create(adminUser)
+      return await this.userRepository.create(adminUser, adminUser)
     }
   }
 
@@ -73,40 +96,40 @@ export class SecurityService {
    * @returns The user activation data
   */
   async requestActivation (request: UserActivationRequest): Promise<Partial<UserActivation>> {
-    request.phone = normalizePhone(request.phone)
-    const userModel = await this.userRepository.findBy({ phone: request.phone })
-    const otpCount = userModel?.otpCount ?? 0
+    const phone = normalizePhone(request.phone)
+    let userModel = await this.userRepository.findBy({ phone })
 
     if (isEmpty(userModel)) {
-      throw new BadRequestError(`The user with phone ${request.phone} does not exist`)
+      return { status: 'not_found' }
     }
 
-    const isActive = userModel.isActive && isNotEmpty(userModel.password)
+    const otpCount = userModel?.otpCount ?? 0
+    const status = userModel.isActive && isNotEmpty(userModel.password) ? 'active' : 'inactive'
 
     if (userModel.isActive) {
-      return { isActive }
+      return { status }
     }
 
     if (otpCount >= this.blueprint.get<number>('app.security.otp.maxCount', 5)) {
-      throw new BadRequestError(`The user with phone ${request.phone} has reached the maximum number of OTP requests`)
+      throw new BadRequestError(`The user with phone ${phone} has reached the maximum number of OTP requests`)
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const otpExpiresAt = Date.now() + this.blueprint.get<number>('app.security.otp.expiresIn', 300000) // 5 minutes
 
-    await this.userRepository.update(userModel, { otp, otpCount: otpCount + 1, otpExpiresAt })
+    await this.userRepository.update(userModel, { otp, otpCount: otpCount + 1, otpExpiresAt }, userModel)
 
     const user: UserActivation = {
       otp,
       uuid: userModel.uuid,
       phone: userModel.phone,
       username: userModel.username,
-      isActive: userModel.isActive
+      status: userModel.isActive ? 'active' : 'inactive'
     }
 
     await this.eventEmitter.emit(new UserActivationEvent(user))
 
-    return { isActive }
+    return { status }
   }
 
   /**
@@ -205,7 +228,7 @@ export class SecurityService {
    */
   isAdmin (user?: User): boolean {
     const admins = this.blueprint.get<Array<Record<'phone' | 'role', string>>>('app.security.admins', [])
-    return user?.roles?.includes('admin') ?? admins.some(admin => normalizePhone(admin.phone) === normalizePhone(user?.phone) && admin.role === 'admin')
+    return Array().concat(user?.roles ?? []).includes('admin') ?? admins.some(admin => normalizePhone(admin.phone) === normalizePhone(user?.phone) && admin.role === 'admin')
   }
 
   /**
@@ -216,7 +239,7 @@ export class SecurityService {
    * @returns True if the user has the role, false otherwise
    */
   hasRole (user?: User, role?: string): boolean {
-    return user?.roles?.includes(role ?? '') || false
+    return Array().concat(user?.roles ?? []).includes(role ?? '') || false
   }
 
   /**
@@ -294,8 +317,9 @@ export class SecurityService {
 
   /**
    * Register a user
-   *
-   * @param user - The user to register
+   * 
+   * @param payload - The user registration data
+   * @throws BadRequestError if registration is not allowed or user already exists
   */
   async register (payload: UserRegister): Promise<void> {
     const canRegister = this.blueprint.get<boolean>('app.security.allowRegister', false)
@@ -318,8 +342,7 @@ export class SecurityService {
     }
 
     const password = await this.hashPassword(payload.password)
-
-    await this.userRepository.create({
+    const userModel = {
       password,
       isActive: true,
       isOnline: false,
@@ -329,7 +352,9 @@ export class SecurityService {
       createdAt: Date.now(),
       fullname: payload.fullname,
       username: payload.username
-    })
+    }
+
+    await this.userRepository.create(userModel, userModel)
   }
 
   /**
@@ -343,7 +368,7 @@ export class SecurityService {
     const userModel = await this.validateUser(user, credentials)
     const password = await this.hashPassword(userPassword.newPassword)
 
-    await this.userRepository.update(userModel, { password, isActive: true })
+    await this.userRepository.update(userModel, { password, isActive: true }, user)
   }
 
   /**

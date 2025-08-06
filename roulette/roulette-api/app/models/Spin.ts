@@ -2,21 +2,23 @@ import { Team } from './Team'
 import { User } from './User'
 
 /**
- * Bet model Interface
+ * Spin model Interface
 */
-export interface BetModel {
+export interface SpinModel {
   uuid: string
   value: string
-  color: string
   userUuid: string
   teamUuid: string
   createdAt: number
+  missionUuid: string
+  color?: string | null
+  teamMemberUuid: string
 }
 
 /**
- * Bet Interface
+ * Spin Interface
  */
-export interface Bet extends BetModel {
+export interface Spin extends SpinModel {
   user?: User
   team?: Team
 }

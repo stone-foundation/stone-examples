@@ -1,3 +1,4 @@
+import { User } from '../../models/User'
 import { ActivityModel } from '../../models/Activity'
 import { ListMetadataOptions } from '../../models/App'
 
@@ -44,26 +45,29 @@ export interface IActivityRepository {
    * Create a new activity model
    *
    * @param activity - Activity to persist
+   * @param author - User creating the activity
    * @returns UUID of created activity
    */
-  create: (activity: ActivityModel) => Promise<string | undefined>
+  create: (activity: ActivityModel, author: User) => Promise<string | undefined>
 
   /**
    * Update an existing activity
    *
    * @param activity - Existing activity
    * @param data - Fields to update
+   * @param author - User performing the update
    * @returns Updated activity
    */
-  update: (activity: ActivityModel, data: Partial<ActivityModel>) => Promise<ActivityModel | undefined>
+  update: (activity: ActivityModel, data: Partial<ActivityModel>, author: User) => Promise<ActivityModel | undefined>
 
   /**
    * Delete an activity model
    *
    * @param activity - Activity to delete
+   * @param author - User performing the deletion
    * @returns True if deleted
    */
-  delete: (activity: ActivityModel) => Promise<boolean>
+  delete: (activity: ActivityModel, author: User) => Promise<boolean>
 
   /**
    * Get total count of activities (from metadata)

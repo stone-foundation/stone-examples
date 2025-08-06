@@ -1,8 +1,7 @@
-
 import { Axios } from 'axios'
 import { AxiosClient } from './AxiosClient'
 import { IBlueprint, Stone } from '@stone-js/core'
-import { UserActivation, UserChangePassword, UserLogin, UserToken } from '../models/User'
+import { UserRegistration, UserActivation, UserChangePassword, UserLogin, UserToken } from '../models/User'
 
 /**
  * Security Client Options
@@ -34,13 +33,13 @@ export class SecurityClient {
   }
 
   /**
-   * Activate a user by sending an OTP to their phone number
+   * Verify user activation by sending an OTP to their phone number
    *
    * @param phone - The phone number to activate
    * @return The user activation details
    */
-  async activate (phone: string): Promise<UserActivation> {
-    return (await this.axios.post<UserActivation>(`${this.path}/activate`, { phone }, { headers: this.getHeaders() })).data
+  async verifyActivation (phone: string): Promise<UserActivation> {
+    return (await this.axios.post<UserActivation>(`${this.path}/verify-activation`, { phone }, { headers: this.getHeaders() })).data
   }
 
   /**
@@ -54,12 +53,31 @@ export class SecurityClient {
   }
 
   /**
+   * Register a new user
+   * 
+   * @param payload - The payload containing phone, mission, username, fullname, password, and confirmPassword.
+   * @return The user activation details
+   */
+  async register (payload: UserRegistration): Promise<void> {
+    await this.axios.post(`${this.path}/register`, payload, { headers: this.getHeaders() })
+  }
+
+  /**
+   * Request change password
+   * 
+   * @param phone - The phone number to request change password
+   */
+  async requestChangePassword (phone: string): Promise<void> {
+    await this.axios.post(`${this.path}/request-change-password`, { phone }, { headers: this.getHeaders() })
+  }
+
+  /**
    * Change the password of a user
    *
    * @param user - The user to change the password for
    */
-  async changePassword (user: UserChangePassword): Promise<void> {
-    await this.client.post(`${this.path}/change-password`, user)
+  async changePassword (password: UserChangePassword): Promise<void> {
+    await this.client.post(`${this.path}/change-password`, password)
   }
 
   /**

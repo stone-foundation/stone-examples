@@ -1,7 +1,7 @@
 import { Service } from '@stone-js/core'
 import { TokenService } from './TokenService'
 import { SecurityClient } from '../clients/SecurityClient'
-import { UserActivation, UserChangePassword, UserLogin } from '../models/User'
+import { UserActivation, UserChangePassword, UserLogin, UserRegistration } from '../models/User'
 
 /**
  * Security Service Options
@@ -28,13 +28,13 @@ export class SecurityService {
   }
 
   /**
-   * Activate a user by sending an OTP to their phone number
+   * Verify user activation by sending an OTP to their phone number
    *
    * @param phone - The phone number to activate
    * @return The user activation details
   */
-  async activate (phone: string): Promise<UserActivation> {
-    return await this.client.activate(phone)
+  async verifyActivation (phone: string): Promise<UserActivation> {
+    return await this.client.verifyActivation(phone)
   }
 
   /**
@@ -49,12 +49,31 @@ export class SecurityService {
   }
 
   /**
+   * Register a new user
+   * 
+   * @param payload - The payload containing phone, mission, username, fullname, password, and confirmPassword.
+   * @return The user activation details
+  */
+  async register (payload: UserRegistration): Promise<void> {
+    await this.client.register(payload)
+  }
+  
+  /**
+   * Request change password
+   * 
+   * @param phone - The phone number to request change password
+   */
+  async requestChangePassword (phone: string): Promise<void> {
+    await this.client.requestChangePassword(phone)
+  }
+
+  /**
    * Change the password of a user
    *
-   * @param user - The user to change the password
-  */
-  async changePassword (user: UserChangePassword): Promise<void> {
-    await this.client.changePassword(user)
+   * @param user - The user to change the password for
+   */
+  async changePassword (password: UserChangePassword): Promise<void> {
+    await this.client.changePassword(password)
   }
 
   /**

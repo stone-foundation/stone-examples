@@ -1,26 +1,31 @@
 import { and, eq } from 'drizzle-orm'
-import { postComments } from '../../database/schema'
+import { User } from '../../models/User'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { postComments } from '../../database/schema'
 import { IBlueprint, isEmpty } from '@stone-js/core'
 import { PostCommentModel } from '../../models/Post'
 import { ListMetadataOptions } from '../../models/App'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
 import { IPostCommentRepository } from '../contracts/IPostCommentRepository'
+import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 export interface RepositoryOptions {
   blueprint: IBlueprint
   database: LibSQLDatabase
   metadataRepository: IMetadataRepository
+  userHistoryRepository: IUserHistoryRepository
 }
 
 export class PostCommentRepository implements IPostCommentRepository {
   private readonly tableName: string
   private readonly database: LibSQLDatabase
   private readonly metadataRepository: IMetadataRepository
+  private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ blueprint, database, metadataRepository }: RepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository, userHistoryRepository }: RepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
+    this.userHistoryRepository = userHistoryRepository
     this.tableName = blueprint.get('drizzle.tables.postComments.name', 'post_comments')
   }
 
@@ -69,20 +74,38 @@ export class PostCommentRepository implements IPostCommentRepository {
     return await this.database.select().from(postComments).where(and(...whereClauses)).get()
   }
 
-  async create (comment: PostCommentModel): Promise<string | undefined> {
+  async create (comment: PostCommentModel, author: User): Promise<string | undefined> {
     await this.database.insert(postComments).values(comment)
     await this.metadataRepository.increment(this.tableName, { lastUuid: comment.uuid })
+    await this.userHistoryRepository.makeHistoryEntry({
+      action: 'created',
+      type: 'post_comment',
+      itemUuid: comment.uuid,
+    }, author)
     return comment.uuid
   }
 
-  async update ({ uuid }: PostCommentModel, data: Partial<PostCommentModel>): Promise<PostCommentModel | undefined> {
-    return await this.database.update(postComments).set(data).where(eq(postComments.uuid, uuid)).returning().get()
+  async update ({ uuid }: PostCommentModel, data: Partial<PostCommentModel>, author: User): Promise<PostCommentModel | undefined> {
+    const comment =  await this.database.update(postComments).set(data).where(eq(postComments.uuid, uuid)).returning().get()
+    if (comment) {
+      await this.userHistoryRepository.makeHistoryEntry({
+        itemUuid: uuid,
+        action: 'updated',
+        type: 'post_comment',
+      }, author)
+    }
+    return comment
   }
 
-  async delete ({ uuid }: PostCommentModel): Promise<boolean> {
+  async delete ({ uuid }: PostCommentModel, author: User): Promise<boolean> {
     const result = await this.database.delete(postComments).where(eq(postComments.uuid, uuid)).run()
     if (result.rowsAffected > 0) {
       await this.metadataRepository.decrement(this.tableName)
+      await this.userHistoryRepository.makeHistoryEntry({
+        itemUuid: uuid,
+        action: 'deleted',
+        type: 'post_comment',
+      }, author)
       return true
     }
     return false
