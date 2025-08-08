@@ -44,6 +44,7 @@ export const RegistrationStep = ({
         name='mission'
         placeholder='Code de mission'
         value={mission}
+        className='mt-2'
         onChange={(e) => onChange('mission', e.target.value)}
       />
 
@@ -52,6 +53,7 @@ export const RegistrationStep = ({
         name='fullname'
         placeholder='Nom complet'
         value={fullname}
+        className='mt-2'
         onChange={(e) => onChange('fullname', e.target.value)}
       />
 

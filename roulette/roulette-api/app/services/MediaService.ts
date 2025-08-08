@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { IBlueprint, isEmpty, Service } from '@stone-js/core'
 import { MediaUploadUrlsPayload, MediaUploadUrlsResponse } from '../models/Media'
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { Readable } from 'node:stream'
 
 /**
  * Media Service Options
@@ -63,8 +64,7 @@ export class MediaService {
   async deleteS3Object (publicUrl: string | undefined | null): Promise<void> {
     if (isEmpty(publicUrl)) return
 
-    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
-    const key = publicUrl.replace(`${cloudfrontStaticUrl}/`, '')
+    const key = this.extractS3KeyFromUrl(publicUrl)
     const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'medias')
 
     const command = new DeleteObjectCommand({
@@ -73,5 +73,89 @@ export class MediaService {
     })
 
     await this.s3Client.send(command)
+  }
+
+  /**
+   * Upload a file to S3
+   * 
+   * @param file - The file to upload
+   * @param key - The key under which to store the file
+   * @param contentType - The content type of the file
+   */
+  async uploadToS3 (file: Buffer | string, key: string, contentType: string): Promise<void> {
+    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'medias')
+
+    const command = new PutObjectCommand({
+      Key: key,
+      Body: file,
+      Bucket: bucketName,
+      ContentType: contentType
+    })
+
+    await this.s3Client.send(command)
+  }
+
+  /**
+   * Download a file from S3 given its public URL
+   * 
+   * @param publicUrl - The public URL of the file to download
+   * @returns An object containing the file buffer and filename
+   */
+  async downloadFromS3 (publicUrl: string): Promise<{ buffer: Buffer, filename: string }> {
+    const key = this.extractS3KeyFromUrl(publicUrl)
+    const bucketName = this.blueprint.get<string>('aws.s3.bucketName', 'medias')
+
+    const command = new GetObjectCommand({
+      Key: key,
+      Bucket: bucketName
+    })
+
+    const response = await this.s3Client.send(command)
+    const data = await response.Body?.transformToByteArray()
+
+    if (!data) throw new Error('Failed to download file from S3')
+
+    return {
+      buffer: Buffer.from(data),
+      filename: key.split('/').pop() ?? 'audio.webm'
+    }
+  }
+
+  /**
+   * Download a file from S3 as a Readable stream given its public URL
+   * 
+   * @param publicUrl - The public URL of the file to download
+   * @returns A Readable stream of the file
+   */
+  async downloadFromS3AsStream (publicUrl: string): Promise<Readable> {
+    const buffer = await this.downloadFromS3(publicUrl)
+    return this.bufferToStream(buffer.buffer, buffer.filename)
+  }
+
+  /**
+   * Convert a Buffer to a Readable stream
+   * 
+   * @param buffer - The buffer to convert
+   * @param filename - Optional filename to attach to the stream
+   * @returns A Readable stream
+   */
+  bufferToStream(buffer: Buffer, filename?: string): Readable {
+    const stream = new Readable()
+    stream.push(buffer)
+    stream.push(null)
+    // @ts-ignore - attach filename to stream for later use if needed
+    stream.path = filename
+    return stream
+  }
+
+  /**
+   * Extract the S3 key from a public URL
+   * 
+   * @param publicUrl - The public URL of the file
+   * @returns The S3 key
+   */
+  private extractS3KeyFromUrl (publicUrl: string): string {
+    const cloudfrontStaticUrl = this.blueprint.get<string>('aws.cloudfront.distStaticName', 'static')
+    return publicUrl.replace(`${cloudfrontStaticUrl}/`, '')
   }
 }

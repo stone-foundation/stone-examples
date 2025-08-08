@@ -3,18 +3,18 @@ import { ChatHeader } from "./ChatHeader"
 import { ChatMessages } from "./ChatMessages"
 import { MessageCircleMore } from "lucide-react"
 import { StoneContext } from "@stone-js/use-react"
-import React, { useContext, useState } from "react"
 import { useChat } from "../../context/ChatContext"
-import { ChatService } from "../../services/ChatService"
+import React, { useContext, useState } from "react"
+import { ChatMessageService } from "../../services/ChatMessageService"
 
 export const Chatbox: React.FC = () => {
   const { setMessages } = useChat()
   const [isClosed, setIsClosed] = useState(true)
   const container = useContext(StoneContext).container
-  const chatService = container.make<ChatService>(ChatService)
+  const chatMessageService = container.make<ChatMessageService>(ChatMessageService)
 
   const handleDeleteAll = () => {
-    chatService.deleteAll().then(() => {
+    chatMessageService.deleteAll().then(() => {
       setMessages([])
     })
   }
@@ -27,7 +27,7 @@ export const Chatbox: React.FC = () => {
       <MessageCircleMore size={24} />
     </button>
   ) : (
-    <div className="fixed bottom-1 right-4 flex flex-col w-full max-w-lg border rounded-lg bg-white shadow-lg overflow-hidden h-[700px]">
+    <div className="fixed inset-0 z-55 h-full w-full max-h-screen md:bottom-1 md:right-4 md:inset-auto md:h-[700px] md:w-full md:max-w-lg flex flex-col border rounded-none md:rounded-lg bg-white shadow-lg overflow-hidden">
       <ChatHeader title="Samba Chat" onClose={() => setIsClosed(true)} onClear={handleDeleteAll} />
       <ChatMessages />
       <ChatInput />

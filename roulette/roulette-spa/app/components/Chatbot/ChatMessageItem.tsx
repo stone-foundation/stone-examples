@@ -21,7 +21,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({ message }) => 
       <div
         className={clsx(
           "max-w-[75%] rounded-lg px-3 py-2 text-sm shadow flex flex-col gap-1",
-          isUser ? "bg-blue-500 text-white" : "bg-white border"
+          isUser ? "bg-blue-500 text-white" : "bg-gray-500 text-white"
         )}
       >
         {message.audioUrl ? (

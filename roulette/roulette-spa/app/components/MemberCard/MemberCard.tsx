@@ -1,24 +1,25 @@
 import { Color } from '../../constants'
 import { User } from '../../models/User'
 import { Logger } from '@stone-js/core'
+import { TeamMember } from '../../models/Team'
 import { JSX, useContext, useState } from 'react'
 import { TeamBadge } from '../TeamBadge/TeamBadge'
-import { UserService } from '../../services/UserService'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
+import { TeamMemberService } from '../../services/TeamMemberService'
 import { ReactIncomingEvent, StoneContext } from '@stone-js/use-react'
 
 export interface MemberCardProps {
-  member: User
+  member: TeamMember
 }
 
 export const MemberCard = ({ member }: MemberCardProps): JSX.Element => {
   const [showModal, setShowModal] = useState(false)
   const container = useContext(StoneContext).container
-  const userService = container.resolve<UserService>('userService')
+  const teamMemberService = container.resolve<TeamMemberService>(TeamMemberService)
   const currentUser = container.resolve<ReactIncomingEvent>('event').getUser<User>()
 
-  const promoteToCaptain = (member: User) => {
-    userService.toggleCaptainGrade(member).catch((error) => {
+  const promoteToCaptain = (member: TeamMember) => {
+    teamMemberService.updateRole(member.uuid, 'captain').catch((error) => {
       Logger.error('Error promoting member to captain:', error)
     })
   }
@@ -26,9 +27,9 @@ export const MemberCard = ({ member }: MemberCardProps): JSX.Element => {
   return (
     <div className='bg-[#123840] border border-neutral-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md'>
       <div>
-        <p className='text-lg font-semibold text-white'>{member.fullname ?? member.username}</p>
-        {member.fullname  && <p className='text-sm text-white/80'>@{member.username}</p>}
-        {member.phone && <p className='text-sm text-white/80'>#{member.phone}</p>}
+        <p className='text-lg font-semibold text-white'>{member.user?.fullname ?? member.user?.username}</p>
+        {member.user?.fullname  && <p className='text-sm text-white/80'>@{member.user?.username}</p>}
+        {member.user?.phone && <p className='text-sm text-white/80'>#{member.user?.phone}</p>}
         <p className={`text-xs font-medium mt-1 ${member.isActive ? 'text-green-400' : 'text-yellow-500'}`}>
           {member.isActive ? 'Actif' : "En attente d’activation"}
         </p>

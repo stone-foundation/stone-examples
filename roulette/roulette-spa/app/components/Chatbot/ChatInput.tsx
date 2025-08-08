@@ -78,8 +78,8 @@ export const ChatInput: React.FC = () => {
         </div>
       ) : (
         <>
-          <input
-            className="flex-1 border rounded px-3 py-2 text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <textarea
+            className="flex-1 border rounded resize-none px-3 py-2 text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Écrire un message..."
             value={text}
             onChange={e => setText(e.target.value)}

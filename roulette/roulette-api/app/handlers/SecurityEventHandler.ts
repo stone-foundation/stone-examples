@@ -1,5 +1,6 @@
 import { isEmpty } from '@stone-js/core'
 import { EventHandler, Post } from '@stone-js/router'
+import { MissionService } from '../services/MissionService'
 import { SecurityService } from '../services/SecurityService'
 import { BadRequestError, IncomingHttpEvent, NoContentHttpResponse } from '@stone-js/http-core'
 import { User, UserActivation, UserActivationRequest, UserChangePassword, UserCredentials, UserRegister, UserToken } from '../models/User'
@@ -8,6 +9,7 @@ import { User, UserActivation, UserActivationRequest, UserChangePassword, UserCr
  * Security Event Handler Options
 */
 export interface SecurityEventHandlerOptions {
+  missionService: MissionService
   securityService: SecurityService
 }
 
@@ -16,6 +18,7 @@ export interface SecurityEventHandlerOptions {
 */
 @EventHandler('/', { name: 'security' })
 export class SecurityEventHandler {
+  private readonly missionService: MissionService
   private readonly securityService: SecurityService
 
   /**
@@ -23,7 +26,8 @@ export class SecurityEventHandler {
    *
    * @param securityService
    */
-  constructor ({ securityService }: SecurityEventHandlerOptions) {
+  constructor ({ securityService, missionService }: SecurityEventHandlerOptions) {
+    this.missionService = missionService
     this.securityService = securityService
   }
 
@@ -33,6 +37,7 @@ export class SecurityEventHandler {
    * @param event - IncomingHttpEvent
   */
   @Post('/make-admin')
+  @NoContentHttpResponse()
   async makeAdmin (_event: IncomingHttpEvent): Promise<void> {
     await this.securityService.createAdminUser()
   }
@@ -71,6 +76,7 @@ export class SecurityEventHandler {
    * @returns void
   */
   @Post('/logout', { name: 'logout', middleware: ['auth'] })
+  @NoContentHttpResponse()
   async logout (event: IncomingHttpEvent): Promise<void> {
     await this.securityService.logout(
       event.get<string>('Authorization', '').replace('Bearer ', '')
@@ -97,10 +103,20 @@ export class SecurityEventHandler {
    * @returns UserToken
   */
   @Post('/register', { name: 'register' })
+  @NoContentHttpResponse()
   async register (event: IncomingHttpEvent): Promise<void> {
-    await this.securityService.register(
-      event.getBody<UserRegister>({} as any)
-    )
+    const data = event.getBody<UserRegister>()
+
+    if (isEmpty(data) || isEmpty(data.phone) || isEmpty(data.mission) || isEmpty(data.fullname)) {
+      throw new BadRequestError('Phone, mission, and fullname are required')
+    }
+    
+    if (!await this.missionService.existsBy({ code: data.mission })) {
+      throw new BadRequestError(`Mission with code ${data.mission} not found`)
+    }
+
+    await this.securityService.register(data)
+    await this.securityService.requestActivation(data)
   }
 
   /**

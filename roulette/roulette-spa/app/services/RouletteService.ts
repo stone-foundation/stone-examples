@@ -1,6 +1,6 @@
 import { Service } from '@stone-js/core'
-import { SpinResult } from '../models/Roulette'
 import { RouletteClient } from '../clients/RouletteClient'
+import { SpinPayload, SpinResult } from '../models/Roulette'
 
 /**
  * Roulette Service Options
@@ -28,7 +28,7 @@ export class RouletteService {
    *
    * @returns The color of the roulette
    */
-  async spin (): Promise<SpinResult> {
-    return await this.client.spin()
+  async spin (data: SpinPayload): Promise<SpinResult> {
+    return await this.client.spin(data)
   }
 }

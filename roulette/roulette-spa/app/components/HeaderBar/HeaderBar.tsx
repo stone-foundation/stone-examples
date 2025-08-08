@@ -35,7 +35,7 @@ export const HeaderBar: FC<HeaderBarProps> = ({ container }) => {
               Liste des soldats
             </StoneLink>
             <StoneLink
-              to='/spin'
+              to='/roulette'
               className='text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
             >
               Roulette
@@ -49,7 +49,7 @@ export const HeaderBar: FC<HeaderBarProps> = ({ container }) => {
           </nav>
         </div>
         <h1 className='text-center text-5xl uppercase font-bold tracking-wide mb-4'>
-          OPÉRATION ADRÉNALINE
+          TRALALA
         </h1>
       </header>
 

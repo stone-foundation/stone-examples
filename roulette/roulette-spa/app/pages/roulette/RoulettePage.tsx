@@ -3,33 +3,37 @@ import { IBlueprint } from '@stone-js/core'
 import { TeamService } from '../../services/TeamService'
 import { Roulette } from '../../components/Roulette/Roulette'
 import { RouletteService } from '../../services/RouletteService'
-import { Page, ReactIncomingEvent, IPage, HeadContext } from '@stone-js/use-react'
+import { TeamMemberService } from '../../services/TeamMemberService'
+import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
 
 /**
- * Spin Page options.
+ * Roulette Page options.
  */
-interface SpinPageOptions {
+interface RoulettePageOptions {
   blueprint: IBlueprint
   teamService: TeamService
   rouletteService: RouletteService
+  teamMemberService: TeamMemberService
 }
 
 /**
- * Spin Page component.
+ * Roulette Page component.
  */
-@Page('/spin', { layout: 'private-default', middleware: ['auth'] })
-export class SpinPage implements IPage<ReactIncomingEvent> {
+@Page('/roulette', { layout: 'header', middleware: ['auth-mission'] })
+export class RoulettePage implements IPage<ReactIncomingEvent> {
   private readonly blueprint: IBlueprint
   private readonly teamService: TeamService
   private readonly rouletteService: RouletteService
+  private readonly teamMemberService: TeamMemberService
 
   /**
-   * Create a new Login Page component.
+   * Create a new Roulette Page component.
    */
-  constructor ({ blueprint, teamService, rouletteService }: SpinPageOptions) {
+  constructor ({ blueprint, teamService, rouletteService, teamMemberService }: RoulettePageOptions) {
     this.blueprint = blueprint
     this.teamService = teamService
     this.rouletteService = rouletteService
+    this.teamMemberService = teamMemberService
   }
 
   /**
@@ -49,10 +53,16 @@ export class SpinPage implements IPage<ReactIncomingEvent> {
    *
    * @returns The rendered component.
    */
-  render (): JSX.Element {
+  render ({ event }: PageRenderContext): JSX.Element {
     return (
       <div className='flex flex-col sm:flex-row w-full max-w-7xl mx-auto gap-6 mt-10 px-4 transition-all duration-500 ease-in-out'>
-        <Roulette blueprint={this.blueprint} teamService={this.teamService} rouletteService={this.rouletteService} />
+        <Roulette
+          event={event}
+          blueprint={this.blueprint}
+          teamService={this.teamService}
+          rouletteService={this.rouletteService}
+          teamMemberService={this.teamMemberService}
+        />
       </div>
     )
   }

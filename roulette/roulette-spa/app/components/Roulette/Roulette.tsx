@@ -1,57 +1,70 @@
+import { User } from '../../models/User'
+import { Mission } from '../../models/Mission'
 import { AlertBox } from '../AlertBox/AlertBox'
 import { JSX, useEffect, useState } from 'react'
 import { TeamPanel } from '../TeamPanel/TeamPanel'
-import { SpinResult } from '../../models/Roulette'
-import { Team, TeamStat } from '../../models/Team'
 import { IBlueprint, Logger } from '@stone-js/core'
+import { Team, TeamMember } from '../../models/Team'
 import { TeamService } from '../../services/TeamService'
+import { ReactIncomingEvent } from '@stone-js/use-react'
 import { RouletteWheel } from '../RouletteWheel/RouletteWheel'
+import { SpinPayload, SpinResult } from '../../models/Roulette'
 import { RouletteService } from '../../services/RouletteService'
 import { TeamStatsPanel } from '../TeamStatsPanel/TeamStatsPanel'
 import { TeamPanelSkeleton } from '../TeamPanel/TeamPanelSkeleton'
+import { TeamMemberService } from '../../services/TeamMemberService'
 import { TeamStatsPanelSkeleton } from '../TeamStatsPanel/TeamStatsPanelSkeleton'
 
 interface RouletteProps {
   blueprint: IBlueprint
   teamService: TeamService
+  event: ReactIncomingEvent
   rouletteService: RouletteService
+  teamMemberService: TeamMemberService
 }
 
-export const Roulette = ({ blueprint, teamService, rouletteService }: RouletteProps): JSX.Element => {
-  const [stats, setStats] = useState<TeamStat[]>([])
-  const [team, setTeam] = useState<Team | undefined>()
+export const Roulette = ({ blueprint, teamService, rouletteService, teamMemberService, event }: RouletteProps): JSX.Element => {
+  const user = event.getUser<User>()
+  const [teams, setTeams] = useState<Team[]>([])
   const [loadingTeam, setLoadingTeam] = useState(true)
-  const [loadingStats, setLoadingStats] = useState(true)
+  const [loadingTeams, setLoadingTeams] = useState(true)
   const [error, setError] = useState<string | undefined>()
+  const [currentTeam, setCurrentTeam] = useState<Team | undefined>()
   const spinningTime = blueprint.get('app.roulette.spinningTime', 10000)
+  const missionUuid = event.cookies.getValue<Mission>('mission')?.uuid ?? ''
+  const [currentTeamMembers, setCurrentTeamMembers] = useState<TeamMember[]>([])
+  const [currentTeamMember, setCurrentTeamMember] = useState<TeamMember | undefined>()
 
   useEffect(() => {
     let cancelled = false
 
-    setLoadingStats(true)
+    setLoadingTeams(true)
 
-    // setInterval(() => {
-    //   autoUpdateTeams().catch(_e => {})
-    // }, 15000)
+    setCurrentTeamMember(event.cookies.getValue<TeamMember>('teamMember'))
 
     teamService
-      .results()
+      .list({ missionUuid }, 50)
       .then(v => {
-        if (!cancelled) setStats(v)
+        if (!cancelled) {
+          setTeams(v.items)
+          setCurrentTeam(v.items.find(t => t.uuid === currentTeamMember?.teamUuid))
+        }
       })
       .catch(e => {
         if (!cancelled) setError(e.response?.data?.errors?.message ?? e.message)
       })
       .finally(() => {
-        if (!cancelled) setTimeout(() => setLoadingStats(false), 500)
+        if (!cancelled) setTimeout(() => setLoadingTeams(false), 500)
       })
 
     setLoadingTeam(true)
 
-    teamService
-      .currentTeam()
+    teamMemberService
+      .listByCurrentUser(missionUuid, 50)
       .then(v => {
-        if (!cancelled) setTeam(v)
+        if (!cancelled) {
+          setCurrentTeamMembers(v.items)
+        }
       })
       .catch(e => {
         if (!cancelled) Logger.error(e.response?.data?.errors?.message ?? e.message)
@@ -65,34 +78,27 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
     }
   }, [teamService])
 
-  const spinRoulette = async (): Promise<{ result: SpinResult, stats: TeamStat[], team: Team }> => {
-    const result = await rouletteService.spin()
-    const team = await teamService.currentTeam()
-    const stats = await teamService.results()
+  const spinRoulette = async (data: SpinPayload): Promise<{ result: SpinResult, teams: Team[], teamMembers: TeamMember[] }> => {
+    const result = await rouletteService.spin(data)
+    const teams = await teamService.list({ missionUuid }, 50).then(v => v.items)
+    const teamMembers = await teamMemberService.listByCurrentUser(missionUuid, 50).then(v => v.items)
 
-    return { result, stats, team }
+    return { result, teams, teamMembers }
   }
 
-  const autoUpdateTeams = async (): Promise<void> => {
-    try {
-      const stats = await teamService.results()
-      setStats(stats)
-    } catch (_e: any) {}
-    try {
-      const team = await teamService.currentTeam()
-      setTeam(team)
-    } catch (_e: any) {}
-  }
-
-  const onSpin = async (): Promise<SpinResult> => {
+  const onSpin = async (data: SpinPayload): Promise<SpinResult> => {
     setLoadingTeam(true)
 
     return await new Promise<SpinResult>((resolve, reject) => {
-      spinRoulette()
+      spinRoulette(data)
         .then(v => {
+          setCurrentTeamMember(v.teamMembers.find(w => w.userUuid === user?.uuid))
+          event.cookies.add('teamMember', currentTeamMember, { path: '/' })
+          
           setTimeout(() => {
-            setTeam(v.team)
-            setStats(v.stats)
+            setTeams(v.teams)
+            setCurrentTeamMembers(v.teamMembers)
+            setCurrentTeam(v.teams.find(t => t.uuid === currentTeamMember?.teamUuid))
             resolve(v.result)
           }, spinningTime)
         })
@@ -110,12 +116,12 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
   return (
     <>
       <div className='sm:w-64 transition-all duration-500'>
-        {loadingStats
+        {loadingTeams
           ? (
             <TeamStatsPanelSkeleton length={5} />
             )
           : (
-              stats.length > 0 && <TeamStatsPanel stats={stats} />
+              teams.length > 0 && <TeamStatsPanel stats={teams} />
             )}
       </div>
 
@@ -125,14 +131,14 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
             {error}
           </AlertBox>
         )}
-        {(team !== undefined) && (
+        {(currentTeam !== undefined) && (
           <AlertBox variant='success' className='mb-10 text-center'>
             🎉 Felicitations Soldat! <br />
-            Vous avez été affecté(e) à l’unité <strong>{team.name}</strong>!
+            Vous avez été affecté(e) à l’unité <strong>{currentTeam.name}</strong>!
           </AlertBox>
         )}
         <div className='flex-1 flex justify-center items-start transition-all duration-500'>
-          <RouletteWheel onSpin={onSpin} />
+          <RouletteWheel onSpin={onSpin} missionUuid={missionUuid} memberName={currentTeamMember?.name} />
         </div>
       </div>
 
@@ -142,7 +148,7 @@ export const Roulette = ({ blueprint, teamService, rouletteService }: RoulettePr
             <TeamPanelSkeleton length={5} />
             )
           : (
-              (team != null) && <TeamPanel team={team} />
+              (currentTeam != null) && <TeamPanel team={currentTeam} members={currentTeamMembers} />
             )}
       </div>
     </>

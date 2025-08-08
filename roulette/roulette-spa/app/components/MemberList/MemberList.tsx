@@ -1,13 +1,13 @@
-import { User } from '../../models/User'
 import { isEmpty } from '@stone-js/core'
 import { useState, useMemo, JSX } from 'react'
+import { TeamMember } from '../../models/Team'
 import { AlertBox } from '../AlertBox/AlertBox'
 import { FilterTabs } from '../FilterTabs/FilterTabs'
 import { MemberCard } from '../MemberCard/MemberCard'
 
 export interface MemberListProps {
-  members: User[]
   isPage?: boolean
+  members: TeamMember[]
 }
 
 export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Element => {
@@ -37,7 +37,7 @@ export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Ele
         {filteredMembers.length > 0
           ? (
               filteredMembers.map((member, i) => (
-                <MemberCard key={`${member.username}-${i}`} member={member} />
+                <MemberCard key={`${member.name}-${i}`} member={member} />
               ))
             )
           : (

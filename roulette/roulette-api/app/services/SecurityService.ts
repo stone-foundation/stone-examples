@@ -106,7 +106,7 @@ export class SecurityService {
     const otpCount = userModel?.otpCount ?? 0
     const status = userModel.isActive && isNotEmpty(userModel.password) ? 'active' : 'inactive'
 
-    if (userModel.isActive) {
+    if (status === 'active') {
       return { status }
     }
 
@@ -329,6 +329,7 @@ export class SecurityService {
     }
 
     payload.phone = normalizePhone(payload.phone, true)
+    payload.username ??= payload.phone
 
     const user = await this.userRepository.findBy({ phone: payload.phone })
     const user2 = await this.userRepository.findBy({ username: payload.username })
@@ -341,7 +342,7 @@ export class SecurityService {
       throw new BadRequestError(`The user with username (${payload.username}) already exists`)
     }
 
-    const password = await this.hashPassword(payload.password)
+    const password = isEmpty(payload.password) ? undefined : await this.hashPassword(payload.password)
     const userModel = {
       password,
       isActive: true,

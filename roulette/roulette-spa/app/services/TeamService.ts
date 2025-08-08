@@ -1,6 +1,7 @@
+import { Team } from '../models/Team'
 import { MediaService } from './MediaService'
-import { Team, TeamStat } from '../models/Team'
 import { TeamClient } from '../clients/TeamClient'
+import { ListMetadataOptions } from '../models/App'
 import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 
 /**
@@ -40,11 +41,11 @@ export class TeamService {
   }
 
   /**
-   * List all posts
+   * List all teams
    */
-  async list (limit?: number, page?: string | number): Promise<Team[]> {
-    return await this.client.list(limit, page)
-  }
+  async list (options: Partial<Team> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Team>> {
+      return await this.client.list(options, limit, page)
+    }
 
   /**
    * Find a team
@@ -57,21 +58,12 @@ export class TeamService {
   }
 
   /**
-   * Results of the team
-   *
-   * @returns The results of the team
-   */
-  async results (): Promise<TeamStat[]> {
-    return await this.client.results()
-  }
-
-  /**
-   * Current team
+   * Get my team
    *
    * @returns The current team
    */
-  async currentTeam (): Promise<Team> {
-    return await this.client.currentTeam()
+  async getMyTeam (): Promise<Team> {
+    return await this.client.getMyTeam()
   }
 
   /**

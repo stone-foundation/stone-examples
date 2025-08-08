@@ -68,6 +68,7 @@ export interface UserCredentials {
 */
 export interface UserRegister {
   phone: string
+  mission: string
   fullname: string
   username: string
   password: string
@@ -101,7 +102,6 @@ export interface UserTokenPayload extends jwt.JwtPayload {
 
 export type UserHistoryType = 'user' | 'team' | 'post' | 'badge' | 'mission' | 'activity' | 'team_member' | 'post_comment' | 'badge_assignment' | 'activity_assignment'
 export interface UserHistoryModel {
-  id: number
   uuid: string
   itemUuid: string
   createdAt: number

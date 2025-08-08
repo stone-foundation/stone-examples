@@ -1,30 +1,30 @@
 import { MediaService } from './MediaService'
 import { ChatMessage } from '../models/Chatbot'
-import { ChatClient } from '../clients/ChatClient'
 import { ListMetadataOptions } from '../models/App'
 import { isNotEmpty, Service } from '@stone-js/core'
+import { ChatMessageClient } from '../clients/ChatMessageClient'
 
 /**
- * Chat Service Options
+ * Chat Message Service Options
  */
-export interface ChatServiceOptions {
-  chatClient: ChatClient
+export interface ChatMessageServiceOptions {
   mediaService: MediaService
+  chatMessageClient: ChatMessageClient
 }
 
 /**
- * Chat Service
+ * Chat Message Service
  */
-@Service({ alias: 'chatService' })
-export class ChatService {
-  private readonly client: ChatClient
+@Service({ alias: 'chatMessageService' })
+export class ChatMessageService {
+  private readonly client: ChatMessageClient
   private readonly mediaService: MediaService
   
   /**
-   * Create a new Chat Service
+   * Create a new Chat Message Service
    */
-  constructor ({ chatClient, mediaService }: ChatServiceOptions) {
-    this.client = chatClient
+  constructor ({ chatMessageClient, mediaService }: ChatMessageServiceOptions) {
+    this.client = chatMessageClient
     this.mediaService = mediaService
   }
 

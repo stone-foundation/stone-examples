@@ -139,7 +139,6 @@ export class UserHistoryRepository implements IUserHistoryRepository {
 
   async makeHistoryEntry (userHistory: Partial<UserHistoryModel>, author: User): Promise<string | undefined> {
     return await this.create({
-      id: 0,
       itemUuid: '',
       type: 'user',
       authorUuid: '',

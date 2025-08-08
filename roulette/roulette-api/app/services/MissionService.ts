@@ -86,6 +86,17 @@ export class MissionService {
   }
 
   /**
+   * Check if a mission exists by conditions
+   *
+   * @param conditions - The conditions to check
+   * @returns True if the mission exists, false otherwise
+   */
+  async existsBy (conditions: Record<string, any>): Promise<boolean> {
+    const missionModel = await this.missionRepository.findBy(conditions)
+    return isNotEmpty<MissionModel>(missionModel)
+  }
+
+  /**
    * Find active missions (missions that haven't ended yet)
    *
    * @param limit - Maximum number of results

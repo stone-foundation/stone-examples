@@ -1,28 +1,30 @@
 import { JSX } from 'react'
-import { User } from '../../models/User'
-import { UserService } from '../../services/UserService'
+import { Mission } from '../../models/Mission'
+import { TeamMember } from '../../models/Team'
+import { ListMetadataOptions } from '../../models/App'
 import { MemberList } from '../../components/MemberList/MemberList'
+import { TeamMemberService } from '../../services/TeamMemberService'
 import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
 
 /**
  * Members Page options.
  */
 interface MembersPageOptions {
-  userService: UserService
+  teamMemberService: TeamMemberService
 }
 
 /**
  * Members Page component.
  */
-@Page('/soldiers', { layout: 'private-default', middleware: ['auth'] })
+@Page('/members', { layout: 'header', middleware: ['auth-mission'] })
 export class MembersPage implements IPage<ReactIncomingEvent> {
-  private readonly userService: UserService
+  private readonly teamMemberService: TeamMemberService
 
   /**
    * Create a new Login Page component.
    */
-  constructor ({ userService }: MembersPageOptions) {
-    this.userService = userService
+  constructor ({ teamMemberService }: MembersPageOptions) {
+    this.teamMemberService = teamMemberService
   }
 
   /**
@@ -31,8 +33,9 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
    * @param event - The incoming event containing query parameters.
    * @returns A promise that resolves to an array of User objects.
    */
-  async handle (event: ReactIncomingEvent): Promise<User[]> {
-    return await this.userService.list(event.get('query.limit', 55))
+  async handle (event: ReactIncomingEvent): Promise<ListMetadataOptions<TeamMember>> {
+    const missionUuid = event.cookies.getValue<Mission>('mission')?.uuid ?? ''
+    return await this.teamMemberService.list({ missionUuid }, event.get('query.limit', 55), event.get('query.page'))
   }
 
   /**
@@ -43,7 +46,7 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
   head (): HeadContext {
     return {
       title: 'Tralala - Membres',
-      description: 'Liste des membres de votre unité. Découvrez leurs rôles et statistiques.'
+      description: 'Liste des membres de votre équipe. Découvrez leurs rôles et statistiques.'
     }
   }
 
@@ -52,10 +55,10 @@ export class MembersPage implements IPage<ReactIncomingEvent> {
    *
    * @returns The rendered component.
    */
-  render ({ data = [] }: PageRenderContext<User[]>): JSX.Element {
+  render ({ data }: PageRenderContext<ListMetadataOptions<TeamMember>>): JSX.Element {
     return (
       <div className='w-full max-w-7xl mx-auto px-4 mt-6'>
-        <MemberList members={data} />
+        <MemberList members={data?.items ?? []} />
       </div>
     )
   }

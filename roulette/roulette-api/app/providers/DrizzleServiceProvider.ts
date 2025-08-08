@@ -16,9 +16,13 @@ import { UserRepository } from '../repositories/drizzle/UserRepository'
 import { BadgeRepository } from '../repositories/drizzle/BadgeRepository'
 import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
 import { SessionRepository } from '../repositories/drizzle/SessionRepository'
+import { MissionRepository } from '../repositories/drizzle/MissionRepository'
 import { MetadataRepository } from '../repositories/drizzle/MetadataRepository'
 import { ActivityRepository } from '../repositories/drizzle/ActivityRepository'
+import { TeamMemberRepository } from '../repositories/drizzle/TeamMemberRepository'
+import { UserHistoryRepository } from '../repositories/drizzle/UserHistoryRepository'
 import { PostCommentRepository } from '../repositories/drizzle/PostCommentRepository'
+import { ChatMessageRepository } from '../repositories/drizzle/ChatMessageRepository'
 import { BadgeAssignmentRepository } from '../repositories/drizzle/BadgeAssignmentRepository'
 import { ActivityAssignmentRepository } from '../repositories/drizzle/ActivityAssignmentRepository'
 
@@ -93,9 +97,13 @@ export class DrizzleServiceProvider implements IServiceProvider {
       .autoBinding(TeamRepository, TeamRepository, true, ['teamRepository'])
       .autoBinding(PostRepository, PostRepository, true, ['postRepository'])
       .autoBinding(BadgeRepository, BadgeRepository, true, ['badgeRepository'])
+      .autoBinding(MissionRepository, MissionRepository, true, ['missionRepository'])
       .autoBinding(SessionRepository, SessionRepository, true, ['sessionRepository'])
       .autoBinding(MetadataRepository, MetadataRepository, true, ['metadataRepository'])
       .autoBinding(ActivityRepository, ActivityRepository, true, ['activityRepository'])
+      .autoBinding(TeamMemberRepository, TeamMemberRepository, true, ['teamMemberRepository'])
+      .autoBinding(UserHistoryRepository, UserHistoryRepository, true, ['userHistoryRepository'])
+      .autoBinding(ChatMessageRepository, ChatMessageRepository, true, ['chatMessageRepository'])
       .autoBinding(PostCommentRepository, PostCommentRepository, true, ['postCommentRepository'])
       .autoBinding(BadgeAssignmentRepository, BadgeAssignmentRepository, true, ['badgeAssignmentRepository'])
       .autoBinding(ActivityAssignmentRepository, ActivityAssignmentRepository, true, ['activityAssignmentRepository'])

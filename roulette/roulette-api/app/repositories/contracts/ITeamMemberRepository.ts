@@ -24,12 +24,12 @@ export interface ITeamMemberRepository {
   listBy: (conditions: Partial<TeamMemberModel>, limit?: number, page?: number | string) => Promise<ListMetadataOptions<TeamMemberModel>>
 
   /**
-   * Find a team member model by its ID
+   * Find a team member model by its UUID
    *
-   * @param id - TeamMember ID
+   * @param uuid - TeamMember UUID
    * @returns The team member model or undefined
    */
-  findById: (id: number) => Promise<TeamMemberModel | undefined>
+  findByUuid: (uuid: string) => Promise<TeamMemberModel | undefined>
 
   /**
    * Find a team member model by conditions

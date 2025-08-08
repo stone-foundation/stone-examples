@@ -57,7 +57,7 @@ export const SingleTeamStatsPanel: React.FC<SingleTeamStatsPanelProps> = ({ team
       </section>
 
       {/* Événements majeurs */}
-      {Boolean(currentTeam?.countActivity) && <section>
+      {Boolean(currentTeam?.countActivities) && <section>
         <h3 className="text-sm text-white/60 uppercase font-semibold mb-2">Activités majeures</h3>
         <div className="space-y-2">
           {currentTeam?.activities?.slice(0, 3).map(activity => (

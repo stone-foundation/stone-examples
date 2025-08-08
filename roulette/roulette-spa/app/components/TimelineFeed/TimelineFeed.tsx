@@ -64,7 +64,7 @@ export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => 
           Aucune publication pour le moment.
           <br />
           <br />
-          Soiyez le premier à publier !
+          Soyez le premier à publier !
         </div>
       )}
     </InfiniteScroll>

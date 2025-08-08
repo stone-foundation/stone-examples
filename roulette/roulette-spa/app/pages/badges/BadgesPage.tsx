@@ -30,7 +30,7 @@ interface HandleResponse {
 /**
  * Badges Page component.
  */
-@Page('/badges', { layout: 'private-default', middleware: ['auth'] })
+@Page('/badges', { layout: 'header', middleware: ['auth-mission'] })
 export class BadgesPage implements IPage<ReactIncomingEvent> {
   private readonly teamService: TeamService
   private readonly badgeService: BadgeService
@@ -76,7 +76,7 @@ export class BadgesPage implements IPage<ReactIncomingEvent> {
   head (): HeadContext {
     return {
       title: 'Tralala - Badges',
-      description: 'Gerez les badges de l\'opération Adrénaline',
+      description: 'Gérez les badges',
     }
   }
 

@@ -35,7 +35,7 @@ export class NotAuthMiddleware implements IMiddleware<ReactIncomingEvent, ReactO
     next: NextMiddleware<ReactIncomingEvent, ReactOutgoingResponse>
   ): Promise<ReactOutgoingResponse> {
     if (this.securityService.isAuthenticated()) {
-      return reactRedirectResponse({ url: '/spin' })
+      return reactRedirectResponse({ url: '/missions' })
     }
 
     return await next(event)

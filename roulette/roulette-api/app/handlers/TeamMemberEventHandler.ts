@@ -32,7 +32,7 @@ export class TeamMemberEventHandler {
   /**
    * List all team members (admin only)
    */
-  @Get('/', { name: 'list', middleware: ['admin'] })
+  @Get('/', { name: 'list' })
   @JsonHttpResponse(200)
   async list (event: IncomingHttpEvent): Promise<ListMetadataOptions<TeamMember>> {
     const role = event.get<TeamMemberRole>('role')
@@ -113,6 +113,7 @@ export class TeamMemberEventHandler {
     }
 
     const uuid = await this.teamMemberService.addMember(
+      data.name || 'Unnamed',
       data.userUuid,
       data.teamUuid,
       data.missionUuid,

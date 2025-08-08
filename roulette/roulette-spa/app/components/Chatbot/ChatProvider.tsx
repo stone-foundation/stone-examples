@@ -1,11 +1,11 @@
 import { Chatbox } from "./Chatbox"
 import { ChatMessage } from "../../models/Chatbot"
 import { ChatContext } from "../../context/ChatContext"
-import { ChatService } from "../../services/ChatService"
 import { useAudioRecorder } from "../../hooks/useAudioRecorder"
 import { useState, useCallback, useMemo, useEffect } from "react"
 import { EventEmitter, IContainer, isEmpty } from "@stone-js/core"
 import { NotificationEvent } from "../../events/NotificationEvent"
+import { ChatMessageService } from "../../services/ChatMessageService"
 
 export interface ChatProviderProps {
   container: IContainer
@@ -15,9 +15,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
   const [isTyping, setIsTyping] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const { isRecording, startRecording, stopRecording } = useAudioRecorder()
-  
-  const chatService = container.make<ChatService>(ChatService)
+
   const eventEmitter = container.make<EventEmitter>(EventEmitter)
+  const chatMessageService = container.make<ChatMessageService>(ChatMessageService)
 
   const sendMessage = useCallback(async (content: string) => {
     if (isEmpty(content)) return
@@ -30,7 +30,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
     }
     setMessages(prev => [...prev, newMessage])
 
-    await chatService.create({ content })
+    await chatMessageService.create({ content })
   }, [])
 
   const sendAudio = useCallback(async (file: File) => {
@@ -45,7 +45,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
     
     setMessages(prev => [...prev, newMessage])
 
-    await chatService.create({}, file)
+    await chatMessageService.create({}, file)
   }, [])
 
   const contextValue = useMemo(() => ({
@@ -70,7 +70,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
       }
     }
 
-    chatService.list(100).then(initialMessages => {
+    chatMessageService.list(100).then(initialMessages => {
       setMessages(initialMessages.items)
     })
 

@@ -135,6 +135,16 @@ export class ChatMessageService {
   }
 
   /**
+   * Get all memories from chat messages
+   *
+   * @returns An array of memories from chat messages
+   */
+  async getAssistantMemories (): Promise<string[]> {
+    const messages = await this.chatMessageRepository.listBy({ role: 'assistant' }, 1000)
+    return messages.items.map(m => m.memory).filter(c => isNotEmpty<string>(c))
+  }
+
+  /**
    * Convert ChatMessageModel to ChatMessage
    *
    * @param chatMessageModel - The chat message model to convert

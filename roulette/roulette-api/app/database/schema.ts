@@ -2,7 +2,7 @@ import { sqliteTable, integer, text, numeric } from 'drizzle-orm/sqlite-core'
 
 // Users table
 export const users = sqliteTable('users', {
-  id: integer('id').primaryKey(), // Optional internal ID, not part of UserModel
+  id: integer('id').primaryKey({ autoIncrement: true }), // Optional internal ID, not part of UserModel
   uuid: text('uuid').unique().notNull(), // external UUID
   phone: text('phone').unique().notNull(),
   username: text('username').unique().notNull(),
@@ -21,7 +21,7 @@ export const users = sqliteTable('users', {
 
 // Sessions table
 export const sessions = sqliteTable('sessions', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   ip: text('ip').notNull(),
   userAgent: text('user_agent'),
@@ -34,7 +34,7 @@ export const sessions = sqliteTable('sessions', {
 
 // Teams table
 export const teams = sqliteTable('teams', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   name: text('name').unique().notNull(),
   rank: integer('rank').notNull().default(0),
@@ -60,7 +60,7 @@ export const teams = sqliteTable('teams', {
 
 // TeamMembers table
 export const teamMembers = sqliteTable('team_members', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   userUuid: text('user_uuid').notNull().references(() => users.uuid, { onDelete: 'cascade' }),
   teamUuid: text('team_uuid').notNull().references(() => teams.uuid, { onDelete: 'cascade' }),
@@ -76,7 +76,7 @@ export const teamMembers = sqliteTable('team_members', {
 
 // Spins table
 export const spins = sqliteTable('spins', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   value: text('value').notNull(),
   color: text('color'),
@@ -96,7 +96,7 @@ export const spins = sqliteTable('spins', {
 })
 
 export const badges = sqliteTable('badges', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   name: text('name').notNull(),
   color: text('color').notNull(),
@@ -114,7 +114,7 @@ export const badges = sqliteTable('badges', {
 })
 
 export const badgeAssignments = sqliteTable('badge_assignments', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   comment: text('comment'),
   revokedAt: integer('revoked_at'),
@@ -130,7 +130,7 @@ export const badgeAssignments = sqliteTable('badge_assignments', {
 })
 
 export const activities = sqliteTable('activities', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
@@ -154,7 +154,7 @@ export const activities = sqliteTable('activities', {
 })
 
 export const activityAssignments = sqliteTable('activity_assignments', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   activityUuid: text('activity_uuid').notNull().references(() => activities.uuid, { onDelete: 'cascade' }),
 
@@ -195,7 +195,7 @@ export const activityAssignments = sqliteTable('activity_assignments', {
 })
 
 export const posts = sqliteTable('posts', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   type: text('type', { enum: ['text', 'colored', 'image', 'activityAssignment', 'team', 'member', 'mission'] }).notNull(),
   content: text('content'),
@@ -219,7 +219,7 @@ export const posts = sqliteTable('posts', {
 })
 
 export const postComments = sqliteTable('postComments', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   content: text('content').notNull(),
   postUuid: text('postUuid').notNull(),
@@ -233,11 +233,13 @@ export const postComments = sqliteTable('postComments', {
 })
 
 export const missions = sqliteTable('missions', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   code: text('code').notNull().unique(),
   name: text('name').notNull(),
   endDate: integer('end_date'),
+  location: text('location'),
+  openDate: integer('open_date'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
   imageUrl: text('image_url'),
@@ -247,9 +249,10 @@ export const missions = sqliteTable('missions', {
 })
 
 export const chatMessages = sqliteTable('chat_messages', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   content: text('content').notNull(),
+  memory: text('memory'),
   modelRef: text('model_ref'),
   audioUrl: text('audio_url'),
   createdAt: integer('created_at').notNull(),
@@ -259,7 +262,7 @@ export const chatMessages = sqliteTable('chat_messages', {
 })
 
 export const userHistories = sqliteTable('user_histories', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   uuid: text('uuid').unique().notNull(),
   itemUuid: text('item_uuid').notNull(),
   createdAt: integer('created_at').notNull(),
@@ -269,7 +272,7 @@ export const userHistories = sqliteTable('user_histories', {
 })
 
 export const metadata = sqliteTable('metadata', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   table: text('table').unique().notNull(), // ex: 'badges'
   total: integer('total').notNull().default(0),
   deleted: integer('deleted').notNull().default(0),

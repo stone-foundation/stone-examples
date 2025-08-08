@@ -33,7 +33,7 @@ interface HandleResponse {
 /**
  * Activity Page component.
  */
-@Page('/activities', { layout: 'private-default', middleware: ['auth'] })
+@Page('/activities', { layout: 'header', middleware: ['auth-mission'] })
 export class ActivityPage implements IPage<ReactIncomingEvent> {
   private readonly teamService: TeamService
   private readonly badgeService: BadgeService
@@ -68,7 +68,7 @@ export class ActivityPage implements IPage<ReactIncomingEvent> {
   head (): HeadContext {
     return {
       title: 'Tralala - Activités',
-      description: 'Gérez les activités de l\'opération Adrénaline',
+      description: 'Gérez les activités',
     }
   }
 

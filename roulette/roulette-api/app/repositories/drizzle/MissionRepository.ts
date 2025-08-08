@@ -104,8 +104,8 @@ export class MissionRepository implements IMissionRepository {
     const whereClauses = []
 
     if (conditions.uuid) whereClauses.push(eq(missions.uuid, conditions.uuid))
+    if (conditions.code) whereClauses.push(eq(missions.code, conditions.code))
     if (conditions.name) whereClauses.push(eq(missions.name, conditions.name))
-    if (conditions.visibility) whereClauses.push(eq(missions.visibility, conditions.visibility))
 
     if (whereClauses.length === 0) return undefined
 

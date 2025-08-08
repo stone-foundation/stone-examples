@@ -4,23 +4,27 @@ import confetti from 'canvas-confetti'
 import { playSound } from '../../utils'
 import moai from '../../../assets/img/moai.png'
 import tada from '../../../assets/audio/tada.mp3'
-import { SpinResult } from '../../models/Roulette'
-import playing from '../../../assets/audio/playing.mp3'
+import { FormInput } from '../FormInput/FormInput'
 import roulette from '../../../assets/img/roulette.png'
+import playing from '../../../assets/audio/playing.mp3'
+import { SpinPayload, SpinResult } from '../../models/Roulette'
 
 /**
  * Props for the RouletteWheel component.
  */
 export interface RouletteWheelProps {
-  onSpin: () => Promise<SpinResult>
+  memberName?: string
+  missionUuid: string
+  onSpin: (data: SpinPayload) => Promise<SpinResult>
 }
 
 /**
  * RouletteWheel component simulates a spinning roulette wheel that randomly selects a color.
  */
-export const RouletteWheel = ({ onSpin }: RouletteWheelProps): JSX.Element => {
+export const RouletteWheel = ({ onSpin, missionUuid, memberName }: RouletteWheelProps): JSX.Element => {
   const [spinClass, setSpinClass] = useState('')
   const [isDisabled, setIsDisabled] = useState(false)
+  const [playerName, setPlayerName] = useState(memberName ?? '')
 
   const fireConfetti = (): void => {
     confetti({
@@ -39,13 +43,14 @@ export const RouletteWheel = ({ onSpin }: RouletteWheelProps): JSX.Element => {
 
     playSound(playing)
 
-    onSpin()
+    onSpin({ name: playerName, missionUuid })
       .then((result) => {
         playSound(tada)
         fireConfetti()
         setSpinClass(`spin-to-${result.color}`)
       })
       .catch(() => setSpinClass(''))
+      .finally(() => setIsDisabled(false))
   }
 
   return (
@@ -60,12 +65,21 @@ export const RouletteWheel = ({ onSpin }: RouletteWheelProps): JSX.Element => {
         </div>
       </div>
 
+      <FormInput
+        type='text'
+        name='memberName'
+        placeholder='Choisissez un nom de joueur unique'
+        value={playerName}
+        className='mt-6 text-center w-64'
+        onChange={(e) => setPlayerName(e.target.value)}
+      />
+
       <button
         onClick={spin}
-        disabled={isDisabled}
+        disabled={isDisabled || playerName.trim().length < 2}
         className='mt-6 bg-orange-600 hover:bg-orange-700 text-white font-semibold px-6 py-2 rounded-md transition disabled:opacity-50'
       >
-        Lancer l'opération
+        Tralala
       </button>
     </div>
   )

@@ -4,12 +4,14 @@ import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
 import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 import { Team, TeamMember, TeamMemberModel } from '../models/Team'
+import { ITeamRepository } from '../repositories/contracts/ITeamRepository'
 import { ITeamMemberRepository } from '../repositories/contracts/ITeamMemberRepository'
 
 /**
  * TeamMember Service Options
  */
 export interface TeamMemberServiceOptions {
+  teamRepository: ITeamRepository
   teamMemberRepository: ITeamMemberRepository
 }
 
@@ -18,6 +20,7 @@ export interface TeamMemberServiceOptions {
  */
 @Service({ alias: 'teamMemberService' })
 export class TeamMemberService {
+  private readonly teamRepository: ITeamRepository
   private readonly teamMemberRepository: ITeamMemberRepository
 
   /**
@@ -35,7 +38,8 @@ export class TeamMemberService {
   /**
    * Create a new TeamMember Service
    */
-  constructor ({ teamMemberRepository }: TeamMemberServiceOptions) {
+  constructor ({ teamMemberRepository, teamRepository }: TeamMemberServiceOptions) {
+    this.teamRepository = teamRepository
     this.teamMemberRepository = teamMemberRepository
   }
 
@@ -83,6 +87,7 @@ export class TeamMemberService {
   /**
    * Add a user to a team
    *
+   * @param name - The name of the team member
    * @param userUuid - The uuid of the user to add
    * @param teamUuid - The uuid of the team
    * @param missionUuid - The uuid of the mission
@@ -90,16 +95,23 @@ export class TeamMemberService {
    * @param author - The user who is adding the member
    * @returns The id of the created team member
    */
-  async addMember (userUuid: string, teamUuid: string, missionUuid: string, role: 'member' | 'captain' | 'admin', author: User): Promise<string | undefined> {
-    return await this.teamMemberRepository.create({
+  async addMember (name: string, userUuid: string, teamUuid: string, missionUuid: string, role: 'member' | 'captain' | 'admin', author: User): Promise<string | undefined> {
+    const result = await this.teamMemberRepository.create({
+      name,
       role,
       userUuid,
       teamUuid,
       missionUuid,
+      isLate: false,
       isActive: true,
+      isPresent: false,
       uuid: randomUUID(),
       joinedAt: Date.now()
     }, author)
+
+    await this.updateTeamMemberCount(teamUuid, true, author)
+
+    return result
   }
 
   /**
@@ -116,6 +128,9 @@ export class TeamMemberService {
     }
 
     const teamMemberModel = await this.teamMemberRepository.update(teamMember, updateData, author)
+    
+    await this.updateTeamMemberCount(teamMember.teamUuid, false, author)
+
     if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
     throw new NotFoundError(`Team member with ID ${teamMember.uuid} not found`)
   }
@@ -187,7 +202,22 @@ export class TeamMemberService {
    * @param teamMemberModel - The team member model to convert
    * @returns The converted team member
    */
-  toTeamMember (teamMemberModel: TeamMemberModel, user: User, team: Team): TeamMember {
-    return { ...teamMemberModel, user, team }
+  toTeamMember (teamMemberModel: TeamMemberModel): TeamMember {
+    return teamMemberModel
+  }
+
+  /**
+   * Update the team member count for a team
+   *
+   * @param teamUuid - The UUID of the team
+   * @param increment - Whether to increment (true) or decrement (false) the count
+   * @param author - The user performing the update
+   */
+  private updateTeamMemberCount = async (teamUuid: string, increment: boolean, author: User): Promise<void> => {
+    const team = await this.teamRepository.findByUuid(teamUuid)
+    if (isNotEmpty<Team>(team)) {
+      const newCount = increment ? team.countMembers + 1 : Math.max(0, team.countMembers - 1)
+      await this.teamRepository.update(team, { countMembers: newCount }, author)
+    }
   }
 }

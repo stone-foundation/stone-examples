@@ -71,7 +71,6 @@ export class ActivityRepository implements IActivityRepository {
     const whereClauses = []
     if (conditions.uuid) whereClauses.push(eq(activities.uuid, conditions.uuid))
     if (conditions.name) whereClauses.push(eq(activities.name, conditions.name))
-    if (conditions.category) whereClauses.push(eq(activities.category, conditions.category))
     if (whereClauses.length === 0) return undefined
 
     return await this.database.select().from(activities).where(and(...whereClauses)).get()

@@ -60,6 +60,6 @@ export interface TeamMemberModel {
  * Team Member Interface
 */
 export interface TeamMember extends TeamMemberModel {
-  user: Partial<User>
-  team: Partial<Team>
+  user?: Partial<User>
+  team?: Partial<Team>
 }

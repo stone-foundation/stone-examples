@@ -1,5 +1,5 @@
 import { JSX } from 'react'
-import { Footer } from '../../components/Footer/Footer'
+import { Footer } from '../components/Footer/Footer'
 import { IPageLayout, PageLayoutRenderContext, PageLayout, StoneOutlet } from '@stone-js/use-react'
 
 /**

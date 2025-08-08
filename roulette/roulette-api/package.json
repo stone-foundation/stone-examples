@@ -35,6 +35,7 @@
     "@stone-js/node-cli-adapter": "^0.2.0",
     "@stone-js/node-http-adapter": "^0.2.0",
     "@stone-js/router": "^0.1.0",
+    "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.44.2",
     "jsonwebtoken": "^9.0.2",

@@ -1,5 +1,5 @@
 import { User } from '../models/User'
-import { Team } from '../models/Team'
+import { Team, TeamMemberModel } from '../models/Team'
 import { randomUUID } from 'node:crypto'
 import { SpinEvent } from '../events/SpinEvent'
 import { Spin, SpinModel } from '../models/Spin'
@@ -120,7 +120,7 @@ export class SpinService {
     const validTeams = teamModels.items.filter(v => v.totalMembers > v.countMembers)
 
     if (validTeams.length === 0) {
-      throw new NotFoundError('No team available to spin')
+      throw new NotFoundError('Aucune équipe disponible pour spinner')
     }
 
     const index = Math.floor(Math.random() * limit) % validTeams.length
@@ -171,6 +171,22 @@ export class SpinService {
    */
   async userAlreadySpinned (user: User, missionUuid: string): Promise<boolean> {
     return isNotEmpty<boolean>(await this.spinRepository.findBy({ userUuid: user.uuid, missionUuid }))
+  }
+
+  /**
+   * Check if the team member name already exists
+   *
+   * @param name - The name of the team member
+   * @param missionUuid - The mission uuid
+   * @returns True if the team member name already exists, false otherwise
+   */
+  async isTeamMemberNameAlreadyExists (name: string, missionUuid: string): Promise<boolean> {
+    try {
+      const teamMember = await this.teamMemberRepository.findBy({ name, missionUuid })
+      return isNotEmpty<TeamMemberModel>(teamMember)
+    } catch (error) {
+      return false
+    }
   }
 
   /**

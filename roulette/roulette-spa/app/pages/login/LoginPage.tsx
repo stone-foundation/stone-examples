@@ -28,6 +28,17 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
   }
 
   /**
+   * Handle the incoming event.
+   *
+   * @param event - The incoming event containing query parameters.
+   * @returns A promise that resolves to an array of Mission objects.
+   */
+  async handle (event: ReactIncomingEvent): Promise<void> {
+    event.cookies.remove('mission', { path: '/', secure: true, httpOnly: false })
+    event.cookies.remove('teamMember', { path: '/', secure: true, httpOnly: false })
+  }
+
+  /**
    * Define the head of the page.
    *
    * @returns The head object containing title and description.
@@ -48,7 +59,7 @@ export class LoginPage implements IPage<ReactIncomingEvent> {
     return (
       <LoginForm
         securityService={this.securityService}
-        onLogin={() => this.router.navigate('/')}
+        onLogin={() => this.router.navigate('/missions')}
         onActivate={() => this.router.navigate('/password')}
       />
     )

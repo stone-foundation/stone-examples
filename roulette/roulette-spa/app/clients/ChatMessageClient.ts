@@ -4,24 +4,24 @@ import { IBlueprint, Stone } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
 
 /**
- * Chat Client Options
+ * Chat Message Client Options
  */
-export interface ChatClientOptions {
+export interface ChatMessageClientOptions {
   blueprint: IBlueprint
   httpClient: AxiosClient
 }
 
 /**
- * Chat Client
+ * Chat Message Client
  */
-@Stone({ alias: 'chatClient' })
-export class ChatClient {
+@Stone({ alias: 'chatMessageClient' })
+export class ChatMessageClient {
   private readonly path: string
   private readonly client: AxiosClient
 
-  constructor ({ blueprint, httpClient }: ChatClientOptions) {
+  constructor ({ blueprint, httpClient }: ChatMessageClientOptions) {
     this.client = httpClient
-    this.path = blueprint.get('app.clients.chat.path', '/chats')
+    this.path = blueprint.get('app.clients.chatMessage.path', '/chat-messages')
   }
 
   /**
@@ -36,13 +36,13 @@ export class ChatClient {
    * Create a new chat
    */
   async create (data: Partial<ChatMessage>): Promise<{ uuid?: string }> {
-    return await this.client.post<{ uuid?: string }>(`${this.path}`, data)
+    return await this.client.post<{ uuid?: string }>(this.path, data)
   }
 
   /**
    * Delete all chats
    */
   async deleteAll (): Promise<void> {
-    await this.client.delete(`${this.path}/all`)
+    await this.client.delete(this.path)
   }
 }

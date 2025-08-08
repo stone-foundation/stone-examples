@@ -1,16 +1,17 @@
 import { JSX, useState } from 'react'
-import { Footer } from '../../components/Footer/Footer'
-import { AppHeader } from '../../components/AppHeader/AppHeader'
-import { ChatProvider } from '../../components/Chatbot/ChatProvider'
-import { SidebarMenu } from '../../components/SidebarMenu/SidebarMenu'
-import { SidebarDrawer } from '../../components/SidebarDrawer/SidebarDrawer'
-import { IPageLayout, PageLayoutRenderContext, PageLayout, StoneOutlet } from '@stone-js/use-react'
+import { User } from '../models/User'
+import { Footer } from '../components/Footer/Footer'
+import { AppHeader } from '../components/AppHeader/AppHeader'
+import { ChatProvider } from '../components/Chatbot/ChatProvider'
+import { SidebarMenu } from '../components/SidebarMenu/SidebarMenu'
+import { SidebarDrawer } from '../components/SidebarDrawer/SidebarDrawer'
+import { IPageLayout, PageLayoutRenderContext, PageLayout, StoneOutlet, ReactIncomingEvent } from '@stone-js/use-react'
 
 /**
- * App Page layout component.
+ * Sidebar Page layout component.
  */
-@PageLayout({ name: 'app' })
-export class AppLayout implements IPageLayout {
+@PageLayout({ name: 'sidebar' })
+export class SidebarLayout implements IPageLayout {
   /**
    * Render the component.
    *
@@ -18,6 +19,7 @@ export class AppLayout implements IPageLayout {
    */
   render ({ children, container }: PageLayoutRenderContext): JSX.Element {
     const [menuOpen, setMenuOpen] = useState(false)
+    const user = container.make<ReactIncomingEvent>('event').getUser<User>()
   
     return (
       <div className="min-h-screen bg-[#0b2e36] text-white">
@@ -37,7 +39,7 @@ export class AppLayout implements IPageLayout {
             {children}
           </StoneOutlet>
         </div>
-        <ChatProvider container={container} />
+        {user?.isAdmin && <ChatProvider container={container} />}
         <Footer />
       </div>
     )

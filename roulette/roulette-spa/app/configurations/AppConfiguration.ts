@@ -34,6 +34,9 @@ export class AppConfiguration implements IConfiguration {
         team: {
           path: getString('API_CLIENT_TEAM_PATH', '/teams')
         },
+        teamMember: {
+          path: getString('API_CLIENT_TEAM_MEMBER_PATH', '/team-members')
+        },
         security: {
           path: getString('API_CLIENT_SECURITY_PATH', '')
         },
@@ -58,8 +61,8 @@ export class AppConfiguration implements IConfiguration {
         mission: {
           path: getString('API_CLIENT_MISSION_PATH', '/missions')
         },
-        chat: {
-          path: getString('API_CLIENT_CHAT_PATH', '/chats')
+        chatMessage: {
+          path: getString('API_CLIENT_CHAT_MESSAGE_PATH', '/chat-messages')
         },
         post: {
           path: getString('API_CLIENT_POST_PATH', '/posts')

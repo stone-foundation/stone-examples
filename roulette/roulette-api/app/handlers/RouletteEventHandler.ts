@@ -61,11 +61,19 @@ export class RouletteEventHandler {
     const { name, missionUuid } = event.getBody<{ name?: string, missionUuid?: string }>({})
 
     if (isEmpty(user)) {
-      throw new BadRequestError('You must be logged in to spin')
+      throw new BadRequestError('Tu dois être connecté pour spinner')
     }
 
     if (isEmpty(missionUuid)) {
-      throw new BadRequestError('You must select a mission before spinning')
+      throw new BadRequestError('Tu dois sélectionner une mission avant de spinner')
+    }
+
+    if (isEmpty(name)) {
+      throw new BadRequestError('Tu dois fournir un nom avant de spinner')
+    }
+
+    if (await this.spinService.isTeamMemberNameAlreadyExists(name, missionUuid)) {
+      throw new BadRequestError(`Le nom "${name}" est déjà pris. Veuillez choisir un nom différent.`)
     }
 
     if (await this.spinService.userAlreadySpinned(user, missionUuid)) {

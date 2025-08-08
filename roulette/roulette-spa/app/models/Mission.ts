@@ -1,7 +1,10 @@
 export interface Mission {
   uuid: string
   name: string
+  code: string
   endDate?: number
+  location?: string
+  openDate?: number
   createdAt: number
   updatedAt: number
   imageUrl?: string

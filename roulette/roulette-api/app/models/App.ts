@@ -33,3 +33,27 @@ export interface ListMetadataOptions<T> {
   page?: number | string
   nextPage?: string | number
 }
+
+/**
+ * AI Analyzer response interface.
+ * Represents the response from an AI analyzer service.
+ */
+export interface AIAnalyzerResponse {
+  id: string
+  tools: string[]
+  memory: string
+  prompt: string,
+  summary?: string
+  cancelled?: boolean
+  requiresConfirmation?: boolean
+}
+
+/**
+ * AI Executor response interface.
+ * Represents the response from an AI executor service.
+ */
+export interface AIExecutorResponse {
+  id: string
+  memory: string
+  message: string
+}

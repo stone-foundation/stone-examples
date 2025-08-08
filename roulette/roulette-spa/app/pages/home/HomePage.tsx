@@ -17,7 +17,7 @@ interface HomePageOptions {
 /**
  * Home Page component.
  */
-@Page('/', { layout: 'app', middleware: ['auth'] })
+@Page('/', { layout: 'sidebar', middleware: ['auth-mission'] })
 export class HomePage implements IPage<ReactIncomingEvent> {
   private readonly postService: PostService
 

@@ -113,6 +113,7 @@ export const LoginForm = ({ onLogin, onActivate, securityService }: LoginFormPro
       {step === 'registration' && (
         <RegistrationStep
           loading={loading}
+          error={error}
           values={{ phone, mission, fullname }}
           onChange={(field, value) => {
             if (field === 'phone') setPhone(value)

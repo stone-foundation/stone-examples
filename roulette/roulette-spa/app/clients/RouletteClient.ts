@@ -1,6 +1,6 @@
 import { AxiosClient } from './AxiosClient'
-import { SpinResult } from '../models/Roulette'
 import { IBlueprint, Stone } from '@stone-js/core'
+import { SpinPayload, SpinResult } from '../models/Roulette'
 
 /**
  * Roulette Client Options
@@ -31,7 +31,7 @@ export class RouletteClient {
   /**
    * Spin the roulette
    */
-  async spin (): Promise<SpinResult> {
-    return await this.client.post(`${this.path}/spin`)
+  async spin (data: SpinPayload): Promise<SpinResult> {
+    return await this.client.post(`${this.path}/spin`, data)
   }
 }

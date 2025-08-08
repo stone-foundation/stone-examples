@@ -26,8 +26,8 @@ interface TeamPageOptions {
 @Page(
   '/page/:team@name/:tab?',
   {
-    layout: 'app',
-    middleware: ['auth'],
+    layout: 'sidebar',
+    middleware: ['auth-mission'],
     rules: { team: /\w{0,32}/ },
     bindings: { team: TeamService }
   })

@@ -93,11 +93,11 @@ export class TeamMemberRepository implements ITeamMemberRepository {
     }
   }
 
-  async findById (id: number): Promise<TeamMemberModel | undefined> {
+  async findByUuid (uuid: string): Promise<TeamMemberModel | undefined> {
     const result = await this.database
       .select()
       .from(teamMembers)
-      .where(eq(teamMembers.id, id))
+      .where(eq(teamMembers.uuid, uuid))
       .get()
 
     return result ?? undefined
@@ -108,6 +108,7 @@ export class TeamMemberRepository implements ITeamMemberRepository {
 
     if (conditions.uuid) whereClauses.push(eq(teamMembers.uuid, conditions.uuid))
     if (conditions.role) whereClauses.push(eq(teamMembers.role, conditions.role))
+    if (conditions.name) whereClauses.push(eq(teamMembers.name, conditions.name))
     if (conditions.userUuid) whereClauses.push(eq(teamMembers.userUuid, conditions.userUuid))
     if (conditions.teamUuid) whereClauses.push(eq(teamMembers.teamUuid, conditions.teamUuid))
     if (conditions.missionUuid) whereClauses.push(eq(teamMembers.missionUuid, conditions.missionUuid))

@@ -57,9 +57,7 @@ export class UserService {
    * List users by conditions with pagination
    */
   async listBy (conditions: Partial<UserModel>, limit: number = 10, page?: number | string, displaySensitiveData: boolean = false): Promise<ListMetadataOptions<User>> {
-    const result = await this.userRepository.listBy(conditions, limit, page)
-    const items = result.items.map(v => this.toUser(v, displaySensitiveData))
-    return { ...result, items }
+    return await this.userRepository.listBy(conditions, limit, page)
   }
 
   /**

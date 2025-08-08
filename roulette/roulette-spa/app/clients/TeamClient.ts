@@ -1,6 +1,7 @@
+import { Team } from '../models/Team'
 import { AxiosClient } from './AxiosClient'
-import { Team, TeamStat } from '../models/Team'
 import { IBlueprint, Stone } from '@stone-js/core'
+import { ListMetadataOptions } from '../models/App'
 
 /**
  * Team Client Options
@@ -31,9 +32,14 @@ export class TeamClient {
   /**
    * List all posts
    */
-  async list (limit: number = 10, page?: string | number): Promise<Team[]> {
-    const query = new URLSearchParams({ limit: String(limit), page: String(page ?? '') })
-    return await this.client.get(`${this.path}/?${query.toString()}`)
+  async list (options: Partial<Team> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Team>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+    
+    return await this.client.get<ListMetadataOptions<Team>>(`${this.path}/?${query.toString()}`)
   }
 
   /**
@@ -44,20 +50,11 @@ export class TeamClient {
   }
 
   /**
-   * Get the team results
-   *
-   * @returns The team results
-   */
-  async results (): Promise<TeamStat[]> {
-    return await this.client.get<TeamStat[]>(`${this.path}/results`)
-  }
-
-  /**
    * Get the current team
    *
    * @returns The current team
    */
-  async currentTeam (): Promise<Team> {
+  async getMyTeam (): Promise<Team> {
     return await this.client.get<Team>(`${this.path}/me`)
   }
 
