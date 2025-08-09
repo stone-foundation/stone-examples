@@ -52,8 +52,8 @@ export class ActivityAssignmentService {
    *
    * @returns The stats of the team
    */
-  async stats (teamName?: string): Promise<TeamsStats> {
-    this.statsCache ??= await this.client.stats(teamName)
+  async stats (options: { teamName?: string, missionUuid: string }): Promise<TeamsStats> {
+    this.statsCache ??= await this.client.stats(options)
     return this.statsCache
   }
 

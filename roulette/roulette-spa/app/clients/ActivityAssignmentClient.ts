@@ -51,8 +51,8 @@ export class ActivityAssignmentClient {
    *
    * @returns The team stats
    */
-  async stats (teamName?: string): Promise<TeamsStats> {
-    return await this.client.get(`${this.path}/stats/${teamName ?? ''}`)
+  async stats (options: { teamName?: string, missionUuid: string }): Promise<TeamsStats> {
+    return await this.client.get(`${this.path}/stats/${options.teamName ?? ''}`, { params: { missionUuid: options.missionUuid } })
   }
 
   /**

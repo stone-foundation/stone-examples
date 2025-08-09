@@ -15,7 +15,7 @@ export const SingleTeamStatsPanel: React.FC<SingleTeamStatsPanelProps> = ({ team
 
   useEffect(() => {
     activityAssignmentService
-      .stats()
+      .stats({ missionUuid: team.missionUuid })
       .then(v => {
         setCurrentTeam(v.teams.find(t => t.name === team.name) ?? team)
       })

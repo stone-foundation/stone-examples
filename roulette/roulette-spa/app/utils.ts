@@ -24,3 +24,15 @@ export const playSound = (src: string): void => {
 export const dateTimeFromNow = (date: number): string => {
   return dayjs(date).fromNow()
 }
+
+/**
+ * Format a date as "DD MMM YYYY HH:mm"
+ *
+ * @param date - Date in milliseconds
+ * @returns The formatted date string
+ */
+export const formatDateTime = (date: number): string => {
+  // Ensure the date is in milliseconds (pad if it's in seconds)
+  const ms = date < 1e12 ? date * 1000 : date
+  return dayjs(ms).format('DD MMM YYYY hh:mm A')
+}

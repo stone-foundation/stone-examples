@@ -1,4 +1,4 @@
-profile=noowow
+profile=default
 fileName=archive.zip
 functionName=Operation-Adrenaline-API
 s3Bucket=operation-adrenaline-artifactory

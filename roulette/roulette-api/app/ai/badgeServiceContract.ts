@@ -1,15 +1,15 @@
-export const activityServiceContract = [
+export const badgeServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_list",
-    "description": "Liste toutes les activités avec pagination optionnelle.",
+    "name": "badgeService_list",
+    "description": "Liste tous les badges avec pagination optionnelle.",
     "parameters": {
       "type": "object",
       "properties": {
         "limit": {
           "type": "integer",
-          "description": "Nombre d'activités à retourner (optionnel, défaut: 10).",
+          "description": "Nombre de badges à retourner (optionnel, défaut: 10).",
           "minimum": 1,
           "maximum": 100
         },
@@ -25,49 +25,47 @@ export const activityServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_listBy",
-    "description": "Liste les activités en filtrant par conditions (ex: mission, badge, catégorie, impact) avec pagination.",
+    "name": "badgeService_listBy",
+    "description": "Liste les badges en filtrant par conditions (ex: nom, catégorie, mission, visibilité) avec pagination.",
     "parameters": {
       "type": "object",
       "properties": {
         "conditions": {
           "type": "object",
-          "description": "Filtres partiels selon le modèle ActivityModel.",
+          "description": "Filtres partiels selon le modèle BadgeModel.",
           "properties": {
             "name": {
               "type": "string",
-              "description": "Nom de l'activité (recherche partielle possible)"
+              "description": "Nom du badge (recherche partielle possible)"
             },
             "category": {
               "type": "string",
-              "description": "Catégorie de l'activité"
+              "description": "Catégorie du badge"
             },
-            "impact": {
+            "categoryLabel": {
               "type": "string",
-              "enum": ["positive", "negative", "neutral"],
-              "description": "Impact de l'activité"
+              "description": "Nom lisible de la catégorie"
+            },
+            "color": {
+              "type": "string",
+              "description": "Couleur du badge"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "private"],
+              "description": "Visibilité du badge"
             },
             "missionUuid": {
               "type": "string",
               "description": "UUID de la mission associée",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-            },
-            "badgeUuid": {
-              "type": "string",
-              "description": "UUID du badge associé",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-            },
-            "conversionWindow": {
-              "type": "string",
-              "enum": ["team", "member"],
-              "description": "Fenêtre de conversion"
             }
           },
           "additionalProperties": false
         },
         "limit": {
           "type": "integer",
-          "description": "Nombre d'activités à retourner (optionnel, défaut: 10).",
+          "description": "Nombre de badges à retourner (optionnel, défaut: 10).",
           "minimum": 1,
           "maximum": 100
         },
@@ -83,23 +81,27 @@ export const activityServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_findBy",
-    "description": "Trouve une activité unique en filtrant par son UUID ou son nom.",
+    "name": "badgeService_findBy",
+    "description": "Trouve un badge unique en filtrant par son UUID, nom ou catégorie.",
     "parameters": {
       "type": "object",
       "properties": {
         "conditions": {
           "type": "object",
-          "description": "Filtres pour identifier l'activité unique.",
+          "description": "Filtres pour identifier le badge unique.",
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "Identifiant unique de l'activité (prioritaire si fourni).",
+              "description": "Identifiant unique du badge (prioritaire si fourni).",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             },
             "name": {
               "type": "string",
-              "description": "Nom exact de l'activité"
+              "description": "Nom exact du badge"
+            },
+            "category": {
+              "type": "string",
+              "description": "Catégorie exacte du badge"
             }
           },
           "additionalProperties": false,
@@ -113,30 +115,41 @@ export const activityServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_create",
-    "description": "Crée une nouvelle activité avec les champs requis et optionnels du modèle ActivityModel.",
+    "name": "badgeService_create",
+    "description": "Crée un nouveau badge avec les champs requis et optionnels du modèle BadgeModel.",
     "parameters": {
       "type": "object",
       "properties": {
-        "activity": {
+        "badge": {
           "type": "object",
-          "description": "Objet activité à créer.",
+          "description": "Objet badge à créer.",
           "properties": {
             "name": {
               "type": "string",
-              "description": "Nom de l'activité.",
+              "description": "Nom du badge.",
               "minLength": 1,
               "maxLength": 255
             },
             "description": {
               "type": "string",
-              "description": "Description de l'activité.",
+              "description": "Description du badge.",
               "minLength": 1,
               "maxLength": 2000
             },
+            "color": {
+              "type": "string",
+              "description": "Couleur du badge (code couleur ou nom).",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "score": {
+              "type": "integer",
+              "description": "Nombre de points attribués par le badge.",
+              "minimum": 0
+            },
             "category": {
               "type": "string",
-              "description": "Catégorie de l'activité (ex: 'presence').",
+              "description": "Catégorie du badge.",
               "minLength": 1,
               "maxLength": 100
             },
@@ -146,60 +159,48 @@ export const activityServiceContract = [
               "minLength": 1,
               "maxLength": 255
             },
-            "impact": {
-              "type": "string",
-              "enum": ["positive", "negative", "neutral"],
-              "description": "Impact de l'activité sur l'équipe ou le membre."
-            },
-            "score": {
-              "type": "integer",
-              "description": "Nombre de points attribués (positif ou négatif)."
-            },
             "missionUuid": {
               "type": "string",
               "description": "UUID de la mission associée.",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             },
-            "badgeUuid": {
-              "type": ["string", "null"],
-              "description": "UUID du badge associé (optionnel).",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "private"],
+              "description": "Visibilité du badge."
             },
-            "autoConvertToBadge": {
-              "type": "boolean",
-              "description": "Convertir automatiquement en badge si seuil atteint (optionnel).",
-              "default": false
-            },
-            "conversionThreshold": {
-              "type": ["integer", "null"],
-              "description": "Score requis pour la conversion automatique (optionnel).",
+            "maxAssignments": {
+              "type": "integer",
+              "description": "Nombre maximum d'attributions du badge.",
               "minimum": 1
             },
-            "conversionWindow": {
-              "type": "string",
-              "enum": ["team", "member"],
-              "description": "Fenêtre de conversion : par équipe ou membre (optionnel)."
+            "iconUrl": {
+              "type": ["string", "null"],
+              "description": "URL de l'icône du badge (optionnel).",
+              "format": "uri"
             },
-            "validityDuration": {
+            "expirationDays": {
               "type": ["integer", "null"],
-              "description": "Durée de validité en millisecondes (optionnel).",
+              "description": "Nombre de jours avant expiration du badge (optionnel).",
               "minimum": 1
             }
           },
           "required": [
             "name",
             "description",
+            "color",
+            "score",
             "category",
             "categoryLabel",
-            "impact",
-            "score",
-            "missionUuid"
+            "missionUuid",
+            "visibility",
+            "maxAssignments"
           ],
           "additionalProperties": false
         },
         "author": {
           "type": "object",
-          "description": "Utilisateur qui crée l'activité.",
+          "description": "Utilisateur qui crée le badge.",
           "properties": {
             "uuid": {
               "type": "string",
@@ -211,25 +212,25 @@ export const activityServiceContract = [
           "additionalProperties": false
         }
       },
-      "required": ["activity", "author"],
+      "required": ["badge", "author"],
       "additionalProperties": false
     }
   },
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_update",
-    "description": "Met à jour une activité existante. Nécessite son UUID et les champs à modifier.",
+    "name": "badgeService_update",
+    "description": "Met à jour un badge existant. Nécessite son UUID et les champs à modifier.",
     "parameters": {
       "type": "object",
       "properties": {
         "item": {
           "type": "object",
-          "description": "L'activité à mettre à jour, identifiée par son UUID.",
+          "description": "Le badge à mettre à jour, identifié par son UUID.",
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "Identifiant unique de l'activité à modifier.",
+              "description": "Identifiant unique du badge à modifier.",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },
@@ -242,19 +243,30 @@ export const activityServiceContract = [
           "properties": {
             "name": {
               "type": "string",
-              "description": "Nom mis à jour de l'activité.",
+              "description": "Nom mis à jour du badge.",
               "minLength": 1,
               "maxLength": 255
             },
             "description": {
               "type": "string",
-              "description": "Description mise à jour de l'activité.",
+              "description": "Description mise à jour du badge.",
               "minLength": 1,
               "maxLength": 2000
             },
+            "color": {
+              "type": "string",
+              "description": "Couleur mise à jour du badge.",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "score": {
+              "type": "integer",
+              "description": "Score mis à jour du badge.",
+              "minimum": 0
+            },
             "category": {
               "type": "string",
-              "description": "Catégorie mise à jour de l'activité.",
+              "description": "Catégorie mise à jour du badge.",
               "minLength": 1,
               "maxLength": 100
             },
@@ -264,42 +276,29 @@ export const activityServiceContract = [
               "minLength": 1,
               "maxLength": 255
             },
-            "impact": {
-              "type": "string",
-              "enum": ["positive", "negative", "neutral"],
-              "description": "Impact mis à jour de l'activité."
-            },
-            "score": {
-              "type": "integer",
-              "description": "Score mis à jour de l'activité."
-            },
             "missionUuid": {
               "type": "string",
               "description": "UUID mis à jour de la mission associée.",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             },
-            "badgeUuid": {
-              "type": ["string", "null"],
-              "description": "UUID mis à jour du badge associé.",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "private"],
+              "description": "Visibilité mise à jour du badge."
             },
-            "autoConvertToBadge": {
-              "type": "boolean",
-              "description": "Mise à jour de la conversion automatique en badge."
-            },
-            "conversionThreshold": {
-              "type": ["integer", "null"],
-              "description": "Seuil mis à jour pour la conversion automatique.",
+            "maxAssignments": {
+              "type": "integer",
+              "description": "Nombre maximum d'attributions mis à jour.",
               "minimum": 1
             },
-            "conversionWindow": {
-              "type": "string",
-              "enum": ["team", "member"],
-              "description": "Fenêtre de conversion mise à jour."
+            "iconUrl": {
+              "type": ["string", "null"],
+              "description": "URL mise à jour de l'icône du badge.",
+              "format": "uri"
             },
-            "validityDuration": {
+            "expirationDays": {
               "type": ["integer", "null"],
-              "description": "Durée de validité mise à jour en millisecondes.",
+              "description": "Nombre de jours avant expiration mis à jour.",
               "minimum": 1
             }
           },
@@ -308,7 +307,7 @@ export const activityServiceContract = [
         },
         "author": {
           "type": "object",
-          "description": "Utilisateur qui modifie l'activité.",
+          "description": "Utilisateur qui modifie le badge.",
           "properties": {
             "uuid": {
               "type": "string",
@@ -327,18 +326,18 @@ export const activityServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_delete",
-    "description": "Supprime une activité existante en utilisant son UUID.",
+    "name": "badgeService_delete",
+    "description": "Supprime un badge existant en utilisant son UUID.",
     "parameters": {
       "type": "object",
       "properties": {
         "item": {
           "type": "object",
-          "description": "L'activité à supprimer, identifiée par son UUID.",
+          "description": "Le badge à supprimer, identifié par son UUID.",
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "Identifiant unique de l'activité à supprimer.",
+              "description": "Identifiant unique du badge à supprimer.",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },
@@ -347,11 +346,11 @@ export const activityServiceContract = [
         },
         "author": {
           "type": "object",
-          "description": "Utilisateur qui supprime l'activité.",
+          "description": "Utilisateur qui supprime le badge.",
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "UUID de l'utilisateur supprimant l'activité",
+              "description": "UUID de l'utilisateur supprimant le badge",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },
@@ -366,27 +365,27 @@ export const activityServiceContract = [
   {
     "strict": false,
     "type": "function",
-    "name": "activityService_count",
-    "description": "Retourne le nombre total d'activités, optionnellement filtré par conditions.",
+    "name": "badgeService_count",
+    "description": "Retourne le nombre total de badges, optionnellement filtré par conditions.",
     "parameters": {
       "type": "object",
       "properties": {
         "conditions": {
           "type": "object",
-          "description": "Filtres optionnels pour compter seulement certaines activités.",
+          "description": "Filtres optionnels pour compter seulement certains badges.",
           "properties": {
             "category": {
               "type": "string",
-              "description": "Compter seulement les activités de cette catégorie"
+              "description": "Compter seulement les badges de cette catégorie"
             },
-            "impact": {
+            "visibility": {
               "type": "string",
-              "enum": ["positive", "negative", "neutral"],
-              "description": "Compter seulement les activités avec cet impact"
+              "enum": ["public", "private"],
+              "description": "Compter seulement les badges avec cette visibilité"
             },
             "missionUuid": {
               "type": "string",
-              "description": "Compter seulement les activités de cette mission",
+              "description": "Compter seulement les badges de cette mission",
               "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },

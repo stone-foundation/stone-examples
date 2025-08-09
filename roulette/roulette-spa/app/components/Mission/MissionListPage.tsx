@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { User } from '../../models/User'
 import { Avatar } from '../Avatar/Avatar'
+import { formatDateTime } from '../../utils'
 import { Mission } from '../../models/Mission'
 import { StoneLink } from '@stone-js/use-react'
 import { MissionListCard } from './MissionListCard'
@@ -8,11 +9,11 @@ import { FormButton } from '../FormButton/FormButton'
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal'
 
 interface MissionListPageProps {
-  user?: User
-  mission?: Mission
-  missions: Mission[]
-  onExploreMission: (mission: Mission) => void
-  onStartMission: (mission: Mission) => Promise<void>
+  readonly user?: User
+  readonly mission?: Mission
+  readonly missions: readonly Mission[]
+  readonly onExploreMission: (mission: Mission) => void
+  readonly onStartMission: (mission: Mission) => Promise<void>
 }
 
 export function MissionListPage({ user, missions, mission, onStartMission, onExploreMission }: MissionListPageProps) {
@@ -36,9 +37,9 @@ export function MissionListPage({ user, missions, mission, onStartMission, onExp
                 <p className="text-sm text-gray-400">Code : {mission.code}</p>
                 <p className="text-sm text-gray-400">Visibilité : {mission.visibility}</p>
                 {mission.location && <p className="text-sm text-gray-400">Lieu : {mission.location}</p>}
-                {mission.startDate && <p className="text-sm text-gray-400">Début : {mission.startDate}</p>}
-                {mission.endDate && <p className="text-sm text-gray-400">Fin : {mission.endDate}</p>}
-                {mission.openDate && <p className="text-sm text-gray-400">Ouvert : {mission.openDate}</p>}
+                {mission.openDate && <p className="text-sm text-gray-400">Ouvert : {formatDateTime(mission.openDate)}</p>}
+                {mission.startDate && <p className="text-sm text-gray-400">Début : {formatDateTime(mission.startDate)}</p>}
+                {mission.endDate && <p className="text-sm text-gray-400">Fin : {formatDateTime(mission.endDate)}</p>}
               </div>
             </div>
 

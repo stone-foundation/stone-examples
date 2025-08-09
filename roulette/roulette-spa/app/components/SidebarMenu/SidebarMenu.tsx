@@ -3,19 +3,22 @@ import { Logger } from "@stone-js/core"
 import { Team } from "../../models/Team"
 import { Avatar } from "../Avatar/Avatar"
 import { COLOR_MAP } from "../../constants"
+import { Mission } from "../../models/Mission"
 import { useContext, useEffect, useState } from "react"
 import { FollowUsCard } from "../FollowUsCard/FollowUsCard"
-import { StoneContext, StoneLink } from "@stone-js/use-react"
 import { RightSidebarPanel } from "../RightSidebarPanel/RightSidebarPanel"
+import { ReactIncomingEvent, StoneContext, StoneLink } from "@stone-js/use-react"
 import { ActivityAssignmentService } from "../../services/ActivityAssignmentService"
 
 export const SidebarMenu = () => {
   const [teams, setTeams] = useState<Team[]>([])
-  const activityAssignmentService = useContext(StoneContext).container.resolve<ActivityAssignmentService>(ActivityAssignmentService)
+  const { container } = useContext(StoneContext)
+  const activityAssignmentService = container.resolve<ActivityAssignmentService>(ActivityAssignmentService)
+  const missionUuid = container.resolve<ReactIncomingEvent>('event')?.cookies.getValue<Mission>('mission')?.uuid ?? ''
 
   useEffect(() => {
     activityAssignmentService
-      .stats()
+      .stats({ missionUuid })
       .then(v => {
         setTeams(v.teams)
       })

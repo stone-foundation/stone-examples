@@ -2,23 +2,63 @@ export const missionServiceContract = [
   {
     "strict": false,
     "type": "function",
+    "name": "missionService_list",
+    "description": "Liste toutes les missions avec pagination optionnelle.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Nombre de missions à retourner (optionnel, défaut: 10).",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "page": {
+          "type": ["string", "integer"],
+          "description": "Identifiant de page pour la pagination (optionnel)."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "strict": false,
+    "type": "function",
     "name": "missionService_listBy",
-    "description": "Liste les missions en filtrant par conditions (ex: nom, visibilité) et pagination.",
+    "description": "Liste les missions en filtrant par conditions (ex: nom, code, visibilité) avec pagination.",
     "parameters": {
       "type": "object",
       "properties": {
         "conditions": {
           "type": "object",
-          "description": "Filtres partiels selon le modèle MissionModel. Exemple : { name, visibility }.",
+          "description": "Filtres partiels selon le modèle MissionModel.",
           "properties": {
-            "name": { "type": "string" },
-            "visibility": { "type": "string", "enum": ["public", "private"] },
-            "code": { "type": "string" }
-          }
+            "name": { 
+              "type": "string",
+              "description": "Nom de la mission (recherche partielle possible)"
+            },
+            "code": { 
+              "type": "string",
+              "description": "Code de la mission"
+            },
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "private"],
+              "description": "Visibilité de la mission"
+            },
+            "authorUuid": {
+              "type": "string",
+              "description": "UUID de l'auteur de la mission"
+            }
+          },
+          "additionalProperties": false
         },
         "limit": {
           "type": "integer",
-          "description": "Nombre de missions à retourner (optionnel, défaut: 10)."
+          "description": "Nombre de missions à retourner (optionnel, défaut: 10).",
+          "minimum": 1,
+          "maximum": 100
         },
         "page": {
           "type": ["string", "integer"],
@@ -33,65 +73,30 @@ export const missionServiceContract = [
     "strict": false,
     "type": "function",
     "name": "missionService_findBy",
-    "description": "Trouve une mission en filtrant par son UUID, nom ou code.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "uuid": {
-          "type": "string",
-          "description": "Identifiant unique de la mission (prioritaire si fourni)."
-        },
-        "name": {
-          "type": "string",
-          "description": "Nom exact de la mission."
-        },
-        "code": {
-          "type": "string",
-          "description": "Code unique de la mission."
-        }
-      },
-      "required": [],
-      "additionalProperties": false
-    }
-  },
-  {
-    "strict": false,
-    "type": "function",
-    "name": "missionService_findActiveMissions",
-    "description": "Trouve les missions actives (non terminées) avec pagination.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "limit": {
-          "type": "integer",
-          "description": "Nombre de missions à retourner (optionnel, défaut: 10)."
-        },
-        "page": {
-          "type": ["string", "integer"],
-          "description": "Identifiant de page pour la pagination (optionnel)."
-        }
-      },
-      "required": [],
-      "additionalProperties": false
-    }
-  },
-  {
-    "strict": false,
-    "type": "function",
-    "name": "missionService_existsBy",
-    "description": "Vérifie si une mission existe selon les conditions données.",
+    "description": "Trouve une mission unique en filtrant par son UUID, nom ou code.",
     "parameters": {
       "type": "object",
       "properties": {
         "conditions": {
           "type": "object",
-          "description": "Conditions pour vérifier l'existence de la mission.",
+          "description": "Filtres pour identifier la mission unique.",
           "properties": {
-            "uuid": { "type": "string" },
-            "name": { "type": "string" },
-            "code": { "type": "string" },
-            "visibility": { "type": "string", "enum": ["public", "private"] }
-          }
+            "uuid": {
+              "type": "string",
+              "description": "Identifiant unique de la mission (prioritaire si fourni).",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "name": { 
+              "type": "string",
+              "description": "Nom exact de la mission"
+            },
+            "code": { 
+              "type": "string",
+              "description": "Code exact de la mission"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1
         }
       },
       "required": ["conditions"],
@@ -110,27 +115,37 @@ export const missionServiceContract = [
           "type": "object",
           "description": "Objet mission à créer.",
           "properties": {
-            "name": { "type": "string", "description": "Nom de la mission." },
-            "description": { "type": "string", "description": "Description de la mission." },
+            "name": { 
+              "type": "string", 
+              "description": "Nom de la mission.",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": { 
+              "type": "string", 
+              "description": "Description de la mission.",
+              "minLength": 1,
+              "maxLength": 2000
+            },
             "visibility": { 
               "type": "string", 
               "enum": ["public", "private"],
               "description": "Visibilité de la mission." 
             },
             "startDate": { 
-              "type": "integer", 
-              "description": "Date de début en timestamp (optionnel).",
-              "nullable": true
+              "type": ["integer", "null"], 
+              "description": "Date de début en timestamp Unix (optionnel).",
+              "minimum": 0
             },
             "endDate": { 
-              "type": "integer", 
-              "description": "Date de fin en timestamp (optionnel).",
-              "nullable": true
+              "type": ["integer", "null"], 
+              "description": "Date de fin en timestamp Unix (optionnel).",
+              "minimum": 0
             },
             "imageUrl": { 
-              "type": "string", 
+              "type": ["string", "null"], 
               "description": "URL de l'image de la mission (optionnel).",
-              "nullable": true
+              "format": "uri"
             }
           },
           "required": ["name", "description", "visibility"],
@@ -138,15 +153,20 @@ export const missionServiceContract = [
         },
         "author": {
           "type": "object",
-          "description": "Acteur qui crée la mission.",
+          "description": "Utilisateur qui crée la mission.",
           "properties": {
-            "uuid": { "type": "string", "description": "UUID de l'utilisateur créateur" }
+            "uuid": { 
+              "type": "string", 
+              "description": "UUID de l'utilisateur créateur",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
           },
           "required": ["uuid"],
           "additionalProperties": false
         }
       },
-      "required": ["mission", "author"]
+      "required": ["mission", "author"],
+      "additionalProperties": false
     }
   },
   {
@@ -163,7 +183,8 @@ export const missionServiceContract = [
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "Identifiant unique de la mission à modifier."
+              "description": "Identifiant unique de la mission à modifier.",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },
           "required": ["uuid"],
@@ -171,22 +192,53 @@ export const missionServiceContract = [
         },
         "data": {
           "type": "object",
-          "description": "Champs à mettre à jour. Identiques à ceux du modèle MissionModel.",
+          "description": "Champs à mettre à jour. Au moins un champ doit être fourni.",
           "properties": {
-            "name": { "type": "string", "description": "Nom mis à jour de la mission." },
-            "description": { "type": "string", "description": "Description mise à jour de la mission." },
-            "visibility": { "type": "string", "enum": ["public", "private"], "description": "Nouvelle visibilité de la mission." },
-            "startDate": { "type": "integer", "description": "Nouvelle date de début (timestamp)." },
-            "endDate": { "type": "integer", "description": "Nouvelle date de fin (timestamp)." },
-            "imageUrl": { "type": "string", "description": "Nouvelle image (URL)." }
+            "name": { 
+              "type": "string", 
+              "description": "Nom mis à jour de la mission.",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": { 
+              "type": "string", 
+              "description": "Description mise à jour de la mission.",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "visibility": { 
+              "type": "string", 
+              "enum": ["public", "private"], 
+              "description": "Nouvelle visibilité de la mission." 
+            },
+            "startDate": { 
+              "type": ["integer", "null"], 
+              "description": "Nouvelle date de début en timestamp Unix.",
+              "minimum": 0
+            },
+            "endDate": { 
+              "type": ["integer", "null"], 
+              "description": "Nouvelle date de fin en timestamp Unix.",
+              "minimum": 0
+            },
+            "imageUrl": { 
+              "type": ["string", "null"], 
+              "description": "Nouvelle image (URL).",
+              "format": "uri"
+            }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "minProperties": 1
         },
         "author": {
           "type": "object",
-          "description": "Acteur qui modifie la mission.",
+          "description": "Utilisateur qui modifie la mission.",
           "properties": {
-            "uuid": { "type": "string", "description": "UUID de l'utilisateur modificateur" }
+            "uuid": { 
+              "type": "string", 
+              "description": "UUID de l'utilisateur modificateur",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
           },
           "required": ["uuid"],
           "additionalProperties": false
@@ -210,7 +262,8 @@ export const missionServiceContract = [
           "properties": {
             "uuid": {
               "type": "string",
-              "description": "Identifiant unique de la mission à supprimer."
+              "description": "Identifiant unique de la mission à supprimer.",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
             }
           },
           "required": ["uuid"],
@@ -218,9 +271,13 @@ export const missionServiceContract = [
         },
         "author": {
           "type": "object",
-          "description": "Acteur qui supprime la mission.",
+          "description": "Utilisateur qui supprime la mission.",
           "properties": {
-            "uuid": { "type": "string", "description": "UUID de l'utilisateur supprimant la mission" }
+            "uuid": { 
+              "type": "string", 
+              "description": "UUID de l'utilisateur supprimant la mission",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
           },
           "required": ["uuid"],
           "additionalProperties": false
@@ -234,57 +291,28 @@ export const missionServiceContract = [
     "strict": false,
     "type": "function",
     "name": "missionService_count",
-    "description": "Retourne le nombre total de missions.",
+    "description": "Retourne le nombre total de missions, optionnellement filtré par conditions.",
     "parameters": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "conditions": {
+          "type": "object",
+          "description": "Filtres optionnels pour compter seulement certaines missions.",
+          "properties": {
+            "visibility": {
+              "type": "string",
+              "enum": ["public", "private"],
+              "description": "Compter seulement les missions avec cette visibilité"
+            },
+            "authorUuid": {
+              "type": "string",
+              "description": "Compter seulement les missions de cet auteur"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
       "required": [],
-      "additionalProperties": false
-    }
-  },
-  {
-    "strict": false,
-    "type": "function",
-    "name": "missionService_isActive",
-    "description": "Vérifie si une mission est active (dans sa période de validité).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "mission": {
-          "type": "object",
-          "description": "La mission à vérifier.",
-          "properties": {
-            "uuid": { "type": "string" },
-            "startDate": { "type": "integer" },
-            "endDate": { "type": "integer" }
-          },
-          "required": ["uuid"]
-        }
-      },
-      "required": ["mission"],
-      "additionalProperties": false
-    }
-  },
-  {
-    "strict": false,
-    "type": "function",
-    "name": "missionService_getDuration",
-    "description": "Calcule la durée d'une mission en millisecondes.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "mission": {
-          "type": "object",
-          "description": "La mission dont calculer la durée.",
-          "properties": {
-            "uuid": { "type": "string" },
-            "startDate": { "type": "integer" },
-            "endDate": { "type": "integer" }
-          },
-          "required": ["uuid"]
-        }
-      },
-      "required": ["mission"],
       "additionalProperties": false
     }
   }

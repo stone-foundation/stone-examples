@@ -1,9 +1,19 @@
+import { teamServiceContract } from "./teamServiceContract";
+import { userServiceContract } from "./userServiceContract";
+import { badgeServiceContract } from "./badgeServiceContract";
 import { missionServiceContract } from "./missionServiceContract";
 import { activityServiceContract } from "./activityServiceContract";
+import { teamMemberServiceContract } from "./teamMemberServiceContract";
+import { activityAssignmentServiceContract } from "./activityAssignmentServiceContract";
 
 export const AI_TOOLS_CONTRACTS = [
+  ...teamServiceContract,
+  ...userServiceContract,
+  ...badgeServiceContract,
   ...missionServiceContract,
-  ...activityServiceContract
+  ...activityServiceContract,
+  ...teamMemberServiceContract,
+  ...activityAssignmentServiceContract
 ]
 
 export const AI_TOOLS_MINI = AI_TOOLS_CONTRACTS.map(tool => ({

@@ -1,20 +1,23 @@
 import { Logger } from "@stone-js/core";
-import { StoneContext } from "@stone-js/use-react";
+import { Mission } from "../../models/Mission";
 import { TeamsStats } from "../../models/Activity";
 import { useState, useContext, useEffect } from "react";
 import { TopTeamCard } from "../TopTeamCard/TopTeamCard";
 import { StatsSection } from "../StatsSection/StatsSection";
 import { GlobalStatsCard } from "../GlobalStatsCard/GlobalStatsCard";
+import { ReactIncomingEvent, StoneContext } from "@stone-js/use-react";
 import { RecentBadgesCard } from "../RecentBadgesCard/RecentBadgesCard";
 import { ActivityAssignmentService } from "../../services/ActivityAssignmentService";
 
 export function RightSidebarPanel() {
   const [stats, setStats] = useState<TeamsStats>()
-  const activityAssignmentService = useContext(StoneContext).container.resolve<ActivityAssignmentService>(ActivityAssignmentService)
+  const { container } = useContext(StoneContext)
+  const activityAssignmentService = container.resolve<ActivityAssignmentService>(ActivityAssignmentService)
+  const missionUuid = container.resolve<ReactIncomingEvent>('event')?.cookies.getValue<Mission>('mission')?.uuid ?? ''
 
   useEffect(() => {
     activityAssignmentService
-      .stats()
+      .stats({ missionUuid })
       .then(v => {
         setStats(v)
       })

@@ -141,7 +141,7 @@ export class ActivityAssignmentService {
       .filter(item => item.status === 'approved' && item.activityUuid)
       .sort((a, b) => Number(b.validatedAt) - Number(a.validatedAt))
 
-    const teams = await this.teamService.list(1000)
+    const teams = await this.teamService.listBy({ missionUuid: conditions?.missionUuid }, 1000)
 
     const latestactivities = (await Promise.all(
       assignments
