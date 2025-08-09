@@ -1,9 +1,9 @@
 import { JSX } from 'react'
 import { User } from '../../models/User'
 import { Post } from '../../models/Post'
+import { Mission } from '../../models/Mission'
 import { PostService } from '../../services/PostService'
-import { TimelineFeed } from '../../components/TimelineFeed/TimelineFeed'
-import { TimelineComposer } from '../../components/TimelineComposer/TimelineComposer'
+import { TimelineProvider } from '../../components/Timeline/TimelineProvider'
 import { RightSidebarPanel } from '../../components/RightSidebarPanel/RightSidebarPanel'
 import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from '@stone-js/use-react'
 
@@ -47,12 +47,16 @@ export class HomePage implements IPage<ReactIncomingEvent> {
    */
   render ({ event }: PageRenderContext): JSX.Element {
     const user = event.getUser<User>()
+    const missionUuid = event.cookies.getValue<Mission>('mission')?.uuid ?? ''
 
     return (
       <>
         <main className="flex-1 min-w-0">
-          {user && <TimelineComposer currentUser={user} onPost={async (v, file) => await this.savePost(v, file)} />}
-          <TimelineFeed currentUser={user} fetchPosts={async (user, v) => await this.postService.list(user, v)} />
+          <TimelineProvider
+            user={user}
+            savePost={async (v, file) => await this.savePost({ ...v, missionUuid }, file)}
+            fetchPosts={async (u, v) => await this.postService.list({ missionUuid }, u, v)}
+          />
         </main>
         <aside className="hidden xl:block w-64 shrink-0 sticky top-[80px] self-start h-[calc(100vh-80px)] overflow-y-auto">
           <RightSidebarPanel />

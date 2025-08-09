@@ -16,16 +16,13 @@ export class AppConfiguration implements IConfiguration {
     blueprint
       .set('app', this.appConfig())
       .set('twilio', this.twilioConfig())
+      .set('openai', this.openAIConfig())
       .set('app.security', this.securityConfig())
       .set('stone.http.cors.preflightStop', true)
       .set('stone.http.cors.allowedHeaders', ['*'])
       .set(defineBlueprintMiddleware(CORSHeadersMiddleware))
-      .set('openai.apiKey', getString('OPENAI_API_KEY', { optional: true }))
   }
 
-  /**
-   * Get the application configuration
-   */
   private appConfig (): Record<string, any> {
     return {
       bet: {
@@ -38,9 +35,16 @@ export class AppConfiguration implements IConfiguration {
     }
   }
 
-  /**
-   * Get the Twilio configuration
-   */
+  private openAIConfig (): Record<string, any> {
+    return {
+      enabled: getBoolean('OPENAI_ENABLED', false),
+      apiKey: getString('OPENAI_API_KEY', { optional: true }),
+      analyserModel: getString('OPENAI_ANALYSER_MODEL', 'gpt-4o'),
+      executorModel: getString('OPENAI_EXECUTOR_MODEL', 'gpt-4o-mini'),
+      transcriptionModel: getString('OPENAI_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe')
+    }
+  }
+
   private twilioConfig (): Record<string, any> {
     return {
       from: getString('TWILIO_PHONE_NUMBER', ''),
@@ -51,9 +55,6 @@ export class AppConfiguration implements IConfiguration {
     }
   }
 
-  /**
-   * Get the security configuration
-   */
   private securityConfig (): Record<string, any> {
     return {
       bcrypt: {

@@ -174,7 +174,6 @@ export class BadgeAssignmentService {
       ...model,
       team,
       issuedBy,
-      teamMember,
       badge: this.badgeService.toBadge(badge)
     }
   }

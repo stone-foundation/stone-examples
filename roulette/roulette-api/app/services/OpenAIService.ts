@@ -4,15 +4,16 @@ import { ChatMessage } from '../models/Chatbot'
 import { ChatEvent } from '../events/ChatEvent'
 import { SecurityService } from './SecurityService'
 import { AIAnalyzerResponse, AIExecutorResponse } from '../models/App'
-import { EventEmitter, IContainer, isEmpty, isNotEmpty, Service } from '@stone-js/core'
 import { ResponseInput, ResponseInputItem } from 'openai/resources/responses/responses.mjs'
-import { AI_TOOLS_CONTRACTS, AI_TOOLS_MINI, ANALYSER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT } from '../ai/toolServicecontracts'
+import { EventEmitter, IBlueprint, IContainer, isEmpty, isNotEmpty, RuntimeError, Service } from '@stone-js/core'
+import { AI_TOOLS_CONTRACTS, AI_TOOLS_MINI, ANALYSER_SYSTEM_PROMPT, EXECUTOR_SYSTEM_PROMPT } from '../ai/toolServiceContracts'
 
 /**
  * OpenAI Service Options
  */
 export interface OpenAIServiceOptions {
   openaiClient: OpenAI
+  blueprint: IBlueprint
   container: IContainer
   mediaService: MediaService
   eventEmitter: EventEmitter
@@ -25,13 +26,15 @@ export interface OpenAIServiceOptions {
 @Service({ alias: 'openAIService' })
 export class OpenAIService {
   private readonly openaiClient: OpenAI
+  private readonly blueprint: IBlueprint
   private readonly container: IContainer
   private readonly mediaService: MediaService
   private readonly eventEmitter: EventEmitter
   private readonly securityService: SecurityService
 
-  constructor ({ openaiClient, eventEmitter, container, mediaService, securityService }: OpenAIServiceOptions) {
+  constructor ({ openaiClient, eventEmitter, container, mediaService, securityService, blueprint }: OpenAIServiceOptions) {
     this.container = container
+    this.blueprint = blueprint
     this.openaiClient = openaiClient
     this.eventEmitter = eventEmitter
     this.mediaService = mediaService
@@ -45,16 +48,20 @@ export class OpenAIService {
    * @param memories - Optional array of memories to include in the analysis
    */
   async answerToUserRequest(userInput: string, memories: string[] = []): Promise<ChatMessage> {
+    if (this.blueprint.is('openai.enabled', false)) {
+      throw new RuntimeError('OpenAI is not enabled in the configuration')
+    }
+
     const res = await this.analyzeUserRequest(userInput, memories)
     
-    if (res.requiresConfirmation || res.cancelled) {
+    if (res.phase !== 'execution') {
       return this.dispatchChatMessageEvent({
         uuid: res.id,
         modelRef: res.id,
         role: 'assistant',
         createdAt: Date.now(),
         content: res.summary ?? '',
-        memory: `${res.memory}. Résumé: ${res.summary}`,
+        memory: `Phase ${res.phase}: ${res.memory}.`,
       })
     } else  {
       memories.push(res.memory)
@@ -63,9 +70,9 @@ export class OpenAIService {
         uuid: res2.id,
         modelRef: res2.id,
         role: 'assistant',
-        memory: res2.memory,
         createdAt: Date.now(),
-        content: res2.message
+        content: res2.message,
+        memory: `Phase ${res.phase}: ${res2.memory}.`,
       })
     }
   }
@@ -79,7 +86,8 @@ export class OpenAIService {
    */
   async analyzeUserRequest(userInput: string, memories: string[] = []): Promise<AIAnalyzerResponse> {
     const response = await this.openaiClient.responses.create({
-      model: "gpt-4o-mini",
+      tools: [ { type: "web_search_preview" } ],
+      model: this.blueprint.get<string>('openai.analyserModel', 'gpt-4o'),
       input: [
         { role: "system", content: ANALYSER_SYSTEM_PROMPT },
         { role: "system", content: `Mémoire cumulative:\n${memories.map(v => `- ${v}`).join('\n')}` },
@@ -114,8 +122,8 @@ export class OpenAIService {
 
     let response = await this.openaiClient.responses.create({
       input,
-      model: "gpt-4o-mini",
-      tools: selectedTools,
+      tools: [...selectedTools, { type: "web_search_preview" }],
+      model: this.blueprint.get<string>('openai.executorModel', 'gpt-4o-mini')
     })
 
     if (response.output.length > 0) {
@@ -167,7 +175,7 @@ export class OpenAIService {
     const transcription = await this.openaiClient.audio.transcriptions.create({
       file,
       response_format: 'text',
-      model: 'gpt-4o-mini-transcribe'
+      model: this.blueprint.get<string>('openai.transcriptionModel', 'gpt-4o-mini-transcribe')
     })
 
     return transcription

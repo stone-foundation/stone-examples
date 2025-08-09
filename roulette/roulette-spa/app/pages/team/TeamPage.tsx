@@ -1,10 +1,12 @@
 import { JSX } from 'react'
 import { User } from '../../models/User'
 import { Post } from '../../models/Post'
-import { Team } from '../../models/Team'
+import { Mission } from '../../models/Mission'
+import { Team, TeamMember } from '../../models/Team'
 import { TeamService } from '../../services/TeamService'
 import { PostService } from '../../services/PostService'
 import { ActivityAssignment } from '../../models/Activity'
+import { TeamMemberService } from '../../services/TeamMemberService'
 import { PageDetails } from '../../components/PageDetails/PageDetails'
 import { ActivityAssignmentService } from '../../services/ActivityAssignmentService'
 import { RightSidebarPanel } from '../../components/RightSidebarPanel/RightSidebarPanel'
@@ -17,6 +19,7 @@ import { Page, ReactIncomingEvent, IPage, HeadContext, PageRenderContext } from 
 interface TeamPageOptions {
   postService: PostService
   teamService: TeamService
+  teamMemberService: TeamMemberService
   activityAssignmentService: ActivityAssignmentService
 }
 
@@ -34,24 +37,28 @@ interface TeamPageOptions {
 export class TeamPage implements IPage<ReactIncomingEvent> {
   private readonly postService: PostService
   private readonly teamService: TeamService
+  private readonly teamMemberService: TeamMemberService
   private readonly activityAssignmentService: ActivityAssignmentService
 
   /**
    * Create a new Team Page component.
    */
-  constructor ({ teamService, postService, activityAssignmentService }: TeamPageOptions) {
+  constructor ({ teamService, postService, activityAssignmentService, teamMemberService }: TeamPageOptions) {
     this.teamService = teamService
     this.postService = postService
+    this.teamMemberService = teamMemberService
     this.activityAssignmentService = activityAssignmentService
   }
 
   async handle (event: ReactIncomingEvent): Promise<Record<string, any>> {
+    const teamMembers = await this.listTeamMembers(event.get<Team>('team', {} as any))
     const assignments = await this.listActivityAssignments(event.get<Team>('team', {} as any))
-    const badges = assignments.filter(v => v.status === 'approved').map((a) => a.badge).filter((b) => b !== undefined)
+    const badges = assignments.filter(v => v.status === 'approved' && v.badge).map((a) => a.badge)
     
     return {
       badges,
-      assignments
+      assignments,
+      teamMembers
     }
   }
 
@@ -75,7 +82,10 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
   render ({ data, event }: PageRenderContext): JSX.Element {
     const tab = event.get<string>('tab', 'timeline')
     const team = event.get<Team>('team', {} as any)
+    const missionUuid = event.cookies.getValue<Mission>('mission')?.uuid ?? ''  
     const user = event.getUser<User>() ?? { username: 'Jonh', fullname: 'Doe' } as unknown as User
+    
+    team.members = data.teamMembers ?? []
 
     return (
       <>
@@ -87,9 +97,9 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
             badges={data.badges ?? []}
             activityAssignments={data.assignments ?? []}
             onUpdateInfos={async (v) => await this.updateInfos(v, team)}
-            savePost={async (v, file?: File) => await this.savePost(v, team, file)}
+            savePost={async (v, file?: File) => await this.savePost({ ...v, missionUuid }, team, file)}
             onLogoChange={async (file: File) => await this.updateImage(team, file)}
-            fetchPosts={async (u, v) => await this.postService.listByTeam(team.name, u, v)}
+            fetchPosts={async (u, v) => await this.postService.listByTeam(team.uuid, u, v)}
             onUpdateAssigmentStatus={async (u, v) => await this.onUpdateAssigmentStatus(u, v)}
             onBannerChange={async (file: File) => await this.updateImage(team, undefined, file)}
           />
@@ -116,6 +126,11 @@ export class TeamPage implements IPage<ReactIncomingEvent> {
   
   private async listActivityAssignments (team: Team): Promise<ActivityAssignment[]> {
     const meta = await this.activityAssignmentService.listByTeam(team, 1000)
+    return meta.items ?? []
+  }
+
+  private async listTeamMembers (team: Team): Promise<TeamMember[]> {
+    const meta = await this.teamMemberService.listByTeam(team.uuid, 1000)
     return meta.items ?? []
   }
 

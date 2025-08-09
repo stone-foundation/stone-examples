@@ -8,9 +8,8 @@ import { PageBadges } from '../PageBadges/PageBadges'
 import { ListMetadataOptions } from '../../models/App'
 import { PageMembers } from '../PageMembers/PageMembers'
 import { ActivityAssignment } from '../../models/Activity'
-import { TimelineFeed } from '../TimelineFeed/TimelineFeed'
+import { TimelineProvider } from '../Timeline/TimelineProvider'
 import { PageActivities } from '../PageActivities/PageActivities'
-import { TimelineComposer } from '../TimelineComposer/TimelineComposer'
 import { TabItem, TabNavigation } from '../TabNavigation/TabNavigation'
 
 interface PageDetailsProps {
@@ -32,7 +31,7 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ onLogoChange, onBanner
     { path: `/page/${team.name}/`, label: 'Timeline' },
     { path: `/page/${team.name}/infos`, label: 'Infos' },
     { path: `/page/${team.name}/badges`, label: 'Badges' },
-    { path: `/page/${team.name}/soldiers`, label: 'Soldats' },
+    { path: `/page/${team.name}/members`, label: 'Membres' },
     { path: `/page/${team.name}/activities`, label: 'Activités' },
   ]
 
@@ -43,13 +42,14 @@ export const PageDetails: React.FC<PageDetailsProps> = ({ onLogoChange, onBanner
       <div className="flex flex-col-reverse lg:flex-row gap-6">
         <div className="flex-1">
           {activePath === 'timeline' && (
-            <>
-            {currentUser && <TimelineComposer currentUser={currentUser} onPost={async (v, file) => await savePost(v, file)} />}
-              <TimelineFeed currentUser={currentUser} fetchPosts={fetchPosts} />
-            </>
+            <TimelineProvider
+              user={currentUser}
+              savePost={savePost}
+              fetchPosts={fetchPosts}
+            />
           )}
           {activePath === 'infos' && <PageInfo currentUser={currentUser} team={team} onUpdate={onUpdateInfos} />}
-          {activePath === 'soldiers' && <PageMembers members={team.members} currentUser={currentUser} />}
+          {activePath === 'members' && <PageMembers members={team.members} currentUser={currentUser} />}
           {activePath === 'badges' && (
             <PageBadges
               badges={badges}

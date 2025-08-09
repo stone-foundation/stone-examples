@@ -42,10 +42,9 @@ export interface AIAnalyzerResponse {
   id: string
   tools: string[]
   memory: string
-  prompt: string,
+  prompt: string
   summary?: string
-  cancelled?: boolean
-  requiresConfirmation?: boolean
+  phase: "exploration" | "confirmation" | "execution" | "annulation"
 }
 
 /**

@@ -35,7 +35,7 @@ export function RightSidebarPanel() {
             totalPosts: stats?.totalPosts ?? 0,
             totalBadges: stats?.totalBadges ?? 0,
             totalPresence: stats?.totalPresence ?? 0,
-            totalSoldiers: stats?.totalMembers ?? 0,
+            totalMembers: stats?.totalMembers ?? 0,
           }}
         />
       </StatsSection>

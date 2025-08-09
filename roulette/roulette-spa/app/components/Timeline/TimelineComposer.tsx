@@ -15,6 +15,7 @@ interface TimelineComposerProps {
 export const TimelineComposer = ({ onPost, currentUser }: TimelineComposerProps) => {
   const [text, setText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [resetTrigger, setResetTrigger] = useState(0)
   const [image, setImage] = useState<File | undefined>()
   const [error, setError] = useState<string | undefined>()
   const [selectedColor, setSelectedColor] = useState<Color | undefined>()
@@ -32,6 +33,7 @@ export const TimelineComposer = ({ onPost, currentUser }: TimelineComposerProps)
         setText('')
         setImage(undefined)
         setSelectedColor(undefined)
+        setResetTrigger(prev => prev + 1)
       })
       .catch(err => {
         setError('Erreur lors de la publication. Veuillez réessayer.')
@@ -54,7 +56,7 @@ export const TimelineComposer = ({ onPost, currentUser }: TimelineComposerProps)
       )}
 
       <div className="flex flex-wrap gap-4 mt-4">
-        <MediaUploader onSelect={v => setImage(v)} />
+        <MediaUploader onSelect={v => setImage(v)} resetTrigger={resetTrigger} />
         <ColorSelector colors={POST_COLORS} selected={selectedColor} onSelect={v => setSelectedColor(v === selectedColor ? undefined : v)} />
         <button
           onClick={handleSubmit}

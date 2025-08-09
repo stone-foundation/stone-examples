@@ -43,7 +43,6 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
     )
   }
 
-  // future case: type === "event"
   if (post.type === "activityAssignment" && post.activityAssignment?.activity) {
     return (
       <div className="bg-gradient-to-br overflow-hidden from-white/5 to-white/10 border border-white/10 rounded-xl p-4 mt-2 text-white shadow-sm">
@@ -84,9 +83,9 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
               🎯 {post.activityAssignment.activity.categoryLabel}
             </span>
           )}
-          {post.activityAssignment.member && (
+          {post.activityAssignment.teamMember && (
             <span className="px-2 py-1 bg-white/5 border border-white/10 rounded-md">
-              👤 {currentUser?.isAdmin && `${post.activityAssignment.member.username} - @`}{post.activityAssignment.member.username}
+              👤 {currentUser?.isAdmin && `${post.activityAssignment.teamMember.user?.fullname} - @`}{post.activityAssignment.teamMember.name}
             </span>
           )}
         </div>
@@ -124,7 +123,6 @@ export const PostContent = ({ post, currentUser }: PostContentProps) => {
       </div>
     )
   }
-
 
   // default: simple text
   return (

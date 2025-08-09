@@ -71,8 +71,8 @@ export class PostCommentEventHandler {
     const user = event.getUser<User>()
     const data = event.getBody<PostComment>()
 
-    if (isEmpty(data) || isEmpty(data?.postUuid) || isEmpty(data?.content)) {
-      throw new BadRequestError('Post UUID and comment content are required')
+    if (isEmpty(data) || isEmpty(data?.postUuid) || isEmpty(data?.content) || isEmpty(data?.missionUuid)) {
+      throw new BadRequestError('Post UUID, comment content and mission UUID are required')
     }
 
     const uuid = await this.postCommentService.create(data, user)

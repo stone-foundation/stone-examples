@@ -48,7 +48,7 @@ export class PostCommentService {
   /**
    * Create a new comment
    */
-  async create (data: Pick<PostComment, 'postUuid' | 'content'>): Promise<{ uuid?: string }> {
+  async create (data: Pick<PostComment, 'postUuid' | 'content' | 'missionUuid'>): Promise<{ uuid?: string }> {
     return await this.client.create(data)
   }
 

@@ -128,6 +128,6 @@ export class UserHistoryService {
    * @returns The converted user history
    */
   toUserHistory (userHistoryModel: UserHistoryModel): UserHistory {
-    return { ...userHistoryModel }
+    return { ...userHistoryModel } as UserHistory
   }
 }

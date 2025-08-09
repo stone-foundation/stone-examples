@@ -1,5 +1,3 @@
-export const PRESENCE_EVENT_CATEGORY = 'presence.punch'
-
 export const COLOR_MAP: Record<Color, string> = {
   red: '#e74c3c',
   blue: '#3498db',

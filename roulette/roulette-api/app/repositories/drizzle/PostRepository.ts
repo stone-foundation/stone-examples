@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm'
 import { User } from '../../models/User'
+import { and, eq, desc } from 'drizzle-orm'
 import { posts } from '../../database/schema'
 import { PostModel } from '../../models/Post'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -34,7 +34,12 @@ export class PostRepository implements IPostRepository {
     limit = isEmpty(limit) ? 10 : Number(limit)
     const offset = (page - 1) * limit
 
-    const items = await this.database.select().from(posts).limit(limit).offset(offset)
+    const items = await this.database
+      .select()
+      .from(posts)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(posts.createdAt))
     const total = await this.count()
     const nextPage = items.length === limit ? page + 1 : undefined
 
@@ -57,7 +62,7 @@ export class PostRepository implements IPostRepository {
     const query = this.database.select().from(posts).limit(limit).offset(offset)
     if (whereClauses.length > 0) query.where(and(...whereClauses))
 
-    const items = await query
+    const items = await query.orderBy(desc(posts.createdAt))
     const total = await this.count()
     const nextPage = items.length === limit ? page + 1 : undefined
 

@@ -7,14 +7,18 @@ import {
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import { AWS_LAMBDA_HTTP_PLATFORM } from '@stone-js/aws-lambda-http-adapter'
-import { DynamoBetRepository } from '../repositories/dynamobd/DynamoBetRepository'
 import { DynamoUserRepository } from '../repositories/dynamobd/DynamoUserRepository'
 import { DynamoTeamRepository } from '../repositories/dynamobd/DynamoTeamRepository'
+import { DynamoSpinRepository } from '../repositories/dynamobd/DynamoSpinRepository'
 import { DynamoPostRepository } from '../repositories/dynamobd/DynamoPostRepository'
 import { DynamoBadgeRepository } from '../repositories/dynamobd/DynamoBadgeRepository'
+import { DynamoMissionRepository } from '../repositories/dynamobd/DynamoMissionRepository'
 import { DynamoSessionRepository } from '../repositories/dynamobd/DynamoSessionRepository'
 import { DynamoMetadataRepository } from '../repositories/dynamobd/DynamoMetadataRepository'
 import { DynamoActivityRepository } from '../repositories/dynamobd/DynamoActivityRepository'
+import { DynamoTeamMemberRepository } from '../repositories/dynamobd/DynamoTeamMemberRepository'
+import { DynamoChatMessageRepository } from '../repositories/dynamobd/DynamoChatMessageRepository'
+import { DynamoUserHistoryRepository } from '../repositories/dynamobd/DynamoUserHistoryRepository'
 import { DynamoPostCommentRepository } from '../repositories/dynamobd/DynamoPostCommentRepository'
 import { DynamoBadgeAssignmentRepository } from '../repositories/dynamobd/DynamoBadgeAssignmentRepository'
 import { DynamoActivityAssignmentRepository } from '../repositories/dynamobd/DynamoActivityAssignmentRepository'
@@ -73,14 +77,18 @@ export class AwsServiceProvider implements IServiceProvider {
    */
   registerRepositories (): void {
     this.container
-      .autoBinding(DynamoBetRepository, DynamoBetRepository, true, ['betRepository'])
+      .autoBinding(DynamoSpinRepository, DynamoSpinRepository, true, ['spinRepository'])
       .autoBinding(DynamoUserRepository, DynamoUserRepository, true, ['userRepository'])
       .autoBinding(DynamoTeamRepository, DynamoTeamRepository, true, ['teamRepository'])
       .autoBinding(DynamoPostRepository, DynamoPostRepository, true, ['postRepository'])
       .autoBinding(DynamoBadgeRepository, DynamoBadgeRepository, true, ['badgeRepository'])
+      .autoBinding(DynamoMissionRepository, DynamoMissionRepository, true, ['missionRepository'])
       .autoBinding(DynamoSessionRepository, DynamoSessionRepository, true, ['sessionRepository'])
       .autoBinding(DynamoMetadataRepository, DynamoMetadataRepository, true, ['metadataRepository'])
       .autoBinding(DynamoActivityRepository, DynamoActivityRepository, true, ['activityRepository'])
+      .autoBinding(DynamoTeamMemberRepository, DynamoTeamMemberRepository, true, ['teamMemberRepository'])
+      .autoBinding(DynamoUserHistoryRepository, DynamoUserHistoryRepository, true, ['userHistoryRepository'])
+      .autoBinding(DynamoChatMessageRepository, DynamoChatMessageRepository, true, ['chatMessageRepository'])
       .autoBinding(DynamoPostCommentRepository, DynamoPostCommentRepository, true, ['postCommentRepository'])
       .autoBinding(DynamoBadgeAssignmentRepository, DynamoBadgeAssignmentRepository, true, ['badgeAssignmentRepository'])
       .autoBinding(DynamoActivityAssignmentRepository, DynamoActivityAssignmentRepository, true, ['activityAssignmentRepository'])

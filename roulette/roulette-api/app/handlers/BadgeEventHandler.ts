@@ -59,8 +59,8 @@ export class BadgeEventHandler {
     const user = event.getUser<User>()
     const data = event.getBody<Badge>()
 
-    if (!data?.name || !data.score) {
-      throw new BadRequestError('Badge name and score are required')
+    if (!data?.name || !data.score || !data.missionUuid) {
+      throw new BadRequestError('Badge name, score and mission UUID are required')
     }
 
     const uuid = await this.badgeService.create(data, user)
@@ -128,6 +128,7 @@ export class BadgeEventHandler {
         color: v.color,
         iconUrl: v.iconUrl,
         category: v.category,
+        missionUuid: v.missionUuid,
         description: v.description,
         score: Number(v.score) || 0,
         categoryLabel: v.categoryLabel,

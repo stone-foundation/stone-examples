@@ -2,48 +2,48 @@ import {
   PutCommand,
   ScanCommand,
   QueryCommand,
-  UpdateCommand,
   DeleteCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
-import { User } from '../../models/User'
-import { TeamModel } from '../../models/Team'
+import { randomUUID } from 'node:crypto'
 import { ListMetadataOptions } from '../../models/App'
-import { ITeamRepository } from '../contracts/ITeamRepository'
+import { User, UserHistoryModel } from '../../models/User'
+import { IBlueprint, isNotEmpty, Logger } from '@stone-js/core'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
-import { IBlueprint, isEmpty, isNotEmpty, Logger } from '@stone-js/core'
 import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 /**
- * Team Repository Options
+ * UserHistory Repository Options
  */
-export interface DynamoTeamRepositoryOptions {
+export interface DynamoUserHistoryRepositoryOptions {
   blueprint: IBlueprint
   database: DynamoDBDocumentClient
   metadataRepository: IMetadataRepository
-  userHistoryRepository: IUserHistoryRepository
 }
 
 /**
- * Team Repository (DynamoDB)
+ * UserHistory Repository (DynamoDB)
  */
-export class DynamoTeamRepository implements ITeamRepository {
+export class DynamoUserHistoryRepository implements IUserHistoryRepository {
   private readonly tableName: string
   private readonly database: DynamoDBDocumentClient
   private readonly metadataRepository: IMetadataRepository
-  private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ database, blueprint, metadataRepository, userHistoryRepository }: DynamoTeamRepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository }: DynamoUserHistoryRepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
-    this.userHistoryRepository = userHistoryRepository
-    this.tableName = blueprint.get('aws.dynamo.tables.teams.name', 'teams')
+    this.tableName = blueprint.get('aws.dynamo.tables.userHistories.name', 'user_histories')
   }
 
-  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamModel>> {
+  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<UserHistoryModel>> {
     const params: any = {
       TableName: this.tableName,
-      Limit: Number(limit ?? 10)
+      IndexName: 'createdAt-global-index', // GSI with constant PK + createdAt SK for chronological order
+      Limit: Number(limit ?? 10),
+      ScanIndexForward: false, // DESC order by createdAt
+      KeyConditionExpression: '#gsiPK = :gsiPK',
+      ExpressionAttributeNames: { '#gsiPK': 'gsiPK' },
+      ExpressionAttributeValues: { ':gsiPK': 'user_histories' }
     }
 
     if (typeof cursor === 'string' && cursor.length > 0) {
@@ -55,26 +55,26 @@ export class DynamoTeamRepository implements ITeamRepository {
     }
 
     const total = await this.count()
-    const result = await this.database.send(new ScanCommand(params))
+    const result = await this.database.send(new QueryCommand(params))
 
     return {
       total,
       limit: Number(limit ?? 10),
       page: cursor,
-      items: (result.Items as TeamModel[]) ?? [],
+      items: (result.Items as UserHistoryModel[]) ?? [],
       nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
   }
 
-  async listBy (conditions: Partial<TeamModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamModel>> {
+  async listBy (conditions: Partial<UserHistoryModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<UserHistoryModel>> {
     let keyValue: any
     let keyName: string | undefined
     let indexName: string | undefined
 
     // Define which fields have indexes
-    const indexedKeys = ['color', 'name']
+    const indexedKeys = ['type', 'action', 'authorUuid']
 
     for (const [key, value] of Object.entries(conditions)) {
       if (indexedKeys.includes(key) && isNotEmpty(value)) {
@@ -86,11 +86,12 @@ export class DynamoTeamRepository implements ITeamRepository {
     }
 
     if (keyName) {
-      // Use Query on GSI for indexed fields
+      // Use Query on GSI for indexed fields with createdAt ordering
       const params: any = {
         TableName: this.tableName,
         IndexName: indexName,
         Limit: Number(limit ?? 10),
+        ScanIndexForward: false, // DESC order by createdAt (if createdAt is SK)
         KeyConditionExpression: `#${keyName} = :${keyName}`,
         ExpressionAttributeNames: { [`#${keyName}`]: keyName },
         ExpressionAttributeValues: { [`:${keyName}`]: keyValue }
@@ -111,7 +112,7 @@ export class DynamoTeamRepository implements ITeamRepository {
         total,
         limit: Number(limit ?? 10),
         page: cursor,
-        items: (result.Items as TeamModel[]) ?? [],
+        items: (result.Items as UserHistoryModel[]) ?? [],
         nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
@@ -157,29 +158,30 @@ export class DynamoTeamRepository implements ITeamRepository {
       total,
       limit: Number(limit ?? 10),
       page: cursor,
-      items: (result.Items as TeamModel[]) ?? [],
+      items: (result.Items as UserHistoryModel[]) ?? [],
       nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
   }
 
-  async findByUuid (uuid: string): Promise<TeamModel | undefined> {
-    const result = await this.database.send(
-      new QueryCommand({
-        TableName: this.tableName,
-        KeyConditionExpression: '#uuid = :uuid',
-        ExpressionAttributeNames: { '#uuid': 'uuid' },
-        ExpressionAttributeValues: { ':uuid': uuid }
-      })
-    )
+  async findById (id: number): Promise<UserHistoryModel | undefined> {
+    // Note: DynamoDB doesn't have auto-increment IDs, this method searches by id field
+    const params = {
+      TableName: this.tableName,
+      FilterExpression: '#id = :id',
+      ExpressionAttributeNames: { '#id': 'id' },
+      ExpressionAttributeValues: { ':id': id },
+      Limit: 1
+    }
 
-    return result.Items?.[0] as TeamModel | undefined
+    const result = await this.database.send(new ScanCommand(params))
+    return result.Items?.[0] as UserHistoryModel | undefined
   }
 
-  async findBy (conditions: Partial<TeamModel>): Promise<TeamModel | undefined> {
+  async findBy (conditions: Partial<UserHistoryModel>): Promise<UserHistoryModel | undefined> {
     // Primary key and indexed fields that can be used for efficient queries
-    const queryableKeys = ['uuid', 'color', 'name']
+    const queryableKeys = ['uuid', 'type', 'action', 'authorUuid']
     
     for (const [key, value] of Object.entries(conditions)) {
       if (queryableKeys.includes(key) && isNotEmpty(value)) {
@@ -197,7 +199,7 @@ export class DynamoTeamRepository implements ITeamRepository {
         }
         
         const result = await this.database.send(new QueryCommand(params))
-        return result.Items?.[0] as TeamModel | undefined
+        return result.Items?.[0] as UserHistoryModel | undefined
       }
     }
 
@@ -225,93 +227,59 @@ export class DynamoTeamRepository implements ITeamRepository {
     }
 
     const result = await this.database.send(new ScanCommand(params))
-    return result.Items?.[0] as TeamModel | undefined
+    return result.Items?.[0] as UserHistoryModel | undefined
   }
 
-  async create (team: TeamModel, author: User): Promise<string | undefined> {
+  async create (userHistory: UserHistoryModel, author: User): Promise<string | undefined> {
+    // Add constant partition key for global ordering GSI + set authorUuid
+    const enrichedUserHistory = {
+      ...userHistory,
+      authorUuid: author.uuid,
+      gsiPK: 'user_histories'
+    }
+
     await this.database.send(
       new PutCommand({
         TableName: this.tableName,
-        Item: team,
+        Item: enrichedUserHistory,
         ExpressionAttributeNames: { '#uuid': 'uuid' },
         ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
     
-    await this.metadataRepository.increment(this.tableName, { lastUuid: team.uuid })
-    await this.userHistoryRepository.makeHistoryEntry({
-      type: 'team',
-      action: 'created',
-      itemUuid: team.uuid,
-    }, author)
-    
-    return team.uuid
+    await this.metadataRepository.increment(this.tableName, { lastUuid: userHistory.uuid })
+    return userHistory.uuid
   }
 
-  async update ({ uuid, name }: TeamModel, data: Partial<TeamModel>, author: User): Promise<TeamModel | undefined> {
-    const updateExpr: string[] = []
-    const attrNames: Record<string, string> = {}
-    const attrValues: Record<string, any> = {}
-
-    for (const [key, value] of Object.entries(data)) {
-      // Keep original logic: skip uuid and name if empty (immutable fields)
-      if (['uuid', 'name'].includes(key) && isEmpty(value)) continue
-      updateExpr.push(`#${key} = :${key}`)
-      attrNames[`#${key}`] = key
-      attrValues[`:${key}`] = value
-    }
-
-    if (updateExpr.length === 0) return await this.findByUuid(uuid)
-
-    // Handle composite key properly - use both uuid and name if name is part of primary key
-    const key = name ? { uuid, name } : { uuid }
-
-    const result = await this.database.send(
-      new UpdateCommand({
-        TableName: this.tableName,
-        Key: key,
-        ReturnValues: 'ALL_NEW',
-        ExpressionAttributeNames: attrNames,
-        ExpressionAttributeValues: attrValues,
-        UpdateExpression: `SET ${updateExpr.join(', ')}`
-      })
-    )
-
-    await this.userHistoryRepository.makeHistoryEntry({
-      itemUuid: uuid,
-      type: 'team',
-      action: 'updated'
-    }, author)
-
-    return result.Attributes as TeamModel | undefined
-  }
-
-  async delete ({ uuid, name }: TeamModel, author: User): Promise<boolean> {
+  async delete ({ uuid }: UserHistoryModel): Promise<boolean> {
     try {
-      // Handle composite key properly - use both uuid and name if name is part of primary key
-      const key = name ? { uuid, name } : { uuid }
-
       await this.database.send(
         new DeleteCommand({
           TableName: this.tableName,
-          Key: key,
+          Key: { uuid },
           ExpressionAttributeNames: { '#uuid': 'uuid' },
           ConditionExpression: 'attribute_exists(#uuid)'
         })
       )
       
       await this.metadataRepository.decrement(this.tableName)
-      await this.userHistoryRepository.makeHistoryEntry({
-        itemUuid: uuid,
-        type: 'team',
-        action: 'deleted',
-      }, author)
-      
       return true
     } catch (err: any) {
       if (err.name === 'ConditionalCheckFailedException') return false
       throw err
     }
+  }
+
+  async makeHistoryEntry (userHistory: Partial<UserHistoryModel>, author: User): Promise<string | undefined> {
+    return await this.create({
+      itemUuid: '',
+      type: 'user',
+      authorUuid: '',
+      action: 'created',
+      ...userHistory,
+      uuid: randomUUID(),
+      createdAt: Date.now(),
+    }, author)
   }
 
   async count (): Promise<number> {

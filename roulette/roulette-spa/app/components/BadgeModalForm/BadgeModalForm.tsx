@@ -1,13 +1,15 @@
 import { X } from "lucide-react"
-import { FC, useState, useEffect } from "react"
+import { FC, useState } from "react"
+import { Mission } from "../../models/Mission"
 import { Badge, BadgeType } from "../../models/Badge"
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react"
 
 interface BadgeModalFormProps {
   open: boolean
+  mission?: Mission
   onClose: () => void
   initialData?: Partial<Badge>
-  onSubmit: (badge: Partial<Badge>) => void
+  onSubmit: (badge: Partial<Badge>) => Promise<void>
 }
 
 const BADGE_TYPES: { label: string; value: BadgeType }[] = [
@@ -17,30 +19,35 @@ const BADGE_TYPES: { label: string; value: BadgeType }[] = [
   { label: "Spécial", value: "special" },
 ]
 
+const BADGE_VISIBILITIES: { label: string; value: 'public' | 'private' }[] = [
+  { label: "Privé", value: "private" },
+  { label: "Public", value: "public" },
+]
+
 const COLOR_OPTIONS = [
   "#f87171", "#facc15", "#4ade80", "#60a5fa", "#a78bfa", "#f472b6", "#f97316", "#14b8a6"
 ]
 
 export const BadgeModalForm: FC<BadgeModalFormProps> = ({
   open,
+  mission,
   onClose,
   onSubmit,
   initialData = {},
 }) => {
   const [form, setForm] = useState<Partial<Badge>>(initialData)
 
-  useEffect(() => {
-    setForm(initialData)
-  }, [initialData])
-
   const handleChange = (key: keyof Badge, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   const handleSubmit = () => {
+    form.missionUuid = mission?.uuid
     if (!form.name || !form.category || !form.color || !form.categoryLabel) return
-    onSubmit(form)
-    onClose()
+    onSubmit(form).then(() => {
+      setForm({})
+      onClose()
+    })
   }
 
   return (
@@ -89,10 +96,36 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
             </div>
 
             <div>
-              <label className="block mb-1 text-sm">Type</label>
+              <label className="block mb-1 text-sm">Affectations maximales</label>
+              <input
+                type="number"
+                value={form.maxAssignments ?? 0}
+                onChange={(e) => handleChange("maxAssignments", parseInt(e.target.value))}
+                className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm">Visibilité</label>
+              <select
+                value={form.visibility ?? ""}
+                onChange={(e) => handleChange("visibility", e.target.value as BadgeType)}
+                className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
+              >
+                <option value="">Sélectionner une visibilité</option>
+                {BADGE_VISIBILITIES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm">Catégorie</label>
               <select
                 value={form.category ?? ""}
-                onChange={(e) => handleChange("type", e.target.value as BadgeType)}
+                onChange={(e) => handleChange("category", e.target.value as BadgeType)}
                 className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
               >
                 <option value="">Sélectionner un type</option>
@@ -105,10 +138,10 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
             </div>
 
             <div>
-              <label className="block mb-1 text-sm">Texte du type</label>
+              <label className="block mb-1 text-sm">Label de catégorie</label>
               <input
                 value={form.categoryLabel ?? ""}
-                onChange={(e) => handleChange("typeLabel", e.target.value)}
+                onChange={(e) => handleChange("categoryLabel", e.target.value)}
                 className="w-full bg-zinc-800 border border-white/10 p-2 rounded-md text-white"
               />
             </div>
@@ -139,13 +172,15 @@ export const BadgeModalForm: FC<BadgeModalFormProps> = ({
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={handleSubmit}
-              className="px-6 py-2 bg-orange-600 rounded-md hover:bg-orange-500 transition text-sm"
-            >
-              {form.uuid ? "Modifier" : "Créer"}
-            </button>
+          <div className="px-6 py-4 border-t mt-5 border-white/10">
+            <div className="flex justify-end">
+              <button
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-orange-600 rounded-md hover:bg-orange-500 transition text-sm"
+              >
+                {form.uuid ? "Modifier" : "Créer"}
+              </button>
+            </div>
           </div>
         </DialogPanel>
       </div>

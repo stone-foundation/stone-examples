@@ -1,18 +1,30 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
+import { UserService } from './UserService'
 import { NotFoundError } from '@stone-js/http-core'
+import { SecurityService } from './SecurityService'
 import { ListMetadataOptions } from '../models/App'
+import { PRESENCE_EVENT_CATEGORY } from '../constants'
+import { ActivityAssignment } from '../models/Activity'
 import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 import { Team, TeamMember, TeamMemberModel } from '../models/Team'
 import { ITeamRepository } from '../repositories/contracts/ITeamRepository'
+import { IMissionRepository } from '../repositories/contracts/IMissionRepository'
+import { IActivityRepository } from '../repositories/contracts/IActivityRepository'
 import { ITeamMemberRepository } from '../repositories/contracts/ITeamMemberRepository'
+import { IActivityAssignmentRepository } from '../repositories/contracts/IActivityAssignmentRepository'
 
 /**
  * TeamMember Service Options
  */
 export interface TeamMemberServiceOptions {
+  userService: UserService
   teamRepository: ITeamRepository
+  securityService: SecurityService
+  missionRepository: IMissionRepository
+  activityRepository: IActivityRepository
   teamMemberRepository: ITeamMemberRepository
+  activityAssignmentRepository: IActivityAssignmentRepository
 }
 
 /**
@@ -20,8 +32,12 @@ export interface TeamMemberServiceOptions {
  */
 @Service({ alias: 'teamMemberService' })
 export class TeamMemberService {
+  private readonly userService: UserService
   private readonly teamRepository: ITeamRepository
+  private readonly missionRepository: IMissionRepository
+  private readonly activityRepository: IActivityRepository
   private readonly teamMemberRepository: ITeamMemberRepository
+  private readonly activityAssignmentRepository: IActivityAssignmentRepository
 
   /**
    * Resolve route binding
@@ -38,9 +54,13 @@ export class TeamMemberService {
   /**
    * Create a new TeamMember Service
    */
-  constructor ({ teamMemberRepository, teamRepository }: TeamMemberServiceOptions) {
+  constructor ({ teamMemberRepository, missionRepository, activityRepository, teamRepository, userService, activityAssignmentRepository }: TeamMemberServiceOptions) {
+    this.userService = userService
     this.teamRepository = teamRepository
+    this.missionRepository = missionRepository
+    this.activityRepository = activityRepository
     this.teamMemberRepository = teamMemberRepository
+    this.activityAssignmentRepository = activityAssignmentRepository
   }
 
   /**
@@ -48,7 +68,7 @@ export class TeamMemberService {
    */
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<TeamMember>> {
     const result = await this.teamMemberRepository.list(limit, page)
-    const items = result.items.map(v => this.toTeamMember(v))
+    const items = await this.toTeamMembers(result.items)
     return { ...result, items }
   }
 
@@ -57,7 +77,7 @@ export class TeamMemberService {
    */
   async listBy (conditions: Partial<TeamMemberModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<TeamMember>> {
     const result = await this.teamMemberRepository.listBy(conditions, limit, page)
-    const items = result.items.map(v => this.toTeamMember(v))
+    const items = await this.toTeamMembers(result.items)
     return { ...result, items }
   }
 
@@ -69,7 +89,7 @@ export class TeamMemberService {
    */
   async findBy (conditions: Record<string, any>): Promise<TeamMember> {
     const teamMemberModel = await this.teamMemberRepository.findBy(conditions)
-    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
+    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return await this.toTeamMember(teamMemberModel)
     throw new NotFoundError(`The team member with conditions ${JSON.stringify(conditions)} not found`)
   }
   
@@ -81,7 +101,7 @@ export class TeamMemberService {
    */
   async findByUuid (uuid: string): Promise<TeamMember | undefined> {
     const teamMemberModel = await this.teamMemberRepository.findBy({ uuid })
-    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
+    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return await this.toTeamMember(teamMemberModel)
   }
 
   /**
@@ -131,7 +151,7 @@ export class TeamMemberService {
     
     await this.updateTeamMemberCount(teamMember.teamUuid, false, author)
 
-    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
+    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return await this.toTeamMember(teamMemberModel)
     throw new NotFoundError(`Team member with ID ${teamMember.uuid} not found`)
   }
 
@@ -145,7 +165,7 @@ export class TeamMemberService {
    */
   async updateRole (teamMember: TeamMember, role: 'member' | 'captain' | 'admin', author: User): Promise<TeamMember> {
     const teamMemberModel = await this.teamMemberRepository.update(teamMember, { role }, author)
-    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
+    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return await this.toTeamMember(teamMemberModel)
     throw new NotFoundError(`Team member with ID ${teamMember.uuid} not found`)
   }
 
@@ -163,7 +183,7 @@ export class TeamMemberService {
     }
 
     const teamMemberModel = await this.teamMemberRepository.update(teamMember, updateData, author)
-    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return this.toTeamMember(teamMemberModel)
+    if (isNotEmpty<TeamMemberModel>(teamMemberModel)) return await this.toTeamMember(teamMemberModel)
     throw new NotFoundError(`Team member with ID ${teamMember.uuid} not found`)
   }
 
@@ -197,16 +217,6 @@ export class TeamMemberService {
   }
 
   /**
-   * Convert TeamMemberModel to TeamMember
-   *
-   * @param teamMemberModel - The team member model to convert
-   * @returns The converted team member
-   */
-  toTeamMember (teamMemberModel: TeamMemberModel): TeamMember {
-    return teamMemberModel
-  }
-
-  /**
    * Update the team member count for a team
    *
    * @param teamUuid - The UUID of the team
@@ -218,6 +228,83 @@ export class TeamMemberService {
     if (isNotEmpty<Team>(team)) {
       const newCount = increment ? team.countMembers + 1 : Math.max(0, team.countMembers - 1)
       await this.teamRepository.update(team, { countMembers: newCount }, author)
+    }
+  }
+
+  /**
+   * Convert TeamMemberModel to TeamMember
+   *
+   * @param teamMemberModel - The team member model to convert
+   * @returns The converted team member
+   */
+  async toTeamMember (teamMemberModel: TeamMemberModel): Promise<TeamMember> {
+    const presence = await this.getTeamMemberPresence(teamMemberModel)
+    const user = await this.userService.findByUuid(teamMemberModel.userUuid)
+    const team = await this.teamRepository.findByUuid(teamMemberModel.teamUuid)
+
+    return {
+      ...teamMemberModel,
+      ...presence,
+      user,
+      team,
+    }
+  }
+
+  /**
+   * Convert an array of TeamMemberModel to TeamMember
+   * 
+   * @param teamMemberModel - The array of team member models to convert
+   * @returns The converted array of team members
+   */
+  async toTeamMembers (teamMemberModel: TeamMemberModel[]): Promise<TeamMember[]> {
+    const userMeta = await this.userService.list(1000)
+    const teamMeta = await this.teamRepository.list(1000)
+    const result: TeamMember[] = []
+
+    for (const member of teamMemberModel) {
+      const presence = await this.getTeamMemberPresence(member)
+      const user = userMeta.items.find(user => user.uuid === member.userUuid)
+      const team = teamMeta.items.find(team => team.uuid === member.teamUuid)
+      result.push({
+        ...member,
+        ...presence,
+        team,
+        user,
+      })
+    }
+
+    return result
+  }
+
+  /**
+   * Get the presence status of a team member
+   *
+   * @param teamMember - The team member to check
+   * @returns An object containing presence and lateness status
+   */
+  private async getTeamMemberPresence (teamMember: TeamMember): Promise<{ isPresent: boolean, isLate: boolean }> {
+    const activity = await this.activityRepository.findBy({
+      category: PRESENCE_EVENT_CATEGORY,
+      missionUuid: teamMember.missionUuid
+    })
+    const mission = await this.missionRepository.findByUuid(teamMember.missionUuid)
+    const activityAssignment = (await this.activityAssignmentRepository.listBy({
+      activityUuid: activity?.uuid,
+      teamUuid: teamMember.teamUuid,
+      teamMemberUuid: teamMember.uuid,
+      missionUuid: teamMember.missionUuid,
+    })).items.find(v => v.status === 'approved')
+
+    if (isNotEmpty<ActivityAssignment>(activityAssignment)) {
+      return {
+        isPresent: true,
+        isLate: activityAssignment.createdAt > (mission?.startDate ?? 0) ? true : false
+      }
+    }
+
+    return {
+      isLate: true,
+      isPresent: false,
     }
   }
 }

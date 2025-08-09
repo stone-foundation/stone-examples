@@ -27,8 +27,13 @@ export class PostClient {
   /**
    * List all posts
    */
-  async list (limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Post>> {
-    const query = new URLSearchParams({ limit: String(limit), page: String(page ?? '') })
+  async list (options: Partial<Post> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Post>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+    
     return await this.client.get<ListMetadataOptions<Post>>(`${this.path}/?${query.toString()}`)
   }
 

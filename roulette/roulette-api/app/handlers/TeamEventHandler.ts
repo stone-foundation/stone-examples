@@ -145,8 +145,8 @@ export class TeamEventHandler {
       throw new BadRequestError(`Team with name "${data.name}" already exists`)
     }
 
-    if (isCreation && isEmpty(data.name)) {
-      throw new BadRequestError('Team name is required')
+    if (isCreation && isEmpty(data.name) && isEmpty(data.missionUuid)) {
+      throw new BadRequestError('Team name and mission UUID are required')
     }
 
     return data

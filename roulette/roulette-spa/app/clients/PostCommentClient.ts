@@ -37,7 +37,7 @@ export class PostCommentClient {
    */
   async listByPost (postUuid: string, limit: number = 10, page?: string): Promise<ListMetadataOptions<PostComment>> {
     const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
-    return await this.client.get<ListMetadataOptions<PostComment>>(`${this.path}/by-post/${postUuid}?${query.toString()}`)
+    return await this.client.get<ListMetadataOptions<PostComment>>(`${this.path}/posts/${postUuid}?${query.toString()}`)
   }
 
   /**

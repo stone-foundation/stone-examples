@@ -18,9 +18,7 @@ export interface BadgeModel {
   visibility: 'public' | 'private'
 }
 
-export interface Badge extends BadgeModel {
-  activityUuid?: string
-}
+export interface Badge extends BadgeModel {}
 
 export interface BadgeAssignmentModel {
   uuid: string

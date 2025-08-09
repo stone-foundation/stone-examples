@@ -72,12 +72,12 @@ export class RouletteEventHandler {
       throw new BadRequestError('Tu dois fournir un nom avant de spinner')
     }
 
-    if (await this.spinService.isTeamMemberNameAlreadyExists(name, missionUuid)) {
-      throw new BadRequestError(`Le nom "${name}" est déjà pris. Veuillez choisir un nom différent.`)
-    }
-
     if (await this.spinService.userAlreadySpinned(user, missionUuid)) {
       throw new BadRequestError('🤪 E PIYAY 🤪! Dasomann! Vous faites déjà partie d\'une équipe.')
+    }
+
+    if (await this.spinService.isTeamMemberNameAlreadyExists(name, missionUuid)) {
+      throw new BadRequestError(`Le nom "${name}" est déjà pris. Veuillez choisir un nom différent.`)
     }
 
     const result = await this.spinService.spin(user, missionUuid, name)

@@ -25,7 +25,7 @@ export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Ele
       {isPage && (
         <>
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-4xl font-bold">Soldats</h1>
+            <h1 className="text-4xl font-bold">Membres</h1>
           </div>
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
             <FilterTabs value={filter} onChange={setFilter} />
@@ -42,7 +42,7 @@ export const MemberList = ({ members, isPage = true }: MemberListProps): JSX.Ele
             )
           : (
             <AlertBox className='col-span-full text-center text-white/70 text-sm italic mt-4'>
-              Aucun soldat trouvé avec ce filtre.
+              Aucun member trouvé avec ce filtre.
             </AlertBox>
             )}
       </div>

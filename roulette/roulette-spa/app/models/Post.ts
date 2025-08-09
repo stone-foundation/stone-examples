@@ -1,6 +1,5 @@
 import { Team } from "./Team"
 import { User } from "./User"
-import { Badge } from "./Badge"
 import { Color } from "../constants"
 import { ActivityAssignment } from "./Activity"
 
@@ -12,7 +11,6 @@ export interface Post {
   team?: Team
   uuid: string
   author: User
-  badge?: Badge
   type: PostType
   content?: string
   private: boolean
@@ -20,9 +18,12 @@ export interface Post {
   createdAt: number
   likeCount: number
   teamUuid?: string
+  authorUuid: string
   updatedAt?: number
   likedByMe?: boolean
+  missionUuid: string
   commentCount: number
+  teamMemberUuid?: string
   comments?: PostComment[]
   backgroundColor?: Color
   activityAssignment?: ActivityAssignment
@@ -40,4 +41,5 @@ export interface PostComment {
   createdAt: number
   likeCount: number
   likedByMe?: boolean
+  missionUuid: string
 }

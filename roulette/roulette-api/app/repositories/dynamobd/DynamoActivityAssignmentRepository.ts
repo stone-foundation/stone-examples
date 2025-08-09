@@ -62,7 +62,7 @@ export class DynamoActivityAssignmentRepository implements IActivityAssignmentRe
     let keyName: string | undefined
     let indexName: string | undefined
     
-    const keys = ['activityUuid', 'badgeUuid', 'teamUuid', 'memberUuid']
+    const keys = ['activityUuid', 'badgeUuid', 'teamUuid', 'teamMemberUuid']
 
     for (const [key, value] of Object.entries(conditions)) {
       if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
@@ -113,7 +113,7 @@ export class DynamoActivityAssignmentRepository implements IActivityAssignmentRe
   }
 
   async findBy (conditions: Partial<ActivityAssignmentModel>): Promise<ActivityAssignmentModel | undefined> {
-    const keys = ['uuid', 'activityUuid', 'badgeUuid', 'teamUuid', 'memberUuid']
+    const keys = ['uuid', 'activityUuid', 'badgeUuid', 'teamUuid', 'teamMemberUuid']
     for (const [key, value] of Object.entries(conditions)) {
       if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
         const params: any = {

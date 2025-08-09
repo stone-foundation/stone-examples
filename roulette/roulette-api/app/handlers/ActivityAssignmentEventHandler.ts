@@ -4,12 +4,14 @@ import { PostModel } from '../models/Post'
 import { PostEvent } from '../events/PostEvent'
 import { ListMetadataOptions } from '../models/App'
 import { TeamService } from '../services/TeamService'
+import { PRESENCE_EVENT_CATEGORY } from '../constants'
 import { ActivityAssignment } from '../models/Activity'
 import { ActivityService } from '../services/ActivityService'
-import { EventEmitter, ILogger, isNotEmpty } from '@stone-js/core'
+import { TeamMemberService } from '../services/TeamMemberService'
 import { EventHandler, Get, Post, Patch, Delete } from '@stone-js/router'
+import { EventEmitter, ILogger, isEmpty, isNotEmpty } from '@stone-js/core'
 import { ActivityAssignmentService } from '../services/ActivityAssignmentService'
-import { JsonHttpResponse, BadRequestError, IncomingHttpEvent } from '@stone-js/http-core'
+import { JsonHttpResponse, BadRequestError, IncomingHttpEvent, ForbiddenError } from '@stone-js/http-core'
 
 /**
  * Activity Assignment Event Handler Options
@@ -18,6 +20,8 @@ export interface ActivityAssignmentEventHandlerOptions {
   logger: ILogger
   teamService: TeamService
   eventEmitter: EventEmitter
+  activityService: ActivityService
+  teamMemberService: TeamMemberService
   activityAssignmentService: ActivityAssignmentService
 }
 
@@ -29,12 +33,16 @@ export class ActivityAssignmentEventHandler {
   private readonly logger: ILogger
   private readonly teamService: TeamService
   private readonly eventEmitter: EventEmitter
+  private readonly activityService: ActivityService
+  private readonly teamMemberService: TeamMemberService
   private readonly activityAssignmentService: ActivityAssignmentService
 
-  constructor ({ logger, teamService, eventEmitter, activityAssignmentService }: ActivityAssignmentEventHandlerOptions) {
+  constructor ({ logger, teamService, eventEmitter, activityService, teamMemberService, activityAssignmentService }: ActivityAssignmentEventHandlerOptions) {
     this.logger = logger
     this.teamService = teamService
     this.eventEmitter = eventEmitter
+    this.activityService = activityService
+    this.teamMemberService = teamMemberService
     this.activityAssignmentService = activityAssignmentService
   }
 
@@ -76,34 +84,58 @@ export class ActivityAssignmentEventHandler {
     return event.get<ActivityAssignment>('assignment')
   }
 
-  @Post('/', { middleware: ['auth'] })
+  @Post('/', { middleware: ['moderator'] })
   @JsonHttpResponse(201)
   async create (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
     const user = event.getUser<User>()
     const data = event.getBody<ActivityAssignment>()
 
-    if (!data?.activityUuid || !data?.teamUuid) {
-      throw new BadRequestError('Activity UUID and team UUID are required')
+    if (!data?.activityUuid || !data?.teamUuid || !data?.missionUuid) {
+      throw new BadRequestError('Activity UUID, team UUID and mission UUID are required')
     }
 
-    data.origin = 'manual'
-    data.userAgent = event.getHeader('user-agent')
-    data.locationCity = event.getHeader('cloudfront-viewer-city')
-    data.platform = event.getHeader('cloudfront-viewer-platform')
-    data.locationIp = event.getHeader('cloudfront-viewer-address')
-    data.device = event.getHeader('cloudfront-viewer-device-type')
-    data.locationCountry = event.getHeader('cloudfront-viewer-country')
-    data.locationLatitude = event.getHeader('cloudfront-viewer-latitude')
-    data.locationTimezone = event.getHeader('cloudfront-viewer-time-zone')
-    data.locationLongitude = event.getHeader('cloudfront-viewer-longitude')
-    data.locationPostalCode = event.getHeader('cloudfront-viewer-postal-code')
-    data.locationRegion = event.getHeader('cloudfront-viewer-country-region-name')
+    return await this.createActivityAssignment(event, data, user)
+  }
 
-    const uuid = await this.activityAssignmentService.create(data, user)
+  @Post('/presence')
+  @JsonHttpResponse(201)
+  async createPresence (event: IncomingHttpEvent): Promise<{ uuid?: string }> {
+    const missionUuid = event.get<string>('missionUuid')
+    
+    if (!missionUuid) {
+      throw new BadRequestError('The mission UUID is required')
+    }
 
-    this.logger.info(`ActivityAssignment created: ${uuid}, by user: ${String(user.uuid)}`)
+    const user = event.getUser<User>()
+    let activityUuid: string | undefined
+    const teamMember = await this.teamMemberService.findBy({ userUuid: user.uuid, missionUuid })
 
-    return { uuid }
+    try {
+      activityUuid = (await this.activityService.findBy({ category: PRESENCE_EVENT_CATEGORY, missionUuid })).uuid
+    } catch {}
+
+    if (isEmpty(activityUuid)) {
+      activityUuid = await this.activityService.create({
+        score: 3,
+        name: 'Présence',
+        impact: 'positive',
+        categoryLabel: 'Présence',
+        category: PRESENCE_EVENT_CATEGORY,
+        missionUuid: event.get<string>('missionUuid'),
+        description: 'Enregistrement de la présence individuelle des membres de l\'équipe lors de la mission.',
+      }, user)
+    }
+
+    const data = {
+      missionUuid,
+      activityUuid,
+      issuedByUuid: user.uuid,
+      teamUuid: teamMember.teamUuid,
+      teamMemberUuid: teamMember.uuid,
+      comment: 'Le membre de l\'équipe a marqué sa présence',
+    }
+
+    return await this.createActivityAssignment(event, data, user)
   }
 
   @Patch('/:assignment@uuid', {
@@ -140,8 +172,7 @@ export class ActivityAssignmentEventHandler {
 
   @Patch('/:assignment@uuid/status', {
     rules: { assignment: /\S{30,40}/ },
-    bindings: { assignment: ActivityAssignmentService },
-    middleware: ['admin']
+    bindings: { assignment: ActivityAssignmentService }
   })
   @JsonHttpResponse(200)
   async changeStatus (event: IncomingHttpEvent): Promise<ActivityAssignment> {
@@ -150,6 +181,10 @@ export class ActivityAssignmentEventHandler {
     const assignment = event.get<ActivityAssignment>('assignment', {} as unknown as ActivityAssignment)
 
     if (!status) throw new BadRequestError('Status is required')
+
+    if (!Array().concat(user?.roles ?? []).some(v => ['moderator', 'admin'].includes(v)) && status !== 'contested') {
+      throw new ForbiddenError('You are not allowed to change the status of this assignment')
+    }
 
     const updated = await this.activityAssignmentService.update(assignment, { status, validatedAt: Date.now(), validatedByUuid: user.uuid }, user)
 
@@ -169,5 +204,34 @@ export class ActivityAssignmentEventHandler {
     this.logger.info(`ActivityAssignment status changed to ${status}: ${assignment.uuid}`)
 
     return updated
+  }
+
+  /**
+   * Save a new activity assignment
+   *
+   * @param event - The incoming HTTP event
+   * @param data - The activity assignment data
+   * @param user - The user creating the assignment
+   * @returns The created activity assignment UUID
+   */
+  private async createActivityAssignment (event: IncomingHttpEvent, data: Partial<ActivityAssignment>, user: User): Promise<{ uuid: string | undefined }> {
+    data.origin = 'manual'
+    data.userAgent = event.getHeader('user-agent')
+    data.locationCity = event.getHeader('cloudfront-viewer-city')
+    data.platform = event.getHeader('cloudfront-viewer-platform')
+    data.locationIp = event.getHeader('cloudfront-viewer-address')
+    data.device = event.getHeader('cloudfront-viewer-device-type')
+    data.locationCountry = event.getHeader('cloudfront-viewer-country')
+    data.locationLatitude = event.getHeader('cloudfront-viewer-latitude')
+    data.locationTimezone = event.getHeader('cloudfront-viewer-time-zone')
+    data.locationLongitude = event.getHeader('cloudfront-viewer-longitude')
+    data.locationPostalCode = event.getHeader('cloudfront-viewer-postal-code')
+    data.locationRegion = event.getHeader('cloudfront-viewer-country-region-name')
+
+    const uuid = await this.activityAssignmentService.create(data, user)
+
+    this.logger.info(`ActivityAssignment created: ${uuid}, by user: ${String(user.uuid)}`)
+
+    return { uuid }
   }
 }

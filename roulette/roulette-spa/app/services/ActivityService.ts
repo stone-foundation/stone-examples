@@ -27,8 +27,8 @@ export class ActivityService {
   /**
    * List all activities
    */
-  async list (limit?: number, page?: string): Promise<ListMetadataOptions<Activity>> {
-    return await this.client.list(limit, page)
+  async list (options: Partial<Activity> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Activity>> {
+    return await this.client.list(options, limit, page)
   }
 
   /**

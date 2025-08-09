@@ -28,8 +28,13 @@ export class ActivityAssignmentClient {
   /**
    * List all assignments
    */
-  async list (limit: number = 10, page?: string): Promise<ListMetadataOptions<ActivityAssignment>> {
-    const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
+  async list (options: Partial<ActivityAssignment> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<ActivityAssignment>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+    
     return await this.client.get<ListMetadataOptions<ActivityAssignment>>(`${this.path}/?${query.toString()}`)
   }
 
@@ -38,7 +43,7 @@ export class ActivityAssignmentClient {
    */
   async listByTeam (team: Team, limit: number = 10, page?: string): Promise<ListMetadataOptions<ActivityAssignment>> {
     const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
-    return await this.client.get<ListMetadataOptions<ActivityAssignment>>(`${this.path}/team/${team.uuid}?${query.toString()}`)
+    return await this.client.get<ListMetadataOptions<ActivityAssignment>>(`${this.path}/teams/${team.uuid}?${query.toString()}`)
   }
   
   /**
@@ -62,6 +67,13 @@ export class ActivityAssignmentClient {
    */
   async create (assignment: Partial<ActivityAssignment>): Promise<{ uuid?: string }> {
     return await this.client.post<{ uuid?: string }>(`${this.path}/`, assignment)
+  }
+
+  /**
+   * Set presence for an activity assignment
+   */
+  async setPresence (assignment: Partial<ActivityAssignment>): Promise<{ uuid?: string }> {
+    return await this.client.post<{ uuid?: string }>(`${this.path}/presence`, assignment)
   }
 
   /**
@@ -89,7 +101,7 @@ export class ActivityAssignmentClient {
    * Get assignments by team
    */
   async getByTeam (teamUuid: string): Promise<ActivityAssignment[]> {
-    return await this.client.get<ActivityAssignment[]>(`${this.path}/team/${teamUuid}`)
+    return await this.client.get<ActivityAssignment[]>(`${this.path}/teams/${teamUuid}`)
   }
 
   /**

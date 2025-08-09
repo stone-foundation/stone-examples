@@ -1,21 +1,24 @@
 import { X } from "lucide-react"
 import { FC, useState } from "react"
-import { Activity, ActivityAssignment } from "../../models/Activity"
+import { Mission } from "../../models/Mission"
 import { Team, TeamMember } from "../../models/Team"
+import { Activity, ActivityAssignment } from "../../models/Activity"
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react"
 
 interface AssignActivityModalProps {
   open: boolean
   teams: Team[]
+  mission?: Mission
   activity: Activity
   onClose: () => void
   membersByTeam: Record<string, TeamMember[]>
-  onAssign: (activity: Activity, payload: Partial<ActivityAssignment>) => void
+  onAssign: (activity: Activity, payload: Partial<ActivityAssignment>) => Promise<void>
 }
 
 export const AssignActivityModal: FC<AssignActivityModalProps> = ({
   open,
   teams,
+  mission,
   onClose,
   onAssign,
   activity,
@@ -28,12 +31,13 @@ export const AssignActivityModal: FC<AssignActivityModalProps> = ({
   const handleSubmit = () => {
     if (!selectedTeam) return
     onAssign(activity, {
+      missionUuid: mission?.uuid,
       activityUuid: activity.uuid,
       teamUuid: selectedTeam.uuid,
       badgeUuid: activity.badge?.uuid,
-      memberUuid: selectedMember?.uuid,
+      teamMemberUuid: selectedMember?.uuid,
       comment: comment.trim() || undefined,
-    })
+    }).catch(() => {})
     onClose()
   }
 
@@ -92,7 +96,7 @@ export const AssignActivityModal: FC<AssignActivityModalProps> = ({
                   <option value="">Aucun</option>
                   {membersByTeam[selectedTeam.uuid]?.map((m) => (
                     <option key={m.uuid} value={m.uuid}>
-                      {m.username}
+                      {m.name}
                     </option>
                   ))}
                 </select>

@@ -7,8 +7,8 @@ import { PostFooter } from "../PostFooter/PostFooter"
 import { PostHeader } from "../PostHeader/PostHeader"
 import { PostContent } from "../PostContent/PostContent"
 import { PostCommentService } from "../../services/PostCommentService"
-import { TimelinePostCommentList } from "../TimelinePostCommentList/TimelinePostCommentList"
-import { TimelinePostCommentInput } from "../TimelinePostCommentInput/TimelinePostCommentInput"
+import { TimelinePostCommentList } from "./TimelinePostCommentList"
+import { TimelinePostCommentInput } from "./TimelinePostCommentInput"
 
 
 interface TimelinePostCardProps {
@@ -41,7 +41,7 @@ export const TimelinePostCard = ({ post, currentUser }: TimelinePostCardProps) =
 
   const onComment = (content: string) => {
     commentService
-      .create({ postUuid: post.uuid, content })
+      .create({ postUuid: post.uuid, missionUuid: post.missionUuid, content })
       .then(() => {
         showMoreComments()
       })

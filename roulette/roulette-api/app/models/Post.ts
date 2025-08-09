@@ -32,6 +32,7 @@ export interface PostModel {
 export interface Post extends PostModel {
   team?: Team
   author?: User
+  likedByMe?: boolean
   teamMember?: TeamMember
   comments?: PostComment[]
   activityAssignment?: ActivityAssignment
@@ -42,6 +43,7 @@ export interface PostCommentModel {
   content: string
   postUuid: string
   authorUuid: string
+  missionUuid: string
 
   createdAt: number
   updatedAt: number

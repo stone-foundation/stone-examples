@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { XIcon, ImageIcon } from 'lucide-react'
 
 interface MediaUploaderProps {
+  resetTrigger?: number
   onSelect: (file: File | undefined) => void
 }
 
-export const MediaUploader = ({ onSelect }: MediaUploaderProps) => {
+export const MediaUploader = ({ onSelect, resetTrigger }: MediaUploaderProps) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | undefined>(undefined)
 
@@ -19,10 +20,18 @@ export const MediaUploader = ({ onSelect }: MediaUploaderProps) => {
   }
 
   const removeFile = () => {
-    setPreview(undefined)
     onSelect(undefined)
+    setPreview(undefined)
     if (inputRef.current) inputRef.current.value = ''
   }
+
+  useEffect(() => {
+    if (resetTrigger && resetTrigger > 0) {
+      onSelect(undefined)
+      setPreview(undefined)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }, [resetTrigger])
 
   return (
     <div className="relative">

@@ -7,8 +7,11 @@ import {
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
 import { UserModel } from '../../models/User'
+import { ListMetadataOptions } from '../../models/App'
 import { IUserRepository } from '../contracts/IUserRepository'
-import { IBlueprint, isEmpty, isNotEmpty } from '@stone-js/core'
+import { IMetadataRepository } from '../contracts/IMetadataRepository'
+import { IBlueprint, isEmpty, isNotEmpty, Logger } from '@stone-js/core'
+import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 /**
  * User Repository Options
@@ -16,72 +19,169 @@ import { IBlueprint, isEmpty, isNotEmpty } from '@stone-js/core'
 export interface DynamoUserRepositoryOptions {
   blueprint: IBlueprint
   database: DynamoDBDocumentClient
+  metadataRepository: IMetadataRepository
+  userHistoryRepository: IUserHistoryRepository
 }
 
 /**
- * User Repository
+ * User Repository (DynamoDB)
  */
 export class DynamoUserRepository implements IUserRepository {
   private readonly tableName: string
   private readonly database: DynamoDBDocumentClient
+  private readonly metadataRepository: IMetadataRepository
+  private readonly userHistoryRepository: IUserHistoryRepository
 
-  /**
-   * Create a new instance of UserRepository
-   */
-  constructor ({ database, blueprint }: DynamoUserRepositoryOptions) {
+  constructor ({ database, blueprint, metadataRepository, userHistoryRepository }: DynamoUserRepositoryOptions) {
     this.database = database
+    this.metadataRepository = metadataRepository
+    this.userHistoryRepository = userHistoryRepository
     this.tableName = blueprint.get('aws.dynamo.tables.users.name', 'users')
   }
 
-  /**
-   * List users
-   *
-   * @param limit - The limit of users to list
-   * @returns The list of users
-   */
-  async list (limit: number): Promise<UserModel[]> {
-    const result = await this.database.send(
-      new ScanCommand({ TableName: this.tableName, Limit: Number(limit) })
-    )
-    return (result.Items as UserModel[]) ?? []
-  }
-
-  /**
-   * List users by dynamic conditions
-   *
-   * @param conditions - Conditions to filter users
-   * @param limit - The limit of users to list
-   * @returns The list of users
-   */
-  async listBy (conditions: Partial<UserModel>, limit: number): Promise<UserModel[]> {
-    if (isNotEmpty(conditions.teamUuid)) {
-      const result = await this.database.send(
-        new QueryCommand({
-          Limit: Number(limit),
-          TableName: this.tableName,
-          IndexName: 'teamUuid-index',
-          KeyConditionExpression: '#teamUuid = :teamUuid',
-          ExpressionAttributeNames: { '#teamUuid': 'teamUuid' },
-          ExpressionAttributeValues: { ':teamUuid': conditions.teamUuid }
-        })
-      )
-      return (result.Items as UserModel[]) ?? []
+  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<UserModel>> {
+    const params: any = {
+      TableName: this.tableName,
+      Limit: Number(limit ?? 10)
     }
 
-    // fallback to Scan if no indexed field is specified
-    return await this.list(limit)
+    if (typeof cursor === 'string' && cursor.length > 0) {
+      try {
+        params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+      } catch (error) {
+        Logger.warn('Failed to parse cursor:', error)
+      }
+    }
+
+    const total = await this.count()
+    const result = await this.database.send(new ScanCommand(params))
+
+    return {
+      total,
+      limit: Number(limit ?? 10),
+      page: cursor,
+      items: (result.Items as UserModel[]) ?? [],
+      nextPage: (result.LastEvaluatedKey != null)
+        ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
+        : undefined
+    }
   }
 
-  /**
-   * Find a user by dynamic conditions
-   *
-   * @param conditions - Conditions to match the user
-   * @returns The user or undefined if not found
-   */
-  async findBy (conditions: Partial<UserModel>): Promise<UserModel | undefined> {
-    const keys = ['uuid', 'phone', 'username']
+  async listBy (conditions: Partial<UserModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<UserModel>> {
+    let keyValue: any
+    let keyName: string | undefined
+    let indexName: string | undefined
+
+    // Define which fields have indexes
+    const indexedKeys = ['teamUuid', 'phone', 'username']
+
     for (const [key, value] of Object.entries(conditions)) {
-      if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
+      if (indexedKeys.includes(key) && isNotEmpty(value)) {
+        keyName = key
+        keyValue = value
+        indexName = `${key}-index`
+        break
+      }
+    }
+
+    if (keyName) {
+      // Use Query on GSI for indexed fields
+      const params: any = {
+        TableName: this.tableName,
+        IndexName: indexName,
+        Limit: Number(limit ?? 10),
+        KeyConditionExpression: `#${keyName} = :${keyName}`,
+        ExpressionAttributeNames: { [`#${keyName}`]: keyName },
+        ExpressionAttributeValues: { [`:${keyName}`]: keyValue }
+      }
+
+      if (typeof cursor === 'string' && cursor.length > 0) {
+        try {
+          params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+        } catch (error) {
+          Logger.warn('Failed to parse cursor:', error)
+        }
+      }
+
+      const total = await this.count()
+      const result = await this.database.send(new QueryCommand(params))
+
+      return {
+        total,
+        limit: Number(limit ?? 10),
+        page: cursor,
+        items: (result.Items as UserModel[]) ?? [],
+        nextPage: (result.LastEvaluatedKey != null)
+          ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
+          : undefined
+      }
+    }
+
+    // Fallback to Scan with filter for non-indexed fields
+    const filterExpressions: string[] = []
+    const attrNames: Record<string, string> = {}
+    const attrValues: Record<string, any> = {}
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(value)) {
+        filterExpressions.push(`#${key} = :${key}`)
+        attrNames[`#${key}`] = key
+        attrValues[`:${key}`] = value
+      }
+    }
+
+    const params: any = {
+      TableName: this.tableName,
+      Limit: Number(limit ?? 10)
+    }
+
+    if (filterExpressions.length > 0) {
+      params.FilterExpression = filterExpressions.join(' AND ')
+      params.ExpressionAttributeNames = attrNames
+      params.ExpressionAttributeValues = attrValues
+    }
+
+    if (typeof cursor === 'string' && cursor.length > 0) {
+      try {
+        params.ExclusiveStartKey = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'))
+      } catch (error) {
+        Logger.warn('Failed to parse cursor:', error)
+      }
+    }
+
+    const total = await this.count()
+    const result = await this.database.send(new ScanCommand(params))
+
+    return {
+      total,
+      limit: Number(limit ?? 10),
+      page: cursor,
+      items: (result.Items as UserModel[]) ?? [],
+      nextPage: (result.LastEvaluatedKey != null)
+        ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
+        : undefined
+    }
+  }
+
+  async findByUuid (uuid: string): Promise<UserModel | undefined> {
+    const result = await this.database.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: '#uuid = :uuid',
+        ExpressionAttributeNames: { '#uuid': 'uuid' },
+        ExpressionAttributeValues: { ':uuid': uuid }
+      })
+    )
+
+    return result.Items?.[0] as UserModel | undefined
+  }
+
+  async findBy (conditions: Partial<UserModel>): Promise<UserModel | undefined> {
+    // Primary key and indexed fields that can be used for efficient queries
+    const queryableKeys = ['uuid', 'phone', 'username', 'teamUuid']
+    
+    for (const [key, value] of Object.entries(conditions)) {
+      if (queryableKeys.includes(key) && isNotEmpty(value)) {
         const params: any = {
           Limit: 1,
           TableName: this.tableName,
@@ -89,101 +189,132 @@ export class DynamoUserRepository implements IUserRepository {
           ExpressionAttributeNames: { [`#${key}`]: key },
           ExpressionAttributeValues: { [`:${key}`]: value }
         }
+        
         // Use index if not primary key
         if (key !== 'uuid') {
           params.IndexName = `${key}-index`
         }
+        
         const result = await this.database.send(new QueryCommand(params))
         return result.Items?.[0] as UserModel | undefined
       }
     }
 
-    return undefined
+    // Fallback to scan with filter for non-indexed fields
+    const filterExpressions: string[] = []
+    const attrNames: Record<string, string> = {}
+    const attrValues: Record<string, any> = {}
+
+    for (const [key, value] of Object.entries(conditions)) {
+      if (isNotEmpty(value)) {
+        filterExpressions.push(`#${key} = :${key}`)
+        attrNames[`#${key}`] = key
+        attrValues[`:${key}`] = value
+      }
+    }
+
+    if (filterExpressions.length === 0) return undefined
+
+    const params: any = {
+      Limit: 1,
+      TableName: this.tableName,
+      FilterExpression: filterExpressions.join(' AND '),
+      ExpressionAttributeNames: attrNames,
+      ExpressionAttributeValues: attrValues
+    }
+
+    const result = await this.database.send(new ScanCommand(params))
+    return result.Items?.[0] as UserModel | undefined
   }
 
-  /**
-   * Find a user by uuid
-   *
-   * @param uuid - The uuid of the user to find
-   * @returns The user or undefined if not found
-   */
-  async findByUuid (uuid: string): Promise<UserModel | undefined> {
-    return await this.findBy({ uuid })
-  }
-
-  /**
-   * Create a user
-   *
-   * @param user - The user to create
-   * @returns The uuid of the created user
-   */
-  async create (user: UserModel): Promise<string | undefined> {
+  async create (user: UserModel, author: UserModel): Promise<string | undefined> {
     await this.database.send(
       new PutCommand({
-        Item: user,
         TableName: this.tableName,
+        Item: user,
         ExpressionAttributeNames: { '#uuid': 'uuid' },
         ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
+    
+    await this.metadataRepository.increment(this.tableName, { lastUuid: user.uuid })
+    await this.userHistoryRepository.makeHistoryEntry({
+      type: 'user',
+      action: 'created',
+      itemUuid: user.uuid,
+    }, author)
+    
     return user.uuid
   }
 
-  /**
-   * Update a user
-   *
-   * @param data - The user to update
-   * @param data - The data to update in the user
-   * @returns The updated user or undefined if not found
-   */
-  async update ({ uuid, username }: UserModel, data: Partial<UserModel>): Promise<UserModel | undefined> {
-    const updateExprParts: string[] = []
-    const exprAttrValues: Record<string, any> = {}
-    const exprAttrNames: Record<string, string> = {}
+  async update ({ uuid, username }: UserModel, data: Partial<UserModel>, author: UserModel): Promise<UserModel | undefined> {
+    const updateExpr: string[] = []
+    const attrNames: Record<string, string> = {}
+    const attrValues: Record<string, any> = {}
 
     for (const [key, value] of Object.entries(data)) {
-      if (['uuid', 'username'].includes(key) || isEmpty(value)) continue // skip immutable fields
-      updateExprParts.push(`#${key} = :${key}`)
-      exprAttrNames[`#${key}`] = key
-      exprAttrValues[`:${key}`] = value
+      // Keep original logic: skip uuid and username if empty (immutable fields)
+      if (['uuid', 'username'].includes(key) && isEmpty(value)) continue
+      updateExpr.push(`#${key} = :${key}`)
+      attrNames[`#${key}`] = key
+      attrValues[`:${key}`] = value
     }
 
-    if (updateExprParts.length === 0) return await this.findByUuid(uuid)
+    if (updateExpr.length === 0) return await this.findByUuid(uuid)
+
+    // Handle composite key properly - use both uuid and username if username is part of primary key
+    const key = username ? { uuid, username } : { uuid }
 
     const result = await this.database.send(
       new UpdateCommand({
-        Key: { uuid, username },
-        ReturnValues: 'ALL_NEW',
         TableName: this.tableName,
-        ExpressionAttributeNames: exprAttrNames,
-        ExpressionAttributeValues: exprAttrValues,
-        UpdateExpression: `SET ${updateExprParts.join(', ')}`
+        Key: key,
+        ReturnValues: 'ALL_NEW',
+        ExpressionAttributeNames: attrNames,
+        ExpressionAttributeValues: attrValues,
+        UpdateExpression: `SET ${updateExpr.join(', ')}`
       })
     )
+
+    await this.userHistoryRepository.makeHistoryEntry({
+      itemUuid: uuid,
+      type: 'user',
+      action: 'updated'
+    }, author)
 
     return result.Attributes as UserModel | undefined
   }
 
-  /**
-   * Delete a user
-   *
-   * @param user - The user to delete
-   * @returns `true` if the user was deleted, `false` if not
-   */
-  async delete ({ uuid, username }: UserModel): Promise<boolean> {
+  async delete ({ uuid, username }: UserModel, author: UserModel): Promise<boolean> {
     try {
+      // Handle composite key properly - use both uuid and username if username is part of primary key
+      const key = username ? { uuid, username } : { uuid }
+
       await this.database.send(
         new DeleteCommand({
-          Key: { uuid, username },
           TableName: this.tableName,
+          Key: key,
           ExpressionAttributeNames: { '#uuid': 'uuid' },
           ConditionExpression: 'attribute_exists(#uuid)'
         })
       )
+      
+      await this.metadataRepository.decrement(this.tableName)
+      await this.userHistoryRepository.makeHistoryEntry({
+        itemUuid: uuid,
+        type: 'user',
+        action: 'deleted',
+      }, author)
+      
       return true
     } catch (err: any) {
       if (err.name === 'ConditionalCheckFailedException') return false
       throw err
     }
+  }
+
+  async count (): Promise<number> {
+    const meta = await this.metadataRepository.get(this.tableName)
+    return meta?.total ?? 0
   }
 }

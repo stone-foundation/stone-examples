@@ -4,17 +4,21 @@ import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
 import { ActivityModel, Activity } from '../models/Activity'
 import { isNotEmpty, Service, IContainer } from '@stone-js/core'
+import { IBadgeRepository } from '../repositories/contracts/IBadgeRepository'
 import { IActivityRepository } from '../repositories/contracts/IActivityRepository'
 
 export interface ActivityServiceOptions {
+  badgeRepository: IBadgeRepository
   activityRepository: IActivityRepository
 }
 
 @Service({ alias: 'activityService' })
 export class ActivityService {
+  private readonly badgeRepository: IBadgeRepository
   private readonly activityRepository: IActivityRepository
 
-  constructor ({ activityRepository }: ActivityServiceOptions) {
+  constructor ({ activityRepository, badgeRepository }: ActivityServiceOptions) {
+    this.badgeRepository = badgeRepository
     this.activityRepository = activityRepository
   }
 
@@ -25,12 +29,14 @@ export class ActivityService {
 
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Activity>> {
     const result = await this.activityRepository.list(limit, page)
-    return { ...result, items: result.items.map(this.toActivity) }
+    const items = await this.toActivities(result.items)
+    return { ...result, items }
   }
 
   async listBy (conditions: Partial<ActivityModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Activity>> {
     const result = await this.activityRepository.listBy(conditions, limit, page)
-    return { ...result, items: result.items.map(this.toActivity) }
+    const items = await this.toActivities(result.items)
+    return { ...result, items }
   }
 
   async findByUuid (uuid: string): Promise<Activity | undefined> {
@@ -76,7 +82,13 @@ export class ActivityService {
     return await this.activityRepository.delete(activity, author)
   }
 
-  toActivity (model: ActivityModel): Activity {
-    return { ...model } as Activity
+  async toActivity (model: ActivityModel): Promise<Activity> {
+    const badge = model.badgeUuid ? await this.badgeRepository.findByUuid(model.badgeUuid) : undefined
+    return { ...model, badge } as Activity
+  }
+
+  async toActivities (model: ActivityModel[]): Promise<Activity[]> {
+    const badgeMeta = await this.badgeRepository.list(1000)
+    return model.map(item => ({ ...item, badge: badgeMeta.items.find(badge => badge.uuid === item.badgeUuid) }))
   }
 }

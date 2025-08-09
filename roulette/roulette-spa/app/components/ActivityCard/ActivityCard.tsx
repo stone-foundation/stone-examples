@@ -83,9 +83,9 @@ export const ActivityCard: FC<ActivityCardProps> = ({
 
       {assignment && (
         <div className="text-sm text-white/70 mt-2 space-y-1">
-          {assignment.member && (
+          {assignment.teamMember && (
             <div>
-              👤 <strong>{assignment.member.username}</strong>
+              👤 <strong>{assignment.teamMember.name}</strong>
             </div>
           )}
           {assignment.locationCity && (
@@ -137,7 +137,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
             </button>
           )}
 
-          {onApprove && assignment?.status === 'pending' && (
+          {onApprove && currentUser.isModerator && assignment?.status === 'pending' && (
             <button
               onClick={() => confirm(onApprove, "Es-tu sûr de vouloir approuver cette activité ?")}
               className="px-4 py-1 rounded bg-green-700 hover:bg-green-600"
@@ -145,7 +145,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
               Approuver
             </button>
           )}
-          {onCancel && assignment?.status === 'pending' && (
+          {onCancel && currentUser.isModerator && assignment?.status === 'pending' && (
             <button
               onClick={() => confirm(onCancel, "Es-tu sûr de vouloir annuler cette activité ?")}
               className="px-4 py-1 rounded bg-red-600 hover:bg-red-500"

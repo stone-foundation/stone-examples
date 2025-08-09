@@ -44,8 +44,8 @@ export class TeamService {
    * List all teams
    */
   async list (options: Partial<Team> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Team>> {
-      return await this.client.list(options, limit, page)
-    }
+    return await this.client.list(options, limit, page)
+  }
 
   /**
    * Find a team

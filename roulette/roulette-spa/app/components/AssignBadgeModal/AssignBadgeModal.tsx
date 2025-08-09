@@ -1,18 +1,21 @@
 import { X } from "lucide-react"
 import { FC, useState } from "react"
 import { Badge } from "../../models/Badge"
+import { Mission } from "../../models/Mission"
 import { Team, TeamMember } from "../../models/Team"
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react"
 
 interface AssignBadgeModalProps {
-  open: boolean
+  open: boolean,
+  mission?: Mission
   onClose: () => void
   onAssign: (payload: {
     team: Team
     badge: Badge
     comment?: string
+    missionUuid?: string
     member?: TeamMember
-  }) => void
+  }) => Promise<void>
   badge: Badge
   teams: Team[]
   membersByTeam: Record<string, TeamMember[]> // teamUuid → members
@@ -20,10 +23,11 @@ interface AssignBadgeModalProps {
 
 export const AssignBadgeModal: FC<AssignBadgeModalProps> = ({
   open,
-  onClose,
-  onAssign,
   badge,
   teams,
+  mission,
+  onClose,
+  onAssign,
   membersByTeam,
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
@@ -35,9 +39,10 @@ export const AssignBadgeModal: FC<AssignBadgeModalProps> = ({
     onAssign({
       badge,
       team: selectedTeam,
+      missionUuid: mission?.uuid,
       member: selectedMember ?? undefined,
       comment: comment.trim() || undefined,
-    })
+    }).catch(() => {})
     onClose()
   }
 
@@ -94,7 +99,7 @@ export const AssignBadgeModal: FC<AssignBadgeModalProps> = ({
                   <option value="">Aucun</option>
                   {membersByTeam[selectedTeam.uuid]?.map((m) => (
                     <option key={m.uuid} value={m.uuid}>
-                      {m.username}
+                      {m.name}
                     </option>
                   ))}
                 </select>

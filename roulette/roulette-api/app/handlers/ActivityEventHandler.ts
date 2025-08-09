@@ -59,8 +59,8 @@ export class ActivityEventHandler {
     const user = event.getUser<User>()
     const data = event.getBody<Activity>()
 
-    if (!data?.name || data.score == null) {
-      throw new BadRequestError('Activity name and score are required')
+    if (!data?.name || data.score == null || data.missionUuid == null) {
+      throw new BadRequestError('Activity name, score and missionUuid are required')
     }
 
     const uuid = await this.activityService.create(data, user)
@@ -129,6 +129,7 @@ export class ActivityEventHandler {
         category: v.category,
         badgeUuid: v.badgeUuid,
         description: v.description,
+        missionUuid: v.missionUuid,
         score: Number(v.score) || 0,
         impact: v.impact ?? 'neutral',
         conversionWindow: v.conversionWindow,

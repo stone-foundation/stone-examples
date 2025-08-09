@@ -2,6 +2,7 @@ import clsx from "clsx"
 import { FC, useState } from "react"
 import { User } from "../../models/User"
 import { Plus, Search } from "lucide-react"
+import { Mission } from "../../models/Mission"
 import { BadgeCard } from "../BadgeCard/BadgeCard"
 import { Team, TeamMember } from "../../models/Team"
 import { Badge, BadgeType } from "../../models/Badge"
@@ -13,16 +14,18 @@ interface BadgeListProps {
   teams: Team[]
   badges: Badge[]
   currentUser: User
-  onDelete: (badge: Badge) => void
-  onCreate: (data: Partial<Badge>) => void
+  mission?: Mission
+  onDelete: (badge: Badge) => Promise<void>
   membersByTeam: Record<string, TeamMember[]>
-  onUpdate: (badge: Badge, data: Partial<Badge>) => void
-  onAssign: (payload: Partial<ActivityAssignment>) => void
+  onCreate: (data: Partial<Badge>) => Promise<void>
+  onUpdate: (badge: Badge, data: Partial<Badge>) => Promise<void>
+  onAssign: (payload: Partial<ActivityAssignment>) => Promise<void>
 }
 
 export const BadgeList: FC<BadgeListProps> = ({
   teams,
   badges,
+  mission,
   onUpdate,
   onDelete,
   onCreate,
@@ -109,8 +112,8 @@ export const BadgeList: FC<BadgeListProps> = ({
                 setShowForm(true)
               }}
               currentUser={currentUser}
-              onDelete={() => onDelete(badge)}
               onAssign={() => setAssigningBadge(badge)}
+              onDelete={() => onDelete(badge).catch(() => {})}
             />
           </div>
         ))}
@@ -119,11 +122,12 @@ export const BadgeList: FC<BadgeListProps> = ({
       {showForm && (
         <BadgeModalForm
           open={showForm}
+          mission={mission}
           initialData={editingBadge}
           onClose={() => setShowForm(false)}
-          onSubmit={(b) => {
-            if (editingBadge) onUpdate(editingBadge, b)
-            else onCreate(b)
+          onSubmit={async (b) => {
+            if (editingBadge) await onUpdate(editingBadge, b)
+            else await onCreate(b)
           }}
         />
       )}
@@ -131,6 +135,7 @@ export const BadgeList: FC<BadgeListProps> = ({
       {assigningBadge?.activityUuid && (
         <AssignActivityModal
           teams={teams}
+          mission={mission}
           open={!!assigningBadge}
           membersByTeam={membersByTeam}
           onAssign={(_, v) => onAssign(v)}

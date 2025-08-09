@@ -61,7 +61,7 @@ export function MissionListPage({ user, missions, mission, onStartMission, onExp
             </p>
             {user?.isAdmin && <p>
               <StoneLink to="/" className="w-full mt-10 px-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 rounded-md transition">
-                Retour à l'accueil
+                Aller à l'accueil
               </StoneLink>
             </p>}
           </div>

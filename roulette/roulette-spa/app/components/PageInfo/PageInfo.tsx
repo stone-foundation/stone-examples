@@ -18,7 +18,8 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, currentUser, onUpdate 
     rules: team.rules ?? '',
   })
 
-  const canEdit = team.members.some(member => member.uuid === currentUser.uuid) || currentUser.isAdmin
+  const captain = team.members?.find(member => member.role === 'captain')
+  const canEdit = team.members?.some(member => member.uuid === currentUser.uuid && member.role === 'captain') || currentUser.isAdmin
 
   const handleChange = (key: keyof Team, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -26,10 +27,10 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, currentUser, onUpdate 
 
   const handleCancel = () => {
     setForm({
-      slogan: team.slogan ?? '',
       motto: team.motto ?? '',
-      description: team.description ?? '',
       rules: team.rules ?? '',
+      slogan: team.slogan ?? '',
+      description: team.description ?? '',
     })
     setEditing(false)
   }
@@ -59,8 +60,8 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, currentUser, onUpdate 
           {team.motto && (
             <Section label="Devise">{team.motto}</Section>
           )}
-          {team.captain && (
-            <Section label="Capitaine">{team.captain.username}</Section>
+          {captain && (
+            <Section label="Capitaine">{captain.name}</Section>
           )}
           {team.description && (
             <Section label="Description"><pre>{team.description}</pre></Section>
@@ -68,7 +69,7 @@ export const PageInfo: React.FC<PageInfoProps> = ({ team, currentUser, onUpdate 
           {team.rules && (
             <Section label="Règlements"><pre>{team.rules}</pre></Section>
           )}
-          {!team.slogan && !team.motto && !team.description && !team.rules && (
+          {!captain && !team.slogan && !team.motto && !team.description && !team.rules && (
             <p className="text-white/60 text-center border border-white/10 p-6 rounded-lg">
               Aucune information disponible. <br /> Cliquez sur "Modifier" pour ajouter des détails.
             </p>

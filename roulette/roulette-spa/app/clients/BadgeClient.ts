@@ -27,8 +27,13 @@ export class BadgeClient {
   /**
    * List all badges
    */
-  async list (limit: number = 10, page?: string): Promise<ListMetadataOptions<Badge>> {
-    const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
+  async list (options: Partial<Badge> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Badge>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+    
     return await this.client.get<ListMetadataOptions<Badge>>(`${this.path}/?${query.toString()}`)
   }
 

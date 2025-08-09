@@ -29,8 +29,8 @@ export class ActivityAssignmentService {
   /**
    * List all activity assignments
    */
-  async list (limit?: number, page?: string): Promise<ListMetadataOptions<ActivityAssignment>> {
-    return await this.client.list(limit, page)
+  async list (options: Partial<ActivityAssignment> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<ActivityAssignment>> {
+    return await this.client.list(options, limit, page)
   }
 
   /**
@@ -62,6 +62,13 @@ export class ActivityAssignmentService {
    */
   async create (assignment: Partial<ActivityAssignment>): Promise<{ uuid?: string }> {
     return await this.client.create(assignment)
+  }
+
+  /**
+   * Set presence for an activity assignment
+   */
+  async setPresence (assignment: Partial<ActivityAssignment>): Promise<{ uuid?: string }> {
+    return await this.client.setPresence(assignment)
   }
 
   /**

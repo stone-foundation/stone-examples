@@ -72,7 +72,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ container }) => {
 
     chatMessageService.list(100).then(initialMessages => {
       setMessages(initialMessages.items)
-    })
+    }).catch(console.error)
 
     eventEmitter.on(NotificationEvent.CHAT_MESSAGE, handleChatNotification)
     eventEmitter.on(NotificationEvent.CHAT_TYPING, handleTypingNotification)

@@ -3,6 +3,7 @@ import { FC, useState } from "react"
 import { User } from "../../models/User"
 import { Badge } from "../../models/Badge"
 import { Plus, Search } from "lucide-react"
+import { Mission } from "../../models/Mission"
 import { Team, TeamMember } from "../../models/Team"
 import { ActivityCard } from "../ActivityCard/ActivityCard"
 import { Activity, ActivityAssignment } from "../../models/Activity"
@@ -11,18 +12,20 @@ import { AssignActivityModal } from "../AssignActivityModal/AssignActivityModal"
 
 interface ActivityListProps {
   teams: Team[]
+  mission?: Mission
   currentUser: User
   activities: Activity[]
   availableBadges: Badge[]
   membersByTeam: Record<string, TeamMember[]>
-  onDelete: (activity: Activity) => void
-  onCreate: (data: Partial<Activity>) => void
-  onUpdate: (activity: Activity, data: Partial<Activity>) => void
-  onAssign: (activity: Activity, payload: Partial<ActivityAssignment>) => void
+  onDelete: (activity: Activity) => Promise<void>
+  onCreate: (data: Partial<Activity>) => Promise<void>
+  onUpdate: (activity: Activity, data: Partial<Activity>) => Promise<void>
+  onAssign: (activity: Activity, payload: Partial<ActivityAssignment>) => Promise<void>
 }
 
 export const ActivityList: FC<ActivityListProps> = ({
   teams,
+  mission,
   onUpdate,
   onDelete,
   onCreate,
@@ -114,8 +117,8 @@ export const ActivityList: FC<ActivityListProps> = ({
                 setEditingActivity(activity)
                 setShowForm(true)
               }}
-              onDelete={() => onDelete(activity)}
               onAssign={() => setAssigningActivity(activity)}
+              onDelete={() => onDelete(activity).catch(() => {})}
             />
           </div>
         ))}
@@ -124,12 +127,13 @@ export const ActivityList: FC<ActivityListProps> = ({
       {showForm && (
         <ActivityModalForm
           open={showForm}
+          mission={mission}
           initialData={editingActivity}
           availableBadges={availableBadges}
           onClose={() => setShowForm(false)}
-          onSubmit={(a) => {
-            if (editingActivity) onUpdate(editingActivity, a)
-            else onCreate(a)
+          onSubmit={async (a) => {
+            if (editingActivity) await onUpdate(editingActivity, a)
+            else await onCreate(a)
           }}
         />
       )}
@@ -137,6 +141,7 @@ export const ActivityList: FC<ActivityListProps> = ({
       {assigningActivity && (
         <AssignActivityModal
           teams={teams}
+          mission={mission}
           onAssign={onAssign}
           open={!!assigningActivity}
           activity={assigningActivity}

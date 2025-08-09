@@ -65,7 +65,11 @@ export class ActivityAssignmentRepository implements IActivityAssignmentReposito
   async findBy (conditions: Partial<ActivityAssignmentModel>): Promise<ActivityAssignmentModel | undefined> {
     const whereClauses = []
     if (conditions.uuid) whereClauses.push(eq(activityAssignments.uuid, conditions.uuid))
+    if (conditions.status) whereClauses.push(eq(activityAssignments.status, conditions.status))
+    if (conditions.teamUuid) whereClauses.push(eq(activityAssignments.teamUuid, conditions.teamUuid))
+    if (conditions.missionUuid) whereClauses.push(eq(activityAssignments.missionUuid, conditions.missionUuid))
     if (conditions.activityUuid) whereClauses.push(eq(activityAssignments.activityUuid, conditions.activityUuid))
+    if (conditions.teamMemberUuid) whereClauses.push(eq(activityAssignments.teamMemberUuid, conditions.teamMemberUuid))
     if (whereClauses.length === 0) return undefined
 
     return await this.database.select().from(activityAssignments).where(and(...whereClauses)).get()

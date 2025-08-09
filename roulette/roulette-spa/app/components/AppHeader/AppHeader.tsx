@@ -1,9 +1,8 @@
 import { User } from "../../models/User"
 import { Spinner } from "../Spinner/Spinner"
-import { RouteEvent } from "@stone-js/router"
+import { TeamMember } from "../../models/Team"
 import { JSX, useEffect, useState } from "react"
 import { IContainer, isNotEmpty } from "@stone-js/core"
-import { PRESENCE_EVENT_CATEGORY } from "../../constants"
 import { ConfirmModal } from "../ConfirmModal/ConfirmModal"
 import { SecurityService } from "../../services/SecurityService"
 import { IRouter, ReactIncomingEvent, StoneLink } from "@stone-js/use-react"
@@ -18,37 +17,38 @@ interface AppHeaderProps {
 export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Element => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [isPunching, setIsPunching] = useState(false)
+  const [isPresent, setIsPresent] = useState(false)
   const [user, setUser] = useState<User | undefined>()
-  
+  const [showPresenceModal, setShowPresenceModal] = useState(false)
+  const [isSettingPresence, setIsSettingPresence] = useState(false)
+  const cookies = container.make<ReactIncomingEvent>('event').cookies
+  const currentTeamMember = cookies.getValue<TeamMember>('teamMember')
+
   const router = container.make<IRouter>('router')
   const securityService = container.make<SecurityService>('securityService')
   const activityAssignmentService = container.make<ActivityAssignmentService>('activityAssignmentService')
-  const setCurrentUser = () => {
-    setUser(
-      container.make<ReactIncomingEvent>('event').getUser()
-    )
-  }
+
 
   useEffect(() => {
-    setCurrentUser()
-    // router.on(RouteEvent.ROUTED, setCurrentUser)
-    // return () => { router.off(RouteEvent.ROUTED, setCurrentUser) }
+    setIsPresent(currentTeamMember?.isPresent ?? false)
+    setUser(container.make<ReactIncomingEvent>('event').getUser())
   }, [router])
 
-  const onPunch = () => {
+  const onSettingPresence = () => {
     if (!user) return
-    setIsPunching(true)
-    activityAssignmentService.create({
-      memberUuid: user.uuid,
-      teamUuid: user.teamUuid,
-      activityCategory: PRESENCE_EVENT_CATEGORY,
+    setIsSettingPresence(true)
+    activityAssignmentService.setPresence({
+      missionUuid: currentTeamMember?.missionUuid,
     })
       .then(() => {
-        setUser({ ...user, isPunched: true })
+        if (currentTeamMember) {
+          setIsPresent(true)
+          currentTeamMember.isPresent = true
+          cookies.update('teamMember', currentTeamMember)
+        }
       })
       .finally(() => {
-        setIsPunching(false)
+        setIsSettingPresence(false)
       })
   }
 
@@ -91,16 +91,16 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
               <Gamepad2 size={16} /> Missions
             </StoneLink>
             <StoneLink
-              to='/activities'
-              className='items-center justify-center gap-2 hidden md:flex text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
-            >
-              <ActivitySquare size={16} /> Activities
-            </StoneLink>
-            <StoneLink
               to='/badges'
               className='items-center justify-center gap-2 hidden md:flex text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
             >
               <BadgeCheck size={16} /> Badges
+            </StoneLink>
+            <StoneLink
+              to='/activities'
+              className='items-center justify-center gap-2 hidden md:flex text-sm stone-link text-white border border-white/8 rounded-md px-6 py-2 transition duration-200 hover:bg-white/10'
+            >
+              <ActivitySquare size={16} /> Activités
             </StoneLink>
             <StoneLink
               to='/members'
@@ -119,7 +119,7 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
               onClick={() => setMenuOpen(!menuOpen)}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm flex items-center justify-center gap-2"
             >
-              <UserIcon size={16} /> <span className="hidden md:inline text-sm text-white/80 capitalize">{user.username}</span>
+              <UserIcon size={16} /> {currentTeamMember && <span className="hidden md:inline text-sm text-white/80 capitalize">{currentTeamMember.name}</span>}
             </button>
           </nav>
 
@@ -136,36 +136,36 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
                 </div>
                 <div>
                   <div className="font-semibold text-white">{user.fullname}</div>
-                  <div className="text-xs text-white/50 capitalize">@{user.username}</div>
+                  {currentTeamMember && <div className="text-xs text-white/50 capitalize">@{currentTeamMember.name}</div>}
                 </div>
               </div>
-              <button
-                onClick={onPunch}
-                disabled={isPunching}
+              {!isPresent && <button
+                disabled={isSettingPresence}
+                onClick={() => setShowPresenceModal(true)}
                 className='flex w-full items-center justify-center gap-2 text-sm text-white rounded-md px-6 py-2 transition duration-200 bg-orange-600 hover:bg-orange-600/80 disabled:bg-orange-600/50 disabled:cursor-not-allowed'
                 >
                 Je suis présent
-                {isPunching && <Spinner />}
-              </button>
+                {isSettingPresence && <Spinner />}
+              </button>}
               <div className="md:hidden">
                 <StoneLink to='/missions' className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
                   <Gamepad2 size={16} className="text-white/80" /> Missions
                 </StoneLink>
-                <StoneLink to="/activities" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
-                  <ActivitySquare size={16} className="text-white/80" /> Activities
-                </StoneLink>
                 <StoneLink to="/badges" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
                   <BadgeCheck size={16} className="text-white/80" /> Badges
+                </StoneLink>
+                <StoneLink to="/activities" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                  <ActivitySquare size={16} className="text-white/80" /> Activités
                 </StoneLink>
                 <StoneLink to="/members" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
                   <GroupIcon size={16} className="text-white/80" /> Membres
                 </StoneLink>
-                <StoneLink to="/spin" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
+                <StoneLink to="/roulette" className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-white hover:bg-white/10 transition-colors">
                   <Gamepad2 size={16} className="text-white/80" /> Roulette
                 </StoneLink>
               </div>
               <button
-                onClick={() => onLogout(router, securityService)}
+                onClick={() => setShowModal(true)}
                 className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors mt-2"
               >
                 <LogOutIcon size={16} className="text-white/80" /> Se déconnecter
@@ -184,6 +184,16 @@ export const AppHeader = ({ container, onMenuToggle }: AppHeaderProps): JSX.Elem
           onLogout(router, securityService)
         }}
         message='Es-tu sûr de vouloir te déconnecter ?'
+      />
+
+      <ConfirmModal
+        open={showPresenceModal}
+        onClose={() => setShowPresenceModal(false)}
+        onConfirm={() => {
+          onSettingPresence()
+          setShowPresenceModal(false)
+        }}
+        message='Es-tu sûr de vouloir marquer ta présence maintenant ?'
       />
     </header>
   )

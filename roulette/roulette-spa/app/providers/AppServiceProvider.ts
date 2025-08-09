@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import { AxiosClient } from '../clients/AxiosClient'
-import { WebsocketClient } from '../clients/WebsocketClient'
+// import { WebsocketClient } from '../clients/WebsocketClient'
 import { IBlueprint, IContainer, IServiceProvider, Provider } from '@stone-js/core'
 
 /**
@@ -34,7 +34,7 @@ export class AppServiceProvider implements IServiceProvider {
    * Register the Websocket Client
    */
   boot (): void {
-    this.bootWebsocketClient()
+    // this.bootWebsocketClient()
   }
 
   /**
@@ -51,8 +51,8 @@ export class AppServiceProvider implements IServiceProvider {
   /**
    * Boot the Websocket Client
    */
-  private bootWebsocketClient (): void {
-    const websocketClient = this.container.make<WebsocketClient>('websocketClient')
-    websocketClient.stop().start()
-  }
+  // private bootWebsocketClient (): void {
+  //   const websocketClient = this.container.make<WebsocketClient>('websocketClient')
+  //   websocketClient.stop().start()
+  // }
 }

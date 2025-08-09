@@ -27,8 +27,13 @@ export class ActivityClient {
   /**
    * List all activities
    */
-  async list (limit: number = 10, page?: string): Promise<ListMetadataOptions<Activity>> {
-    const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
+  async list (options: Partial<Activity> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Activity>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+    
     return await this.client.get<ListMetadataOptions<Activity>>(`${this.path}/?${query.toString()}`)
   }
 

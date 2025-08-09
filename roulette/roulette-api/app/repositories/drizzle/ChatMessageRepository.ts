@@ -58,9 +58,6 @@ export class ChatMessageRepository implements IChatMessageRepository {
     const whereClauses = []
 
     if (conditions.role) whereClauses.push(eq(chatMessages.role, conditions.role))
-    if (conditions.content) whereClauses.push(eq(chatMessages.content, conditions.content))
-    if (conditions.modelRef) whereClauses.push(eq(chatMessages.modelRef, conditions.modelRef))
-    if (conditions.createdAt) whereClauses.push(eq(chatMessages.createdAt, conditions.createdAt))
     if (conditions.authorUuid) whereClauses.push(eq(chatMessages.authorUuid, conditions.authorUuid))
 
     const offset = (Number(page) - 1) * limit
@@ -103,7 +100,6 @@ export class ChatMessageRepository implements IChatMessageRepository {
 
     if (conditions.uuid) whereClauses.push(eq(chatMessages.uuid, conditions.uuid))
     if (conditions.role) whereClauses.push(eq(chatMessages.role, conditions.role))
-    if (conditions.content) whereClauses.push(eq(chatMessages.content, conditions.content))
     if (conditions.authorUuid) whereClauses.push(eq(chatMessages.authorUuid, conditions.authorUuid))
 
     if (whereClauses.length === 0) return undefined

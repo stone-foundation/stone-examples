@@ -4,6 +4,7 @@ import { MediaService } from './MediaService'
 import { User, UserModel } from '../models/User'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
+import { SecurityService } from './SecurityService'
 import { IContainer, isNotEmpty, Service } from '@stone-js/core'
 import { IUserRepository } from '../repositories/contracts/IUserRepository'
 
@@ -13,6 +14,7 @@ import { IUserRepository } from '../repositories/contracts/IUserRepository'
 export interface UserServiceOptions {
   mediaService: MediaService
   userRepository: IUserRepository
+  securityService: SecurityService
 }
 
 /**
@@ -22,6 +24,7 @@ export interface UserServiceOptions {
 export class UserService {
   private readonly mediaService: MediaService
   private readonly userRepository: IUserRepository
+  private readonly securityService: SecurityService
 
   /**
    * Resolve route binding
@@ -39,25 +42,28 @@ export class UserService {
   /**
    * Create a new User Service
   */
-  constructor ({ userRepository, mediaService }: UserServiceOptions) {
+  constructor ({ userRepository, mediaService, securityService }: UserServiceOptions) {
     this.mediaService = mediaService
     this.userRepository = userRepository
+    this.securityService = securityService
   }
 
   /**
    * List all users with pagination
    */
-  async list (limit: number = 10, page?: number | string, displaySensitiveData: boolean = false): Promise<ListMetadataOptions<User>> {
+  async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<User>> {
     const result = await this.userRepository.list(limit, page)
-    const items = result.items.map(v => this.toUser(v, displaySensitiveData))
+    const items = await this.toUsers(result.items)
     return { ...result, items }
   }
 
   /**
    * List users by conditions with pagination
    */
-  async listBy (conditions: Partial<UserModel>, limit: number = 10, page?: number | string, displaySensitiveData: boolean = false): Promise<ListMetadataOptions<User>> {
-    return await this.userRepository.listBy(conditions, limit, page)
+  async listBy (conditions: Partial<UserModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<User>> {
+    const result = await this.userRepository.listBy(conditions, limit, page)
+    const items = await this.toUsers(result.items)
+    return { ...result, items }
   }
 
   /**
@@ -66,12 +72,12 @@ export class UserService {
    * @param conditions - The conditions to find the user
    * @returns The found user
    */
-  async findBy (conditions: Record<string, any>, displaySensitiveData: boolean = false): Promise<User> {
+  async findBy (conditions: Record<string, any>): Promise<User> {
     // Normalize phone number if provided
     conditions.phone = normalizePhone(conditions.phone)
     // Find the user by conditions
     const userModel = await this.userRepository.findBy(conditions)
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
     throw new NotFoundError(`The user with conditions ${JSON.stringify(conditions)} not found`)
   }
 
@@ -81,9 +87,9 @@ export class UserService {
    * @param uuid - The uuid of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByUuid (uuid: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
+  async findByUuid (uuid: string): Promise<User | undefined> {
     const userModel = await this.userRepository.findByUuid(uuid)
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
   }
 
   /**
@@ -92,10 +98,10 @@ export class UserService {
    * @param rawPhone - The phone number of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByPhone (rawPhone: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
+  async findByPhone (rawPhone: string): Promise<User | undefined> {
     const phone = normalizePhone(rawPhone)
     const userModel = await this.userRepository.findBy({ phone })
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
   }
 
   /**
@@ -104,9 +110,9 @@ export class UserService {
    * @param username - The username of the user to find
    * @returns The found user or undefined if not found
    */
-  async findByUsername (username: string, displaySensitiveData: boolean = false): Promise<User | undefined> {
+  async findByUsername (username: string): Promise<User | undefined> {
     const userModel = await this.userRepository.findBy({ username })
-    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel, displaySensitiveData)
+    if (isNotEmpty<UserModel>(userModel)) return this.toUser(userModel)
   }
 
   /**
@@ -171,19 +177,29 @@ export class UserService {
    * @param userModel - The user model to convert
    * @returns The converted user
    */
-  toUser (userModel: UserModel, displaySensitiveData: boolean = false): User {
+  toUser (userModel: UserModel): User {
     const isAdmin = Array().concat(userModel.roles ?? []).includes('admin') || false
     const isModerator = isAdmin || Array().concat(userModel.roles ?? []).includes('moderator') || false
 
-    return {
-      ...userModel,
-      isAdmin,
-      isModerator,
+    userModel.username = userModel.username ?? userModel.fullname.split(' ')[0] ?? 'Unknown'
 
-      otp: displaySensitiveData ? userModel.otp : undefined, // Omit sensitive data
-      otpCount: displaySensitiveData ? userModel.otpCount : undefined, // Omit OTP count
-      password: displaySensitiveData ? userModel.password : undefined, // Omit password
-      otpExpiresAt: displaySensitiveData ? userModel.otpExpiresAt : undefined // Omit OTP expiration time
-    }
+    return this.securityService.isAuthUserAdmin()
+      ? { ...userModel, isAdmin, isModerator }
+      : {
+          uuid: userModel.uuid,
+          isActive: userModel.isActive,
+          isOnline: userModel.isOnline,
+          fullname: userModel.fullname.split(' ').shift() ?? ''
+      } as User
+  }
+
+  /**
+   * Convert an array of UserModel to User
+   *
+   * @param userModels - The array of user models to convert
+   * @returns The converted array of users
+   */
+  toUsers (userModels: UserModel[]): Promise<User[]> {
+    return Promise.all(userModels.map(userModel => this.toUser(userModel)))
   }
 }

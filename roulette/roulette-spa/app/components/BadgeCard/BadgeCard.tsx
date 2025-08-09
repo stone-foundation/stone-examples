@@ -1,6 +1,9 @@
-import { FC } from "react"
+import { FC, useState } from "react"
 import { User } from "../../models/User"
 import { Badge } from "../../models/Badge"
+import { ConfirmModal } from "../ConfirmModal/ConfirmModal"
+
+type BadgeAction = (activity: Badge) => void
 
 interface BadgeCardProps {
   badge: Badge
@@ -19,6 +22,16 @@ export const BadgeCard: FC<BadgeCardProps> = ({
   onUnassign,
   currentUser
 }) => {
+  const [showModal, setShowModal] = useState(false)
+  const [action, setAction] = useState<BadgeAction>(() => {})
+  const [confirmMessage, setConfirmMessage] = useState<string>("")
+
+  const confirm = (action: BadgeAction, message: string) => {
+    setShowModal(true)
+    setAction(() => action)
+    setConfirmMessage(message || "Es-tu sûr de vouloir effectuer cette action ?")
+  }
+
   return (
     <div className="p-4 overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-xl border border-white/10 shadow-md text-white flex flex-col md:flex-row items-center gap-4">
       <div>
@@ -51,7 +64,7 @@ export const BadgeCard: FC<BadgeCardProps> = ({
             )}
             {currentUser.isAdmin && onDelete && (
               <button
-                onClick={onDelete}
+                onClick={() => confirm(onDelete, "Es-tu sûr de vouloir supprimer ce badge ?")}
                 className="px-4 py-1 rounded bg-red-700 hover:bg-red-600 text-sm transition"
               >
                 Supprimer
@@ -76,6 +89,16 @@ export const BadgeCard: FC<BadgeCardProps> = ({
           </div>
         )}
       </div>
+            
+      <ConfirmModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={() => {
+          setShowModal(false)
+          action(badge)
+        }}
+        message={confirmMessage}
+      />
     </div>
   )
 }

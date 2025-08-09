@@ -2,22 +2,22 @@ import {
   PutCommand,
   ScanCommand,
   QueryCommand,
-  UpdateCommand,
   DeleteCommand,
+  UpdateCommand,
   DynamoDBDocumentClient
 } from '@aws-sdk/lib-dynamodb'
 import { User } from '../../models/User'
-import { TeamModel } from '../../models/Team'
+import { TeamMemberModel } from '../../models/Team'
 import { ListMetadataOptions } from '../../models/App'
-import { ITeamRepository } from '../contracts/ITeamRepository'
 import { IMetadataRepository } from '../contracts/IMetadataRepository'
-import { IBlueprint, isEmpty, isNotEmpty, Logger } from '@stone-js/core'
+import { IBlueprint, isNotEmpty, isEmpty, Logger } from '@stone-js/core'
+import { ITeamMemberRepository } from '../contracts/ITeamMemberRepository'
 import { IUserHistoryRepository } from '../contracts/IUserHistoryRepository'
 
 /**
- * Team Repository Options
+ * TeamMember Repository Options
  */
-export interface DynamoTeamRepositoryOptions {
+export interface DynamoTeamMemberRepositoryOptions {
   blueprint: IBlueprint
   database: DynamoDBDocumentClient
   metadataRepository: IMetadataRepository
@@ -25,22 +25,22 @@ export interface DynamoTeamRepositoryOptions {
 }
 
 /**
- * Team Repository (DynamoDB)
+ * TeamMember Repository (DynamoDB)
  */
-export class DynamoTeamRepository implements ITeamRepository {
+export class DynamoTeamMemberRepository implements ITeamMemberRepository {
   private readonly tableName: string
   private readonly database: DynamoDBDocumentClient
   private readonly metadataRepository: IMetadataRepository
   private readonly userHistoryRepository: IUserHistoryRepository
 
-  constructor ({ database, blueprint, metadataRepository, userHistoryRepository }: DynamoTeamRepositoryOptions) {
+  constructor ({ blueprint, database, metadataRepository, userHistoryRepository }: DynamoTeamMemberRepositoryOptions) {
     this.database = database
     this.metadataRepository = metadataRepository
     this.userHistoryRepository = userHistoryRepository
-    this.tableName = blueprint.get('aws.dynamo.tables.teams.name', 'teams')
+    this.tableName = blueprint.get('aws.dynamo.tables.teamMembers.name', 'team_members')
   }
 
-  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamModel>> {
+  async list (limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamMemberModel>> {
     const params: any = {
       TableName: this.tableName,
       Limit: Number(limit ?? 10)
@@ -61,20 +61,20 @@ export class DynamoTeamRepository implements ITeamRepository {
       total,
       limit: Number(limit ?? 10),
       page: cursor,
-      items: (result.Items as TeamModel[]) ?? [],
+      items: (result.Items as TeamMemberModel[]) ?? [],
       nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
   }
 
-  async listBy (conditions: Partial<TeamModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamModel>> {
+  async listBy (conditions: Partial<TeamMemberModel>, limit?: number, cursor?: number | string): Promise<ListMetadataOptions<TeamMemberModel>> {
     let keyValue: any
     let keyName: string | undefined
     let indexName: string | undefined
 
     // Define which fields have indexes
-    const indexedKeys = ['color', 'name']
+    const indexedKeys = ['role', 'userUuid', 'teamUuid', 'missionUuid', 'isActive']
 
     for (const [key, value] of Object.entries(conditions)) {
       if (indexedKeys.includes(key) && isNotEmpty(value)) {
@@ -111,7 +111,7 @@ export class DynamoTeamRepository implements ITeamRepository {
         total,
         limit: Number(limit ?? 10),
         page: cursor,
-        items: (result.Items as TeamModel[]) ?? [],
+        items: (result.Items as TeamMemberModel[]) ?? [],
         nextPage: (result.LastEvaluatedKey != null)
           ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
           : undefined
@@ -157,14 +157,14 @@ export class DynamoTeamRepository implements ITeamRepository {
       total,
       limit: Number(limit ?? 10),
       page: cursor,
-      items: (result.Items as TeamModel[]) ?? [],
+      items: (result.Items as TeamMemberModel[]) ?? [],
       nextPage: (result.LastEvaluatedKey != null)
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined
     }
   }
 
-  async findByUuid (uuid: string): Promise<TeamModel | undefined> {
+  async findByUuid (uuid: string): Promise<TeamMemberModel | undefined> {
     const result = await this.database.send(
       new QueryCommand({
         TableName: this.tableName,
@@ -174,12 +174,12 @@ export class DynamoTeamRepository implements ITeamRepository {
       })
     )
 
-    return result.Items?.[0] as TeamModel | undefined
+    return result.Items?.[0] as TeamMemberModel | undefined
   }
 
-  async findBy (conditions: Partial<TeamModel>): Promise<TeamModel | undefined> {
+  async findBy (conditions: Partial<TeamMemberModel>): Promise<TeamMemberModel | undefined> {
     // Primary key and indexed fields that can be used for efficient queries
-    const queryableKeys = ['uuid', 'color', 'name']
+    const queryableKeys = ['uuid', 'role', 'name', 'userUuid', 'teamUuid', 'missionUuid', 'isActive']
     
     for (const [key, value] of Object.entries(conditions)) {
       if (queryableKeys.includes(key) && isNotEmpty(value)) {
@@ -197,7 +197,7 @@ export class DynamoTeamRepository implements ITeamRepository {
         }
         
         const result = await this.database.send(new QueryCommand(params))
-        return result.Items?.[0] as TeamModel | undefined
+        return result.Items?.[0] as TeamMemberModel | undefined
       }
     }
 
@@ -225,37 +225,36 @@ export class DynamoTeamRepository implements ITeamRepository {
     }
 
     const result = await this.database.send(new ScanCommand(params))
-    return result.Items?.[0] as TeamModel | undefined
+    return result.Items?.[0] as TeamMemberModel | undefined
   }
 
-  async create (team: TeamModel, author: User): Promise<string | undefined> {
+  async create (teamMember: TeamMemberModel, author: User): Promise<string | undefined> {
     await this.database.send(
       new PutCommand({
         TableName: this.tableName,
-        Item: team,
+        Item: teamMember,
         ExpressionAttributeNames: { '#uuid': 'uuid' },
         ConditionExpression: 'attribute_not_exists(#uuid)'
       })
     )
     
-    await this.metadataRepository.increment(this.tableName, { lastUuid: team.uuid })
+    await this.metadataRepository.increment(this.tableName, { lastUuid: teamMember.uuid })
     await this.userHistoryRepository.makeHistoryEntry({
-      type: 'team',
       action: 'created',
-      itemUuid: team.uuid,
+      type: 'team_member',
+      itemUuid: teamMember.uuid,
     }, author)
     
-    return team.uuid
+    return teamMember.uuid
   }
 
-  async update ({ uuid, name }: TeamModel, data: Partial<TeamModel>, author: User): Promise<TeamModel | undefined> {
+  async update ({ uuid }: TeamMemberModel, data: Partial<TeamMemberModel>, author: User): Promise<TeamMemberModel | undefined> {
     const updateExpr: string[] = []
     const attrNames: Record<string, string> = {}
     const attrValues: Record<string, any> = {}
 
     for (const [key, value] of Object.entries(data)) {
-      // Keep original logic: skip uuid and name if empty (immutable fields)
-      if (['uuid', 'name'].includes(key) && isEmpty(value)) continue
+      if (key === 'uuid' || isEmpty(value)) continue
       updateExpr.push(`#${key} = :${key}`)
       attrNames[`#${key}`] = key
       attrValues[`:${key}`] = value
@@ -263,13 +262,10 @@ export class DynamoTeamRepository implements ITeamRepository {
 
     if (updateExpr.length === 0) return await this.findByUuid(uuid)
 
-    // Handle composite key properly - use both uuid and name if name is part of primary key
-    const key = name ? { uuid, name } : { uuid }
-
     const result = await this.database.send(
       new UpdateCommand({
         TableName: this.tableName,
-        Key: key,
+        Key: { uuid },
         ReturnValues: 'ALL_NEW',
         ExpressionAttributeNames: attrNames,
         ExpressionAttributeValues: attrValues,
@@ -279,22 +275,19 @@ export class DynamoTeamRepository implements ITeamRepository {
 
     await this.userHistoryRepository.makeHistoryEntry({
       itemUuid: uuid,
-      type: 'team',
-      action: 'updated'
+      action: 'updated',
+      type: 'team_member',
     }, author)
 
-    return result.Attributes as TeamModel | undefined
+    return result.Attributes as TeamMemberModel | undefined
   }
 
-  async delete ({ uuid, name }: TeamModel, author: User): Promise<boolean> {
+  async delete ({ uuid }: TeamMemberModel, author: User): Promise<boolean> {
     try {
-      // Handle composite key properly - use both uuid and name if name is part of primary key
-      const key = name ? { uuid, name } : { uuid }
-
       await this.database.send(
         new DeleteCommand({
           TableName: this.tableName,
-          Key: key,
+          Key: { uuid },
           ExpressionAttributeNames: { '#uuid': 'uuid' },
           ConditionExpression: 'attribute_exists(#uuid)'
         })
@@ -303,8 +296,8 @@ export class DynamoTeamRepository implements ITeamRepository {
       await this.metadataRepository.decrement(this.tableName)
       await this.userHistoryRepository.makeHistoryEntry({
         itemUuid: uuid,
-        type: 'team',
         action: 'deleted',
+        type: 'team_member',
       }, author)
       
       return true

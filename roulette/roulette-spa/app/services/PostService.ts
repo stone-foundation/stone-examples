@@ -31,8 +31,8 @@ export class PostService {
   /**
    * List all posts
    */
-  async list (limit?: number, page?: string | number): Promise<ListMetadataOptions<Post>> {
-    return await this.client.list(limit, page)
+  async list (options: Partial<Post> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<Post>> {
+    return await this.client.list(options, limit, page)
   }
 
   /**

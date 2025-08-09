@@ -1,15 +1,17 @@
 import { X } from "lucide-react"
 import { FC, useState } from "react"
 import { Badge } from "../../models/Badge"
+import { Mission } from "../../models/Mission"
 import { Activity } from "../../models/Activity"
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react"
 
 interface ActivityModalFormProps {
   open: boolean
+  mission?: Mission
   onClose: () => void
   availableBadges: Badge[]
   initialData?: Partial<Activity>
-  onSubmit: (activity: Partial<Activity>) => void
+  onSubmit: (activity: Partial<Activity>) => Promise<void>
 }
 
 const IMPACT_OPTIONS = [
@@ -25,6 +27,7 @@ const CONVERSION_WINDOWS = [
 
 export const ActivityModalForm: FC<ActivityModalFormProps> = ({
   open,
+  mission,
   onClose,
   onSubmit,
   initialData = {},
@@ -37,10 +40,13 @@ export const ActivityModalForm: FC<ActivityModalFormProps> = ({
   }
 
   const handleSubmit = () => {
+    form.missionUuid = mission?.uuid
     if (!form.name || !form.description || !form.category || !form.categoryLabel || !form.impact || !form.score)
       return
-    onSubmit(form)
-    onClose()
+    onSubmit(form).then(() => {
+      setForm({})
+      onClose()
+    })
   }
 
   return (

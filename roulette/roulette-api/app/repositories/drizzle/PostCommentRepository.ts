@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm'
 import { User } from '../../models/User'
+import { and, eq, desc } from 'drizzle-orm'
 import { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { postComments } from '../../database/schema'
 import { IBlueprint, isEmpty } from '@stone-js/core'
@@ -34,7 +34,7 @@ export class PostCommentRepository implements IPostCommentRepository {
     limit = isEmpty(limit) ? 10 : Number(limit)
     const offset = (page - 1) * limit
 
-    const items = await this.database.select().from(postComments).limit(limit).offset(offset)
+    const items = await this.database.select().from(postComments).limit(limit).offset(offset).orderBy(desc(postComments.createdAt))
     const total = await this.count()
     const nextPage = items.length === limit ? page + 1 : undefined
 
@@ -54,7 +54,7 @@ export class PostCommentRepository implements IPostCommentRepository {
     const query = this.database.select().from(postComments).limit(limit).offset(offset)
     if (whereClauses.length > 0) query.where(and(...whereClauses))
 
-    const items = await query
+    const items = await query.orderBy(desc(postComments.createdAt))
     const total = await this.count()
     const nextPage = items.length === limit ? page + 1 : undefined
 

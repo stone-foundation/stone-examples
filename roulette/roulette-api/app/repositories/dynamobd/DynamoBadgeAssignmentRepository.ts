@@ -62,7 +62,7 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
     let keyName: string | undefined
     let indexName: string | undefined
 
-    const keys = ['badgeUuid', 'teamUuid', 'memberUuid']
+    const keys = ['badgeUuid', 'teamUuid', 'teamMemberUuid']
 
     for (const [key, value] of Object.entries(conditions)) {
       if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
@@ -113,7 +113,7 @@ export class DynamoBadgeAssignmentRepository implements IBadgeAssignmentReposito
   }
 
   async findBy (conditions: Partial<BadgeAssignmentModel>): Promise<BadgeAssignmentModel | undefined> {
-    const keys = ['uuid', 'badgeUuid', 'teamUuid', 'memberUuid']
+    const keys = ['uuid', 'badgeUuid', 'teamUuid', 'teamMemberUuid']
     for (const [key, value] of Object.entries(conditions)) {
       if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
         const params: any = {

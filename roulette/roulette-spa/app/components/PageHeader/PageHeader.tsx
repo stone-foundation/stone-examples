@@ -14,13 +14,13 @@ interface PageHeaderProps {
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ team, currentUser, onLogoChange, onBannerChange }): JSX.Element => {
-  const [previewLogo, setPreviewLogo] = useState<string | null>(null)
-  const [previewBanner, setPreviewBanner] = useState<string | null>(null)
+  const [previewLogo, setPreviewLogo] = useState<string | undefined>(team.logoUrl)
+  const [previewBanner, setPreviewBanner] = useState<string | undefined>(team.bannerUrl)
 
   const [loadingLogo, setLoadingLogo] = useState(false)
   const [loadingBanner, setLoadingBanner] = useState(false)
 
-  const canEdit = team.members.some(member => member.uuid === currentUser.uuid) || currentUser.isAdmin
+  const canEdit = team.members?.some(member => member.uuid === currentUser.uuid && member.role === 'captain') || currentUser.isAdmin
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner') => {
     const file = e.target.files?.[0]

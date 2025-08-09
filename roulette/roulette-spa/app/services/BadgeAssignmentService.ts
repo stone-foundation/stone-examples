@@ -27,8 +27,8 @@ export class BadgeAssignmentService {
   /**
    * List all assignments
    */
-  async list (limit?: number, page?: string): Promise<ListMetadataOptions<BadgeAssignment>> {
-    return await this.client.list(limit, page)
+  async list (options: Partial<BadgeAssignment> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<BadgeAssignment>> {
+    return await this.client.list(options, limit, page)
   }
 
   /**

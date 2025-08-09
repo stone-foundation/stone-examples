@@ -30,24 +30,23 @@ export const Roulette = ({ blueprint, teamService, rouletteService, teamMemberSe
   const [loadingTeams, setLoadingTeams] = useState(true)
   const [error, setError] = useState<string | undefined>()
   const [currentTeam, setCurrentTeam] = useState<Team | undefined>()
+  const teamMember = event.cookies.getValue<TeamMember>('teamMember')
   const spinningTime = blueprint.get('app.roulette.spinningTime', 10000)
   const missionUuid = event.cookies.getValue<Mission>('mission')?.uuid ?? ''
   const [currentTeamMembers, setCurrentTeamMembers] = useState<TeamMember[]>([])
-  const [currentTeamMember, setCurrentTeamMember] = useState<TeamMember | undefined>()
+  const [currentTeamMember, setCurrentTeamMember] = useState<TeamMember | undefined>(teamMember)
 
   useEffect(() => {
     let cancelled = false
 
     setLoadingTeams(true)
 
-    setCurrentTeamMember(event.cookies.getValue<TeamMember>('teamMember'))
-
     teamService
       .list({ missionUuid }, 50)
       .then(v => {
         if (!cancelled) {
           setTeams(v.items)
-          setCurrentTeam(v.items.find(t => t.uuid === currentTeamMember?.teamUuid))
+          setCurrentTeam(v.items.find(t => t.uuid === teamMember?.teamUuid))
         }
       })
       .catch(e => {
@@ -87,18 +86,20 @@ export const Roulette = ({ blueprint, teamService, rouletteService, teamMemberSe
   }
 
   const onSpin = async (data: SpinPayload): Promise<SpinResult> => {
+    setError(undefined)
     setLoadingTeam(true)
 
     return await new Promise<SpinResult>((resolve, reject) => {
       spinRoulette(data)
         .then(v => {
-          setCurrentTeamMember(v.teamMembers.find(w => w.userUuid === user?.uuid))
-          event.cookies.add('teamMember', currentTeamMember, { path: '/' })
+          const teamMember = v.teamMembers.find(w => w.userUuid === user?.uuid)
+          event.cookies.add('teamMember', teamMember, { path: '/' })
           
           setTimeout(() => {
             setTeams(v.teams)
+            setCurrentTeamMember(teamMember)
             setCurrentTeamMembers(v.teamMembers)
-            setCurrentTeam(v.teams.find(t => t.uuid === currentTeamMember?.teamUuid))
+            setCurrentTeam(v.teams.find(t => t.uuid === teamMember?.teamUuid))
             resolve(v.result)
           }, spinningTime)
         })
@@ -131,9 +132,9 @@ export const Roulette = ({ blueprint, teamService, rouletteService, teamMemberSe
             {error}
           </AlertBox>
         )}
-        {(currentTeam !== undefined) && (
+        {(currentTeam !== undefined && error === undefined) && (
           <AlertBox variant='success' className='mb-10 text-center'>
-            🎉 Felicitations Soldat! <br />
+            🎉 Felicitations! <br />
             Vous avez été affecté(e) à l’unité <strong>{currentTeam.name}</strong>!
           </AlertBox>
         )}
@@ -148,7 +149,7 @@ export const Roulette = ({ blueprint, teamService, rouletteService, teamMemberSe
             <TeamPanelSkeleton length={5} />
             )
           : (
-              (currentTeam != null) && <TeamPanel team={currentTeam} members={currentTeamMembers} />
+              (currentTeam !== undefined) && <TeamPanel team={currentTeam} members={currentTeamMembers} />
             )}
       </div>
     </>

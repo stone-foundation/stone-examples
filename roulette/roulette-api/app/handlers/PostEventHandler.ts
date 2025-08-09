@@ -1,6 +1,6 @@
 import { User } from '../models/User'
 import { Team } from '../models/Team'
-import { Post, PostModel } from '../models/Post'
+import { Post } from '../models/Post'
 import { ILogger, isEmpty } from '@stone-js/core'
 import { ListMetadataOptions } from '../models/App'
 import { PostService } from '../services/PostService'
@@ -42,7 +42,7 @@ export class PostEventHandler {
   /**
    * List all posts by team page
    */
-  @Get('/teams/:team@name', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService } })
+  @Get('/teams/:team@uuid', { rules: { team: /\S{30,40}/ }, bindings: { team: TeamService } })
   @JsonHttpResponse(200)
   async listByTeam (event: IncomingHttpEvent): Promise<ListMetadataOptions<Post>> {
     const team = event.get<Team>('team', {} as Team)
@@ -67,8 +67,8 @@ export class PostEventHandler {
     const user = event.getUser<User>()
     const data = event.getBody<Post & { extension: string }>()
 
-    if (isEmpty(data) || isEmpty(data.type) || isEmpty(data.visibility)) {
-      throw new BadRequestError('Post type and visibility are required')
+    if (isEmpty(data) || isEmpty(data.type) || isEmpty(data.visibility) || isEmpty(data.missionUuid)) {
+      throw new BadRequestError('Post type, visibility and mission UUID are required')
     }
 
     const uuid = await this.postService.create(data, user)
@@ -89,7 +89,7 @@ export class PostEventHandler {
   @NoContentHttpResponse()
   async like (event: IncomingHttpEvent): Promise<void> {
     const user = event.getUser<User>()
-    const post = event.get<Post>('post', {} as unknown as PostModel)
+    const post = event.get<Post>('post', {} as unknown as Post)
     
     await this.postService.toggleLike(post, user)
     
@@ -108,7 +108,7 @@ export class PostEventHandler {
   async update (event: IncomingHttpEvent): Promise<Post> {
     const user = event.getUser<User>()
     const data = event.getBody<Partial<Post>>({})
-    const post = event.get<Post>('post', {} as unknown as PostModel)
+    const post = event.get<Post>('post', {} as unknown as Post)
 
     const updated = await this.postService.update(post, data, user)
 
@@ -127,7 +127,7 @@ export class PostEventHandler {
   })
   async delete (event: IncomingHttpEvent): Promise<{ statusCode: number }> {
     const user = event.getUser<User>()
-    const post = event.get<Post>('post', {} as unknown as PostModel)
+    const post = event.get<Post>('post', {} as unknown as Post)
 
     await this.postService.delete(post, user)
 

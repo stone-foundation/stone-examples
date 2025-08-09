@@ -1,8 +1,8 @@
 interface GlobalStats {
   totalPosts: number
   totalBadges: number
+  totalMembers: number
   totalPresence: number
-  totalSoldiers: number
 }
 
 interface GlobalStatsCardProps {
@@ -11,7 +11,7 @@ interface GlobalStatsCardProps {
 
 export function GlobalStatsCard({ stats }: GlobalStatsCardProps) {
   const items = [
-    { label: 'Soldats', value: stats.totalSoldiers },
+    { label: 'Membres', value: stats.totalMembers },
     { label: 'Présents', value: stats.totalPresence },
     { label: 'Publications', value: stats.totalPosts },
     { label: 'Badges décernés', value: stats.totalBadges },

@@ -66,7 +66,7 @@ export class UserService {
    * @returns The updated user
    */
   async toggleCaptainGrade (user: User): Promise<User> {
-    const roles = user.roles?.includes('captain') ? ['soldier'] : ['captain']
+    const roles = user.roles?.includes('captain') ? ['member'] : ['captain']
     return await this.client.update(user.uuid, { roles })
   }
 

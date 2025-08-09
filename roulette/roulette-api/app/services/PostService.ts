@@ -1,18 +1,30 @@
 import { User } from '../models/User'
 import { randomUUID } from 'node:crypto'
+import { TeamService } from './TeamService'
+import { UserService } from './UserService'
 import { MediaService } from './MediaService'
 import { Post, PostModel } from '../models/Post'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
+import { SecurityService } from './SecurityService'
+import { TeamMemberService } from './TeamMemberService'
+import { PostCommentService } from './PostCommentService'
 import { isNotEmpty, Service, IContainer } from '@stone-js/core'
+import { ActivityAssignmentService } from './ActivityAssignmentService'
 import { IPostRepository } from '../repositories/contracts/IPostRepository'
 
 /**
  * Post Service Options
  */
 export interface PostServiceOptions {
+  teamService: TeamService
+  userService: UserService
   mediaService: MediaService
   postRepository: IPostRepository
+  securityService: SecurityService
+  teamMemberService: TeamMemberService
+  postCommentService: PostCommentService
+  activityAssignmentService: ActivityAssignmentService
 }
 
 /**
@@ -20,12 +32,24 @@ export interface PostServiceOptions {
  */
 @Service({ alias: 'postService' })
 export class PostService {
+  private readonly userService: UserService
+  private readonly teamService: TeamService
   private readonly mediaService: MediaService
   private readonly postRepository: IPostRepository
+  private readonly securityService: SecurityService
+  private readonly teamMemberService: TeamMemberService
+  private readonly postCommentService: PostCommentService
+  private readonly activityAssignmentService: ActivityAssignmentService
 
-  constructor ({ mediaService, postRepository }: PostServiceOptions) {
+  constructor ({ teamService, securityService, mediaService, postRepository, userService, teamMemberService, postCommentService, activityAssignmentService }: PostServiceOptions) {
+    this.userService = userService
+    this.teamService = teamService
     this.mediaService = mediaService
     this.postRepository = postRepository
+    this.securityService = securityService
+    this.teamMemberService = teamMemberService
+    this.postCommentService = postCommentService
+    this.activityAssignmentService = activityAssignmentService
   }
 
   /**
@@ -41,8 +65,8 @@ export class PostService {
    */
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Post>> {
     const result = await this.postRepository.list(limit, page)
-    result.items = result.items.map(v => this.toPost(v))
-    return result
+    const items = await this.toPosts(result.items)
+    return { ...result, items }
   }
 
   /**
@@ -50,8 +74,8 @@ export class PostService {
    */
   async listBy (conditions: Partial<PostModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<Post>> {
     const result = await this.postRepository.listBy(conditions, limit, page)
-    result.items = result.items.map(v => this.toPost(v))
-    return result
+    const items = await this.toPosts(result.items)
+    return { ...result, items }
   }
 
   /**
@@ -147,13 +171,33 @@ export class PostService {
     await this.postRepository.update(post, { commentCount: post.commentCount }, author)
   }
 
-  /**
-   * Convert PostModel to Post (safe)
-   */
-  toPost (model: PostModel, author?: User): Post {
+
+  async toPost (model: PostModel): Promise<Post> {
+    const author = await this.userService.findByUuid(model.authorUuid)
+    const commentMeta = await this.postCommentService.listBy({ postUuid: model.uuid }, 3)
+    const team = model.teamUuid ? await this.teamService.findByUuid(model.teamUuid) : undefined
+    const teamMember = model.teamMemberUuid ? await this.teamMemberService.findByUuid(model.teamMemberUuid) : undefined
+    const activityAssignment = model.activityAssignmentUuid ? await this.activityAssignmentService.findByUuid(model.activityAssignmentUuid) : undefined
+    
+    const likedByMe = Array().concat(model.likedByUuids ?? []).includes(this.securityService.getAuthUser()?.uuid ?? '')
+
+    if (isNotEmpty<User>(author)) {
+      const authorMember = await this.teamMemberService.findBy({ userUuid: model.authorUuid, missionUuid: model.missionUuid })
+      author.username = authorMember?.name ?? author?.fullname.split(' ')[0] ?? 'Unknown'
+    }
+    
     return {
       ...model,
-      author
+      team,
+      author,
+      likedByMe,
+      teamMember,
+      activityAssignment,
+      comments: commentMeta.items,
     }
+  }
+
+  toPosts (models: PostModel[]): Promise<Post[]> {
+    return Promise.all(models.map(model => this.toPost(model)))
   }
 }

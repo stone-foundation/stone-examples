@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { UserService } from './UserService'
 import { NotFoundError } from '@stone-js/http-core'
 import { ListMetadataOptions } from '../models/App'
+import { TeamMemberService } from './TeamMemberService'
 import { PostComment, PostCommentModel } from '../models/Post'
 import { isNotEmpty, Service, IContainer } from '@stone-js/core'
 import { IPostCommentRepository } from '../repositories/contracts/IPostCommentRepository'
@@ -11,6 +12,8 @@ import { IPostCommentRepository } from '../repositories/contracts/IPostCommentRe
  * PostComment Service Options
  */
 export interface PostCommentServiceOptions {
+  userService: UserService
+  teamMemberService: TeamMemberService
   postCommentRepository: IPostCommentRepository
 }
 
@@ -19,9 +22,13 @@ export interface PostCommentServiceOptions {
  */
 @Service({ alias: 'postCommentService' })
 export class PostCommentService {
+  private readonly userService: UserService
+  private readonly teamMemberService: TeamMemberService
   private readonly postCommentRepository: IPostCommentRepository
 
-  constructor ({ postCommentRepository }: PostCommentServiceOptions) {
+  constructor ({ userService, teamMemberService, postCommentRepository }: PostCommentServiceOptions) {
+    this.userService = userService
+    this.teamMemberService = teamMemberService
     this.postCommentRepository = postCommentRepository
   }
 
@@ -37,14 +44,18 @@ export class PostCommentService {
    * List all comments
    */
   async list (limit: number = 10, page?: number | string): Promise<ListMetadataOptions<PostComment>> {
-    return await this.postCommentRepository.list(limit, page)
+    const result = await this.postCommentRepository.list(limit, page)
+    const items = await this.toPostComments(result.items)
+    return { ...result, items }
   }
 
   /**
    * List comments by conditions
    */
   async listBy (conditions: Partial<PostCommentModel>, limit: number = 10, page?: number | string): Promise<ListMetadataOptions<PostComment>> {
-    return await this.postCommentRepository.listBy(conditions, limit, page)
+    const result = await this.postCommentRepository.listBy(conditions, limit, page)
+    const items = await this.toPostComments(result.items)
+    return { ...result, items }
   }
 
   /**
@@ -52,7 +63,8 @@ export class PostCommentService {
    */
   async findByUuid (uuid: string): Promise<PostComment | undefined> {
     const model = await this.postCommentRepository.findByUuid(uuid)
-    if (isNotEmpty<PostCommentModel>(model)) return model
+    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
+    throw new NotFoundError(`Comment with UUID ${uuid} not found`)
   }
 
   /**
@@ -60,7 +72,7 @@ export class PostCommentService {
    */
   async findBy (conditions: Partial<PostCommentModel>): Promise<PostComment> {
     const model = await this.postCommentRepository.findBy(conditions)
-    if (isNotEmpty<PostCommentModel>(model)) return model
+    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
     throw new NotFoundError(`Comment not found with conditions: ${JSON.stringify(conditions)}`)
   }
 
@@ -106,7 +118,7 @@ export class PostCommentService {
   async update (comment: PostComment, data: Partial<PostComment>, author: User): Promise<PostComment> {
     data.updatedAt = Date.now()
     const model = await this.postCommentRepository.update(comment, data, author)
-    if (isNotEmpty<PostCommentModel>(model)) return model
+    if (isNotEmpty<PostCommentModel>(model)) return this.toPostComment(model)
     throw new NotFoundError(`Comment with ID ${comment.uuid} not found`)
   }
 
@@ -116,11 +128,26 @@ export class PostCommentService {
   async delete (comment: PostComment, author: User): Promise<boolean> {
     return await this.postCommentRepository.delete(comment, author)
   }
-    
-  toPostComment (result: PostComment[], userService: UserService): Promise<PostComment[]> {
+
+  async toPostComment (model: PostCommentModel): Promise<PostComment> {
+    const author = await this.userService.findByUuid(model.authorUuid)
+    if (isNotEmpty<User>(author)) {
+      const authorMember = await this.teamMemberService.findBy({ userUuid: model.authorUuid, missionUuid: model.missionUuid })
+      author.username = authorMember?.name ?? author?.fullname.split(' ')[0] ?? 'Unknown'
+    }
+    return {
+      ...model,
+      author
+    }
+  }
+
+  async toPostComments (result: PostComment[]): Promise<PostComment[]> {
     return Promise.all(result.map(async (comment) => {
-      const author = comment.authorUuid ? await userService.findByUuid(comment.authorUuid) : undefined
-      comment.author = author ? userService.toUser(author) : undefined
+      comment.author = comment.authorUuid ? await this.userService.findByUuid(comment.authorUuid) : undefined
+      if (isNotEmpty<User>(comment.author)) {
+        const authorMember = await this.teamMemberService.findBy({ userUuid: comment.authorUuid, missionUuid: comment.missionUuid })
+        comment.author.username = authorMember?.name ?? comment.author?.fullname.split(' ')[0] ?? 'Unknown'
+      }
       return comment
     }))
   }

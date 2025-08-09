@@ -27,8 +27,8 @@ export class AwsConfiguration implements IConfiguration {
       dynamo: {
         region: getString('AWS_REGION', 'us-east-1'),
         tables: {
-          bets: {
-            name: getString('AWS_DYNAMO_TABLE_BETS', 'bets')
+          spins: {
+            name: getString('AWS_DYNAMO_TABLE_SPINS', 'spins')
           },
           users: {
             name: getString('AWS_DYNAMO_TABLE_USERS', 'users')
@@ -51,11 +51,23 @@ export class AwsConfiguration implements IConfiguration {
           activityAssignments: {
             name: getString('AWS_DYNAMO_TABLE_ACTIVITY_ASSIGNMENTS', 'activity-assignments')
           },
+          teamMembers: {
+            name: getString('AWS_DYNAMO_TABLE_TEAM_MEMBERS', 'team-members')
+          },
+          missions: {
+            name: getString('AWS_DYNAMO_TABLE_MISSIONS', 'missions')
+          },
+          chatMessages: {
+            name: getString('AWS_DYNAMO_TABLE_CHAT_MESSAGES', 'chat-messages')
+          },
+          userHistories: {
+            name: getString('AWS_DYNAMO_TABLE_USER_HISTORIES', 'user-histories')
+          },
           posts: {
             name: getString('AWS_DYNAMO_TABLE_POSTS', 'posts')
           },
           postComments: {
-            name: getString('AWS_DYNAMO_TABLE_POST_COMMENTS', 'postComments')
+            name: getString('AWS_DYNAMO_TABLE_POST_COMMENTS', 'post-comments')
           },
           metadata: {
             name: getString('AWS_DYNAMO_TABLE_METADATA', 'tables-metadata')

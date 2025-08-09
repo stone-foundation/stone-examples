@@ -23,12 +23,17 @@ export class BadgeAssignmentClient {
     this.client = httpClient
     this.path = blueprint.get('app.clients.badgeAssignment.path', '/badge-assignments')
   }
-
+  
   /**
    * List all badge assignments
    */
-  async list (limit: number = 10, page?: string): Promise<ListMetadataOptions<BadgeAssignment>> {
-    const query = new URLSearchParams({ limit: String(limit), ...(page ? { page } : {}) })
+  async list (options: Partial<BadgeAssignment> = {}, limit: number = 10, page?: string | number): Promise<ListMetadataOptions<BadgeAssignment>> {
+    const query = new URLSearchParams({
+      limit: String(limit),
+      ...(page && { page: String(page) }),
+      ...(options.missionUuid && { missionUuid: options.missionUuid })
+    })
+
     return await this.client.get<ListMetadataOptions<BadgeAssignment>>(`${this.path}/?${query.toString()}`)
   }
 
@@ -71,7 +76,7 @@ export class BadgeAssignmentClient {
    * Get all assignments for a team
    */
   async getAssignmentsForTeam (uuid: string): Promise<BadgeAssignment[]> {
-    return await this.client.get<BadgeAssignment[]>(`${this.path}/team/${uuid}`)
+    return await this.client.get<BadgeAssignment[]>(`${this.path}/teams/${uuid}`)
   }
 
   /**

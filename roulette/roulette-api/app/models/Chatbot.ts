@@ -10,8 +10,8 @@ export type ChatMessageRole = "user" | "assistant" | "system"
 export interface ChatMessageModel {
   uuid: string
   content: string
-  memory?: string
   createdAt: number
+  memory?: string | null
   modelRef?: string | null
   audioUrl?: string | null
   authorUuid?: string | null

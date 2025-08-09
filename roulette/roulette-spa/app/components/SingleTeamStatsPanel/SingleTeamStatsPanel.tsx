@@ -51,7 +51,7 @@ export const SingleTeamStatsPanel: React.FC<SingleTeamStatsPanelProps> = ({ team
       <section>
         <h3 className="text-sm text-white/60 uppercase font-semibold mb-2">Classement de l’unité</h3>
         <div className="bg-white/5 p-4 rounded-xl">
-          <p className="text-white text-lg font-bold">#{team.rank ?? 'N/A'}</p>
+          <p className="text-white text-lg font-bold">#{team.rank || 'N/A'}</p>
           <p className="text-sm text-white/70">Score total : <span className="font-semibold">{team.score} pts</span></p>
         </div>
       </section>
@@ -91,9 +91,9 @@ export const SingleTeamStatsPanel: React.FC<SingleTeamStatsPanelProps> = ({ team
       {currentTeam?.captain !== undefined && <section>
         <h3 className="text-sm text-white/60 uppercase font-semibold mb-2">Capitaine</h3>
         <div className="bg-white/5 p-4 rounded-xl flex items-center gap-3">
-          <Avatar size={24} name={currentTeam.captain.username} />
+          <Avatar size={24} name={currentTeam.captain.name} />
           <div>
-            <p className="text-white font-medium capitalize">{currentTeam.captain.username}</p>
+            <p className="text-white font-medium capitalize">{currentTeam.captain.name}</p>
           </div>
         </div>
       </section>}

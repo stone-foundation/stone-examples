@@ -62,7 +62,7 @@ export class DynamoPostRepository implements IPostRepository {
     let keyName: string | undefined
     let indexName: string | undefined
 
-    const keys = ['teamUuid', 'authorUuid']
+    const keys = ['teamUuid', 'missionUuid']
 
     for (const [key, value] of Object.entries(conditions)) {
       if (isNotEmpty(keys.includes(key)) && isNotEmpty(value)) {
@@ -78,6 +78,7 @@ export class DynamoPostRepository implements IPostRepository {
         TableName: this.tableName,
         IndexName: indexName,
         Limit: Number(limit),
+        ScanIndexForward: false, // DESC order by createdAt
         KeyConditionExpression: `#${keyName} = :${keyName}`,
         ExpressionAttributeNames: { [`#${keyName}`]: keyName },
         ExpressionAttributeValues: { [`:${keyName}`]: keyValue }

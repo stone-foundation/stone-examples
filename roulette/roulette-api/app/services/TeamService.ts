@@ -162,39 +162,7 @@ export class TeamService {
    * @param teamModel - The team model to convert
    * @returns The converted team
    */
-  toTeam (teamModel: TeamModel, members: User[] = []): Team {
-    return { ...teamModel, members }
-  }
-
-  /**
-   * Convert Team to Partial<Team>
-   *
-   * @param team - The team to convert
-   * @param withDetails - Whether to include detailed information like members and chat link
-   * @returns The converted team
-   */
-  toStatTeam (team: Team, withDetails: boolean = false): Partial<Team> {
-    return {
-      name: team.name,
-      color: team.color,
-      totalMembers: team.totalMembers,
-      countMembers: team.countMembers,
-      members: withDetails ? team.members : undefined,
-      chatLink: withDetails ? team.chatLink : undefined
-    }
-  }
-
-  toTeamMember (member: User): TeamMember {
-    const isCaptain = Array().concat(member.roles ?? []).includes('captain') || false
-
-    return {
-      isCaptain,
-      uuid: member.uuid,
-      phone: member.phone,
-      isSoldier: !isCaptain,
-      fullname: member.fullname,
-      username: member.username,
-      isPresent: false // TODO: Implement presence logic
-    }
+  toTeam (teamModel: TeamModel): Team {
+    return { ...teamModel, members: [] } as Team
   }
 }

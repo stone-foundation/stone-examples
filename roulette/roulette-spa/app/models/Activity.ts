@@ -13,7 +13,7 @@ export interface Activity {
   impact: 'positive' | 'negative' | 'neutral'
 
   score: number
-  authorUuid: string
+  missionUuid: string
 
   badgeUuid?: string
   autoConvertToBadge?: boolean
@@ -24,20 +24,20 @@ export interface Activity {
   createdAt: number
   updatedAt: number
   
-  author?: User
   badge?: Badge
 }
 
 export interface ActivityAssignment {
   uuid: string
+  missionUuid: string
   badgeUuid?: string
   activityUuid: string
   activityCategory?: string
 
   teamUuid?: string
-  memberUuid?: string
+  teamMemberUuid?: string
 
-  authorUuid: string
+  issuedByUuid: string
   origin: 'system' | 'manual'
   issuedAt: number
   status: 'pending' | 'approved' | 'cancelled' | 'contested' | 'archived'
@@ -64,9 +64,10 @@ export interface ActivityAssignment {
   
   team?: Team
   badge?: Badge
+  issuedBy?: User
   activity: Activity
-  member?: TeamMember
-  issuedByUser?: User
+  validatedBy?: User
+  teamMember?: TeamMember
 }
 
 export interface TeamsStats {

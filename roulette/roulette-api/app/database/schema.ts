@@ -229,7 +229,8 @@ export const postComments = sqliteTable('postComments', {
   updatedAt: integer('updatedAt').notNull(),
 
   likeCount: integer('likeCount').notNull(),
-  likedByUuids: text('likedByUuids', { mode: 'json' }) // array of strings
+  likedByUuids: text('likedByUuids', { mode: 'json' }), // array of strings
+  missionUuid: text('mission_uuid').notNull().references(() => missions.uuid, { onDelete: 'cascade' }),
 })
 
 export const missions = sqliteTable('missions', {

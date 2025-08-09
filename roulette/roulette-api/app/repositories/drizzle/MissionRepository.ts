@@ -62,7 +62,6 @@ export class MissionRepository implements IMissionRepository {
     limit ??= 10
     const whereClauses = []
 
-    if (conditions.name) whereClauses.push(eq(missions.name, conditions.name))
     if (conditions.visibility) whereClauses.push(eq(missions.visibility, conditions.visibility))
 
     const offset = (Number(page) - 1) * limit

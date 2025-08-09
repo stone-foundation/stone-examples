@@ -1,24 +1,31 @@
 import { Post } from '../../models/Post'
 import { User } from '../../models/User'
 import { useEffect, useState } from 'react'
+import { TimelinePostCard } from './TimelinePostCard'
 import { ListMetadataOptions } from '../../models/App'
 import InfiniteScroll from 'react-infinite-scroll-component'
-import { TimelinePostCard } from '../TimelinePostCard/TimelinePostCard'
 
 interface TimelineFeedProps {
   currentUser?: User
+  refreshTrigger?: number
   fetchPosts: (limit?: number, page?: string | number) => Promise<ListMetadataOptions<Post>>
 }
 
-export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => {
+export const TimelineFeed = ({ fetchPosts, currentUser, refreshTrigger }: TimelineFeedProps) => {
   const limit = 50
   const [hasMore, setHasMore] = useState(true)
-  const [posts, setPosts] = useState<any[]>([])
+  const [posts, setPosts] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<string | number | undefined>()
 
   useEffect(() => {
     fetchInitial()
   }, [])
+
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      fetchInitial()
+    }
+  }, [refreshTrigger])
 
   const fetchInitial = async () => {
     const res = await fetchPosts()
@@ -57,7 +64,7 @@ export const TimelineFeed = ({ fetchPosts, currentUser }: TimelineFeedProps) => 
     >
       {posts.length > 0 ? (<div className="space-y-4">
         {posts.map((post) => (
-          <TimelinePostCard key={post.id} post={post} currentUser={currentUser} />
+          <TimelinePostCard key={post.uuid} post={post} currentUser={currentUser} />
         ))}
       </div>) : (
         <div className="text-white text-center py-4 border border-white/10 rounded-lg bg-white/5 mx-w-2xl mx-auto">
